@@ -107,4 +107,26 @@ describe("Unit Coverage Extensions", () => {
     assert.strictEqual(parsed.injectSteps.length > 0, true);
     assert.strictEqual(parsed.injectSteps[0].ephemeralMessage.includes("MemFS Active Memory"), true);
   });
+
+  it("tests recall-engine search and list functions", async () => {
+    const { getConversationList, searchRecall } = require(path.join(SCRIPTS_DIR, "recall-engine.js"));
+    
+    const convs = getConversationList(5);
+    assert.strictEqual(Array.isArray(convs), true);
+    if (convs.length > 0) {
+      assert.strictEqual(typeof convs[0].id, "string");
+      assert.strictEqual(typeof convs[0].firstPrompt, "string");
+    }
+
+    const matches = await searchRecall("memory");
+    assert.strictEqual(Array.isArray(matches), true);
+    if (matches.length > 0) {
+      assert.strictEqual(typeof matches[0].convId, "string");
+      assert.strictEqual(typeof matches[0].snippet, "string");
+    }
+
+    await assert.rejects(async () => {
+      await searchRecall("");
+    }, /Search query must not be empty/);
+  });
 });

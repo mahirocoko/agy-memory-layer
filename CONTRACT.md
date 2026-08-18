@@ -1,6 +1,6 @@
 # Architecture & Design Contract: `agy-memory-layer` Plugin
 
-**Version**: 1.2.0  
+**Version**: 1.3.0  
 **Target Platform**: Antigravity CLI (`agy`)  
 **Status**: Active Production Standard  
 **Inspired by**: Letta Code (`letta-ai/letta-code`) Dual-Memory & MemFS Architecture  
@@ -24,6 +24,7 @@ It provides:
 10. **Persona Preset Switcher (`/persona`)**: Instantly switches agent personality (`memo`, `linus`, `tutor`, `architect`, `custom`).
 11. **Synapse Linking (`[[link]]`)**: Wikilink-style connections across memory blocks with interactive graph navigation.
 12. **Proactive Memory Budget Guard**: Real-time token monitoring and gentle pruning reminders.
+13. **Episodic Recall Memory (`/recall`)**: Searches across all 500+ past Antigravity conversation transcripts for previous discussions, decisions, and code snippets.
 
 ---
 
@@ -42,6 +43,8 @@ plugins/agy-memory-layer/
 │   │   └── SKILL.md             # /init: Auto-scan codebase & seed project memory on Day 1
 │   ├── memory/
 │   │   └── SKILL.md             # /memory & /memory search: Inspect blocks, history & search
+│   ├── recall/
+│   │   └── SKILL.md             # /recall: Search across all past conversation transcripts
 │   ├── remember/
 │   │   └── SKILL.md             # /remember: Explicitly record a preference or rule
 │   ├── persona/
@@ -61,6 +64,7 @@ plugins/agy-memory-layer/
     ├── hook-auto-commit.sh      # Stop: Performs git add & commit on memory repository
     ├── init-project-memory.js   # Codebase scanner engine for /init
     ├── memory-search.js         # Keyword & regex search engine for /memory search
+    ├── recall-engine.js         # Episodic conversation search engine for /recall
     ├── switch-persona.js        # Persona preset manager for /persona
     ├── sync-memory.sh           # Remote Git sync manager (push/pull/status)
     ├── palace-generator.js      # Memory Palace HTML generator
@@ -111,6 +115,7 @@ All memory is decoupled from individual workspace trees and maintained as an ind
 | :--- | :--- | :--- |
 | **`init`** | `/init` or `/agy-memory-layer:init` | **Codebase Scanner & Onboarding**: Automatically inspects package manifests (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`, etc.), entry points, linters, test commands, and documentation, then generates high-signal `project.md` and `rules.md` in MemFS immediately. |
 | **`memory`** | `/memory` or `/memory search <query>` | Displays active memory blocks, Git commit timeline, or searches across historical `learnings/` logs for matching lessons. |
+| **`recall`** | `/recall <query>` or `/recall list` | **Episodic Recall**: Searches across all 500+ historical conversation transcripts for discussions, bug fixes, decisions, and code snippets. |
 | **`remember`** | `/remember <fact/rule>` | Appends or updates specific memory files (`human.md` or `rules.md`) and immediately commits a snapshot. |
 | **`persona`** | `/persona <preset>` | Switches or inspects the active personality preset (`memo`, `linus`, `tutor`, `architect`, `custom`) in `global/persona.md`. |
 | **`dream`** | `/dream` or `/reflect` | Spawns a background reflection subagent. The subagent reads session transcripts (`transcript.jsonl`), extracts user corrections and conventions, cleans outdated entries, and writes dated learning logs. |

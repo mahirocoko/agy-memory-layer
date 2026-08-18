@@ -1167,7 +1167,7 @@ const html = `<!DOCTYPE html>
     <div class="top-header">
       <div class="brand-left">
         <span>🧠 Antigravity MemFS</span>
-        <span class="brand-badge">agy-memory-layer v1.2.0</span>
+        <span class="brand-badge">agy-memory-layer v1.3.0</span>
       </div>
       <div class="operator-info">
         <div class="operator-title">📁 Workspace: <strong>${escapeHtml(activeSlug)}</strong></div>

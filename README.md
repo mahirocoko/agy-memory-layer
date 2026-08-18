@@ -69,6 +69,7 @@ Once installed, the following commands are available directly inside Antigravity
 | **`/init`** | **Day 1 Onboarding**: Scans codebase architecture, entry points, linters, and scripts to seed `project.md` and `rules.md` immediately. | `/init` or `/init --force` |
 | **`/memory`** | Inspect active memory blocks and recent Git snapshot history. | `/memory` |
 | **`/memory search`** | Fast ranked search across historical `learnings/` logs, project rules, and global memory. | `/memory search docker` |
+| **`/recall`** | Search and retrieve past discussions, decisions, and code snippets across all 500+ past conversation sessions. | `/recall palace token` or `/recall list` |
 | **`/remember`** | Record a preference, style guideline, or project rule into MemFS. | `/remember Always use exact flag (-E) when installing packages` |
 | **`/persona`** | Switch or inspect the active personality preset (`memo`, `linus`, `tutor`, `architect`, `custom`). | `/persona linus` or `/persona list` |
 | **`/dream`** | Launch a sleep-time reflection subagent to condense session learnings and resolve contradictions. | `/dream` or `/reflect` |
