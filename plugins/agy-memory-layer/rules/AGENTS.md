@@ -47,6 +47,11 @@ You MUST autonomously update, consult, and maintain your memory without waiting 
 - Whenever the user asks "What did we talk about previously regarding X?", "How did we solve bug Y in the earlier session?", or when you detect missing context from prior sessions:
   - **Action**: **Do NOT ask the user to type `/recall`**. Autonomously run `recall-engine.js search "<query>"` or invoke a recall research subagent behind the scenes, extract the historical facts, and seamlessly answer the user with full past-session continuity!
 
+### H. Language Density Invariant (Memory is Concise English)
+- The user may express preferences, teach rules, or correct you in **ANY language** (Thai, English, mixed, voice, etc.).
+- **Action**: You MUST autonomously translate, distill, and record all durable rules, project facts, and learning logs into **Concise, High-Signal English** in MemFS (`~/.gemini/memory/`).
+- The user should **NEVER** have to manually translate or police language formatting when speaking with you.
+
 ---
 
 ## 2. Memory Organization & Hierarchy
