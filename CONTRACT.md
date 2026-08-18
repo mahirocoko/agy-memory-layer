@@ -1,6 +1,6 @@
 # Architecture & Design Contract: `agy-memory-layer` Plugin
 
-**Version**: 1.10.0  
+**Version**: 1.11.0  
 **Target Platform**: Antigravity CLI (`agy`)  
 **Status**: Active Production Standard  
 **Inspired by**: Letta Code (`letta-ai/letta-code`) Dual-Memory & MemFS Architecture  
@@ -26,10 +26,11 @@ It provides:
 12. **In-Memory TypeScript Language Inspector (`ts-inspector.ts`)**: Sub-50ms AST diagnostics, hover type signatures, definition resolution, and cross-file references without spawning slow external compiler processes.
 13. **Memory Auto-Eviction & Token Compactor Engine (`memory-compactor.ts`)**: Deterministic token budget enforcement, section-scoped rule deduplication, empty section pruning, and historical archival compaction.
 14. **Autonomous Skill Synthesizer & Auto-Promotion Engine (`skill-synthesizer.ts`)**: Detects recurring procedural patterns (3+ occurrences) in MemFS, clusters them via vector cosine similarity, and drafts production-ready `SKILL.md` candidates.
-15. **Comprehensive Prompt Assets Warehouse (`prompts/`)**: Categorized prompt library covering `system/`, `persona/`, `human/`, `subagents/`, and `alerts/`.
-16. **Hybrid Semantic Recall Engine (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across 500+ past Antigravity conversation transcripts with cosine similarity scoring.
-17. **Synapse Linking (`[[link]]`)**: Wikilink-style connections across memory blocks with interactive graph navigation.
-18. **Proactive Memory Budget Guard**: Real-time token monitoring and gentle pruning reminders.
+15. **Cross-Project Knowledge Synapse Engine (`cross-project-synapse.ts`)**: Breaks knowledge silos across MemFS projects by matching active queries against cross-project learnings with subword n-gram vector cosine similarity.
+16. **Comprehensive Prompt Assets Warehouse (`prompts/`)**: Categorized prompt library covering `system/`, `persona/`, `human/`, `subagents/`, and `alerts/`.
+17. **Hybrid Semantic Recall Engine (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across 500+ past Antigravity conversation transcripts with cosine similarity scoring.
+18. **Synapse Linking (`[[link]]`)**: Wikilink-style connections across memory blocks with interactive graph navigation.
+19. **Proactive Memory Budget Guard**: Real-time token monitoring and gentle pruning reminders.
 
 ---
 

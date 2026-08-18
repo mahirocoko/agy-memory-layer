@@ -50,6 +50,9 @@ const {
 const { scanAndSynthesizeSkills, generateDraftSkill, scanMemfsLearnings } = await import(
   path.join(SCRIPTS_DIR, 'skill-synthesizer.ts')
 )
+const { findCrossProjectSynapses, formatSynapseNotice } = await import(
+  path.join(SCRIPTS_DIR, 'cross-project-synapse.ts')
+)
 
 describe('Unit Coverage Extensions', () => {
   it('tests init-project-memory with Rust, Go, Python, and Docker manifests', () => {
@@ -438,6 +441,46 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(scanRes.totalLearningsScanned, 3)
     assert.strictEqual(scanRes.candidates.length >= 1, true)
     assert.strictEqual(scanRes.candidates[0].occurrenceCount, 3)
+
+    // Clean up
+    fs.rmSync(tempMemfs, { recursive: true, force: true })
+  })
+
+  it('tests cross-project-synapse matching and notice formatting', () => {
+    const tempMemfs = '/tmp/test-synapse-memfs'
+    const projADir = path.join(tempMemfs, 'projects', 'project-a', 'learnings')
+    const projBDir = path.join(tempMemfs, 'projects', 'project-b', 'learnings')
+
+    fs.mkdirSync(projADir, { recursive: true })
+    fs.mkdirSync(projBDir, { recursive: true })
+
+    // Project A solved SQLite WAL contention
+    fs.writeFileSync(
+      path.join(projADir, '2026-08-18_sqlite_wal.md'),
+      '# SQLite WAL Lock Contention Fix\n- Set busy_timeout to 5000ms\n- Enable journal_mode=WAL\n- Lessons: Prevents database locked errors in concurrent execution.',
+    )
+
+    // Project B solved frontend styling
+    fs.writeFileSync(
+      path.join(projBDir, '2026-08-18_css_tokens.md'),
+      '# Design Tokens & CSS Variables\n- Define color palette tokens in index.css\n- Lessons: Keep typography scale consistent.',
+    )
+
+    // Query from Project B searching for sqlite lock fix
+    const hits = findCrossProjectSynapses(
+      'sqlite database locked contention',
+      { currentProjectSlug: 'project-b', minSimilarity: 0.45, limit: 3 },
+      tempMemfs,
+    )
+
+    assert.strictEqual(hits.length >= 1, true)
+    assert.strictEqual(hits[0].projectSlug, 'project-a')
+    assert.strictEqual(hits[0].title.includes('SQLite WAL Lock'), true)
+
+    // Test notice formatting
+    const notice = formatSynapseNotice(hits)
+    assert.strictEqual(notice.includes('Cross-Project Knowledge Synapses'), true)
+    assert.strictEqual(notice.includes('project-a'), true)
 
     // Clean up
     fs.rmSync(tempMemfs, { recursive: true, force: true })

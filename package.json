@@ -1,6 +1,6 @@
 {
   "name": "agy-memory-layer",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "type": "module",
   "description": "Stateful Git-backed MemFS, sleep-time reflection, codebase onboarding, and Memory Palace plugin for Antigravity CLI",
   "scripts": {
