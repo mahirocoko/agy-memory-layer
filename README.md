@@ -70,10 +70,12 @@ Once installed, the following commands are available directly inside Antigravity
 | **`/memory`** | Inspect active memory blocks and recent Git snapshot history. | `/memory` |
 | **`/memory search`** | Fast ranked search across historical `learnings/` logs, project rules, and global memory. | `/memory search docker` |
 | **`/remember`** | Record a preference, style guideline, or project rule into MemFS. | `/remember Always use exact flag (-E) when installing packages` |
+| **`/persona`** | Switch or inspect the active personality preset (`memo`, `linus`, `tutor`, `architect`, `custom`). | `/persona linus` or `/persona list` |
 | **`/dream`** | Launch a sleep-time reflection subagent to condense session learnings and resolve contradictions. | `/dream` or `/reflect` |
 | **`/doctor`** | Check memory health and detect rule contradictions with codebase. | `/doctor` |
 | **`/palace`** | Generate and open the interactive Memory Palace web dashboard. | `/palace` or `/palace --summary` |
 | **`/sync`** | Sync MemFS with a remote private Git repository across multiple development machines. | `/sync setup <repo-url>` or `/sync push` |
+| **`/update`** | Update plugin to latest version while safely preserving all stored MemFS memory. | `/update` |
 
 ---
 

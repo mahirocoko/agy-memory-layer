@@ -46,7 +46,12 @@ fi
 if [ -n "$CONTEXT_TEXT" ]; then
   node -e '
     const text = process.argv[1];
-    const message = `🧠 **[MemFS Active Memory]**\n\n` + text;
+    const estTokens = Math.ceil(text.length / 4);
+    let reminder = "";
+    if (estTokens > 1200) {
+      reminder = `\n> 💡 *[MemFS Budget Notice: Injected memory is ~${estTokens} tokens. Run /dream or /doctor to consolidate if needed.]*\n`;
+    }
+    const message = `🧠 **[MemFS Active Memory]**\n\n` + text + reminder;
     const output = {
       injectSteps: [
         {

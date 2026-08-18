@@ -1132,6 +1132,31 @@ const html = `<!DOCTYPE html>
     .diff-line-add { color: #4ade80; background: rgba(34, 197, 94, 0.08); display: block; }
     .diff-line-del { color: #f87171; background: rgba(239, 68, 68, 0.08); display: block; }
     .diff-line-hunk { color: #38bdf8; font-weight: 600; display: block; }
+
+    /* Synapse Tags */
+    .synapse-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      color: #c4b5fd;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      text-decoration: none;
+      vertical-align: middle;
+    }
+    .synapse-tag:hover {
+      background: rgba(139, 92, 246, 0.35);
+      border-color: #a78bfa;
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 0 8px rgba(167, 139, 250, 0.4);
+    }
   </style>
 </head>
 <body>
@@ -1142,7 +1167,7 @@ const html = `<!DOCTYPE html>
     <div class="top-header">
       <div class="brand-left">
         <span>🧠 Antigravity MemFS</span>
-        <span class="brand-badge">agy-memory-layer v1.1.0</span>
+        <span class="brand-badge">agy-memory-layer v1.2.0</span>
       </div>
       <div class="operator-info">
         <div class="operator-title">📁 Workspace: <strong>${escapeHtml(activeSlug)}</strong></div>
@@ -1538,10 +1563,41 @@ const html = `<!DOCTYPE html>
     }
 
     function renderMarkdown(content) {
+      if (!content) return '';
+      // Parse [[target]] into clickable synapse tags
+      let processed = String(content).replace(/\[\[(.*?)\]\]/g, function(match, p1) {
+        const target = p1.trim();
+        return '<span class="synapse-tag" onclick="navigateToSynapse(\'' + target.replace(/'/g, "\\'") + '\')" title="Synapse link to ' + target.replace(/'/g, "\\'") + '">🔗 ' + target + '</span>';
+      });
       if (window.marked && typeof window.marked.parse === 'function') {
-        return window.marked.parse(content || '');
+        return window.marked.parse(processed);
       }
-      return '<pre>' + (content || '') + '</pre>';
+      return '<pre>' + processed + '</pre>';
+    }
+
+    function navigateToSynapse(target) {
+      const cleanTarget = target.toLowerCase().trim();
+      // Check in Core Files
+      for (let i = 0; i < CORE_FILES.length; i++) {
+        const f = CORE_FILES[i];
+        if (f.name.toLowerCase() === cleanTarget || f.path.toLowerCase().includes(cleanTarget)) {
+          switchTab('core');
+          const items = document.querySelectorAll('#view-core .tree-item');
+          if (items[i]) selectCoreFile(i, items[i]);
+          return;
+        }
+      }
+      // Check in External Files
+      for (let i = 0; i < EXT_FILES.length; i++) {
+        const f = EXT_FILES[i];
+        if (f.filename.toLowerCase() === cleanTarget || f.path.toLowerCase().includes(cleanTarget)) {
+          switchTab('external');
+          const items = document.querySelectorAll('#view-external .tree-item');
+          if (items[i]) selectExternalFile(i, items[i]);
+          return;
+        }
+      }
+      alert('Synapse target: ' + target);
     }
 
     function selectCoreFile(idx, el) {

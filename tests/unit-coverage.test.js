@@ -76,4 +76,35 @@ describe("Unit Coverage Extensions", () => {
 
     fs.unlinkSync(tempBundle);
   });
+
+  it("tests switch-persona script functionality and presets", () => {
+    const { PERSONA_PRESETS, getActivePersona, switchPersona } = require(path.join(SCRIPTS_DIR, "switch-persona.js"));
+    
+    assert.strictEqual(typeof PERSONA_PRESETS.memo, "object");
+    assert.strictEqual(typeof PERSONA_PRESETS.linus, "object");
+    assert.strictEqual(typeof PERSONA_PRESETS.tutor, "object");
+    assert.strictEqual(typeof PERSONA_PRESETS.architect, "object");
+
+    // Test switching persona
+    switchPersona("linus");
+    let current = getActivePersona();
+    assert.strictEqual(current.id, "linus");
+
+    switchPersona("memo");
+    current = getActivePersona();
+    assert.strictEqual(current.id, "memo");
+  });
+
+  it("tests hook-inject-memory budget notice calculation", () => {
+    const hookScript = path.join(SCRIPTS_DIR, "hook-inject-memory.sh");
+    const res = spawnSync("bash", [hookScript], {
+      input: JSON.stringify({ workspacePaths: [ROOT_DIR] }),
+      encoding: "utf-8"
+    });
+    assert.strictEqual(res.status, 0);
+    const parsed = JSON.parse(res.stdout);
+    assert.strictEqual(Array.isArray(parsed.injectSteps), true);
+    assert.strictEqual(parsed.injectSteps.length > 0, true);
+    assert.strictEqual(parsed.injectSteps[0].ephemeralMessage.includes("MemFS Active Memory"), true);
+  });
 });

@@ -1,6 +1,6 @@
 # Architecture & Design Contract: `agy-memory-layer` Plugin
 
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **Target Platform**: Antigravity CLI (`agy`)  
 **Status**: Active Production Standard  
 **Inspired by**: Letta Code (`letta-ai/letta-code`) Dual-Memory & MemFS Architecture  
@@ -19,8 +19,11 @@ It provides:
 5. **Sleep-Time Dreaming / Reflection (`/dream`)**: Uses background subagents that read session transcripts (`transcript.jsonl`) to consolidate learnings, resolve contradictions, and prune outdated data.
 6. **Historical Learnings Search (`/memory search <query>`)**: Enables quick retrieval of past architectural decisions and bug fixes across all historical session logs.
 7. **Multi-Device Remote Sync (`/sync`)**: Syncs MemFS to a private GitHub/GitLab repository across development machines.
-8. **Memory Palace (`/palace`)**: Interactive visual knowledge graph and Git timeline viewer.
+8. **Memory Palace (`/palace`)**: Interactive visual knowledge graph, Synapse network, and Git timeline viewer.
 9. **Tamper-Proof Backups (`tools/memory-backup.ts`)**: Standalone export/import with SHA-256 integrity verification.
+10. **Persona Preset Switcher (`/persona`)**: Instantly switches agent personality (`memo`, `linus`, `tutor`, `architect`, `custom`).
+11. **Synapse Linking (`[[link]]`)**: Wikilink-style connections across memory blocks with interactive graph navigation.
+12. **Proactive Memory Budget Guard**: Real-time token monitoring and gentle pruning reminders.
 
 ---
 
@@ -41,6 +44,8 @@ plugins/agy-memory-layer/
 │   │   └── SKILL.md             # /memory & /memory search: Inspect blocks, history & search
 │   ├── remember/
 │   │   └── SKILL.md             # /remember: Explicitly record a preference or rule
+│   ├── persona/
+│   │   └── SKILL.md             # /persona: Switch active personality preset
 │   ├── dream/
 │   │   └── SKILL.md             # /dream: Sleep-time reflection over transcript.jsonl
 │   ├── doctor/
@@ -52,10 +57,11 @@ plugins/agy-memory-layer/
 │   └── update/
 │       └── SKILL.md             # /update: Update plugin to latest version preserving MemFS
 └── scripts/
-    ├── hook-inject-memory.sh    # PreInvocation: Reads memory & outputs ephemeralMessage
+    ├── hook-inject-memory.sh    # PreInvocation: Reads memory, monitors budget & outputs ephemeralMessage
     ├── hook-auto-commit.sh      # Stop: Performs git add & commit on memory repository
     ├── init-project-memory.js   # Codebase scanner engine for /init
     ├── memory-search.js         # Keyword & regex search engine for /memory search
+    ├── switch-persona.js        # Persona preset manager for /persona
     ├── sync-memory.sh           # Remote Git sync manager (push/pull/status)
     ├── palace-generator.js      # Memory Palace HTML generator
     ├── palace-server.sh         # Generates/opens interactive local Memory Palace HTML viewer
@@ -106,6 +112,7 @@ All memory is decoupled from individual workspace trees and maintained as an ind
 | **`init`** | `/init` or `/agy-memory-layer:init` | **Codebase Scanner & Onboarding**: Automatically inspects package manifests (`package.json`, `Cargo.toml`, `go.mod`, `pyproject.toml`, etc.), entry points, linters, test commands, and documentation, then generates high-signal `project.md` and `rules.md` in MemFS immediately. |
 | **`memory`** | `/memory` or `/memory search <query>` | Displays active memory blocks, Git commit timeline, or searches across historical `learnings/` logs for matching lessons. |
 | **`remember`** | `/remember <fact/rule>` | Appends or updates specific memory files (`human.md` or `rules.md`) and immediately commits a snapshot. |
+| **`persona`** | `/persona <preset>` | Switches or inspects the active personality preset (`memo`, `linus`, `tutor`, `architect`, `custom`) in `global/persona.md`. |
 | **`dream`** | `/dream` or `/reflect` | Spawns a background reflection subagent. The subagent reads session transcripts (`transcript.jsonl`), extracts user corrections and conventions, cleans outdated entries, and writes dated learning logs. |
 | **`doctor`** | `/doctor` or `/memory-doctor` | Runs an audit against the active codebase to detect if memory rules or architecture assumptions have drifted from codebase reality. |
 | **`palace`** | `/palace` or `/palace --summary` | Visual Memory Palace viewer: Generates an interactive visual map of all memory nodes, file connections, commit history timeline, and diffs (standalone HTML viewer or Mermaid Artifact). |
