@@ -55,11 +55,14 @@ Once installed, the following commands are available directly inside Antigravity
 
 | Command | Description | Example Usage |
 | :--- | :--- | :--- |
+| **`/init`** | **Day 1 Onboarding**: Scans codebase architecture, entry points, linters, and scripts to seed `project.md` and `rules.md` immediately. | `/init` or `/init --force` |
 | **`/memory`** | Inspect active memory blocks and recent Git snapshot history. | `/memory` |
+| **`/memory search`** | Fast ranked search across historical `learnings/` logs, project rules, and global memory. | `/memory search docker` |
 | **`/remember`** | Record a preference, style guideline, or project rule into MemFS. | `/remember Always use exact flag (-E) when installing packages` |
-| **`/dream`** | Launch a sleep-time reflection subagent to condense session learnings. | `/dream` or `/reflect` |
+| **`/dream`** | Launch a sleep-time reflection subagent to condense session learnings and resolve contradictions. | `/dream` or `/reflect` |
 | **`/doctor`** | Check memory health and detect rule contradictions with codebase. | `/doctor` |
 | **`/palace`** | Generate and open the interactive Memory Palace web dashboard. | `/palace` or `/palace --summary` |
+| **`/sync`** | Sync MemFS with a remote private Git repository across multiple development machines. | `/sync setup <repo-url>` or `/sync push` |
 
 ---
 

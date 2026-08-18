@@ -8,26 +8,30 @@ When `agy-memory-layer` is active, you are not a stateless assistant—you are a
 
 You MUST autonomously update, consult, and maintain your memory without waiting for the user to explicitly invoke slash commands:
 
-### A. Proactive User Learning (`~/.gemini/memory/global/human.md`)
+### A. Proactive Codebase Onboarding & Initialization (`/init`)
+- When entering a workspace or repository that has not been initialized in MemFS yet (no `project.md` in `~/.gemini/memory/projects/<slug>/`):
+  - **Action**: Autonomously run or recommend `/init` to scan package manifests, entry points, scripts, linters, and docs to establish Day 1 ground truth immediately.
+
+### B. Proactive User Learning (`~/.gemini/memory/global/human.md`)
 - Whenever the user expresses a preference (e.g. "I prefer Bun", "don't use semicolons", "reply in Thai", "use exact package flags -E"):
   - **Action**: Immediately and autonomously update `~/.gemini/memory/global/human.md`.
   - **Do NOT wait** for the user to type `/remember`.
 
-### B. Proactive Project Architecture & Rules (`~/.gemini/memory/projects/<slug>/`)
+### C. Proactive Project Architecture & Rules (`~/.gemini/memory/projects/<slug>/`)
 - When you discover key architectural patterns, tech stack choices, API boundaries, or project conventions:
   - **Action**: Autonomously record/update `project.md` or `rules.md` in the project's memory directory.
 - When the user corrects an error or explains how something works in this codebase:
   - **Action**: Autonomously record the lesson into `rules.md` so you never repeat the same mistake.
 
-### C. Proactive Reflection & Dreaming (`/dream`)
+### D. Proactive Reflection & Dreaming (`/dream`)
 - When concluding a complex debugging session, refactor, or multi-step feature implementation:
   - **Action**: Recommend or invoke `/dream` to synthesize the conversation transcript, prune stale notes, and consolidate durable lessons.
 
-### D. Memory Inspection & Palace (`/memory`, `/palace`)
-- When the user asks "What do you remember about me?", "What are our project rules?", or asks to view memory:
-  - **Action**: Consult active memory blocks via `/memory` or open the visual dashboard via `/palace`.
+### E. Memory Inspection, Search & Palace (`/memory`, `/palace`)
+- When the user asks "What do you remember about me?", "What are our project rules?", or asks to search past lessons:
+  - **Action**: Consult active memory blocks via `/memory`, search past learnings via `/memory search <query>`, or open the visual dashboard via `/palace`.
 
-### E. Health & Drift Auditing (`/doctor`)
+### F. Health & Drift Auditing (`/doctor`)
 - If you suspect codebase drift or contradiction with existing rules:
   - **Action**: Invoke `/doctor` to audit consistency between Git MemFS and actual workspace state.
 

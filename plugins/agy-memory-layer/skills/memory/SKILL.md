@@ -1,52 +1,35 @@
----
-name: memory
-description: >-
-  Inspect, list, and review active MemFS memory blocks (global human profile, project context,
-  rules, and recent git snapshot logs). Trigger when user types /memory, asks to inspect memory,
-  or wants to review what the agent currently remembers.
----
+# /memory - MemFS Status, Inspection & Search
 
-# /memory - MemFS Inspector & Status
+Inspect active memory blocks, Git snapshot commit history, or search across historical learnings.
 
-Inspect and manage long-term Git-backed memory blocks stored at `~/.gemini/memory/`.
+## Quick Commands
 
-## Memory Hierarchy
-
-```
-~/.gemini/memory/
-├── global/
-│   ├── human.md                 # User profile, style, habits
-│   └── persona.md               # Agent identity & tone
-└── projects/
-    └── <project-slug>/          # Project-specific memory
-        ├── project.md           # Project architecture & domain logic
-        ├── rules.md             # Project-specific coding rules
-        └── learnings/           # Dated learning logs
-```
-
-## Step 1: Detect Project Slug & Workspace
 ```bash
-WORKSPACE_DIR="$(pwd)"
-PROJECT_SLUG=$(basename "$WORKSPACE_DIR" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-MEMORY_ROOT="${HOME}/.gemini/memory"
-PROJECT_DIR="${MEMORY_ROOT}/projects/${PROJECT_SLUG}"
+# 1. Inspect active memory blocks & git status
+/memory
+
+# 2. Search historical memory blocks & learnings
+/memory search <query>
 ```
 
-## Step 2: Read Active Memory Blocks
-Read and present the following blocks in a formatted overview:
-1. `~/.gemini/memory/global/human.md`
-2. `~/.gemini/memory/global/persona.md`
-3. `~/.gemini/memory/projects/<project-slug>/project.md` (if exists)
-4. `~/.gemini/memory/projects/<project-slug>/rules.md` (if exists)
+## How It Works
 
-## Step 3: Git Status & Recent Commit History
+1. **Inspection Mode (`/memory`)**:
+   - Prints active `global/human.md`, `global/persona.md`, and project-scoped `project.md` / `rules.md`.
+   - Shows recent Git commit snapshots and uncommitted state.
+
+2. **Search Mode (`/memory search <query>`)**:
+   - Searches across all files in `~/.gemini/memory/` (including historical `learnings/*.md`).
+   - Returns ranked match snippets with file paths, line numbers, and context.
+
+## Direct Script Execution
+
 ```bash
-git -C "$MEMORY_ROOT" status --short
-git -C "$MEMORY_ROOT" log -n 5 --oneline --decorate
-```
+SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../../scripts"
 
-## Output Presentation
-Render a clear summary showing:
-- 👤 **Global User Profile**: Key preferences currently active
-- 📁 **Active Project Context**: Active conventions for this workspace
-- 📜 **Recent Snapshots**: Last 5 Git memory commits with timestamps
+# Search memory
+node "$SCRIPT_DIR/memory-search.js" "<query>"
+
+# Search memory with project filter
+node "$SCRIPT_DIR/memory-search.js" "<query>" --project "<slug>"
+```
