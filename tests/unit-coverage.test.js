@@ -172,4 +172,41 @@ describe("Unit Coverage Extensions", () => {
       printStatus("learn-letta-code");
     });
   });
+
+  it("tests agent-launcher subagent manifests and prompt resolution", () => {
+    const { listSubagents, getSubagent } = require(path.join(SCRIPTS_DIR, "agent-launcher.js"));
+
+    const subagents = listSubagents();
+    assert.strictEqual(Array.isArray(subagents), true);
+    assert.strictEqual(subagents.length, 6);
+
+    const dreamSub = getSubagent("dream_agent");
+    assert.strictEqual(typeof dreamSub, "object");
+    assert.strictEqual(dreamSub.role, "Dream Reflection Subagent");
+    assert.strictEqual(dreamSub.enableWriteTools, true);
+    assert.strictEqual(typeof dreamSub.systemPrompt, "string");
+    assert.strictEqual(dreamSub.systemPrompt.includes("Dream Reflection Subagent Prompt"), true);
+
+    const memorySub = getSubagent("memory_agent");
+    assert.strictEqual(typeof memorySub, "object");
+    assert.strictEqual(memorySub.role, "MemFS Memory Specialist");
+    assert.strictEqual(memorySub.enableWriteTools, true);
+
+    const skillCreatorSub = getSubagent("skill_creator_agent");
+    assert.strictEqual(typeof skillCreatorSub, "object");
+    assert.strictEqual(skillCreatorSub.role, "Skill Creator Specialist");
+    assert.strictEqual(skillCreatorSub.modelTier, "pro");
+
+    const historySub = getSubagent("history_analyzer_agent");
+    assert.strictEqual(typeof historySub, "object");
+    assert.strictEqual(historySub.role, "Deep History Analyzer");
+
+    const recallSub = getSubagent("recall_agent");
+    assert.strictEqual(typeof recallSub, "object");
+    assert.strictEqual(recallSub.role, "Episodic Recall Specialist");
+
+    const onboardingSub = getSubagent("onboarding_agent");
+    assert.strictEqual(typeof onboardingSub, "object");
+    assert.strictEqual(onboardingSub.role, "Codebase Onboarding Specialist");
+  });
 });

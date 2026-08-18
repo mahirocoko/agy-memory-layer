@@ -1,0 +1,10 @@
+{
+  "name": "history_analyzer_agent",
+  "role": "Deep History Analyzer",
+  "description": "Deeply investigates past conversation trajectories, multi-step debugging traces, and historical decisions across local transcripts.",
+  "system_prompt_file": "../prompts/subagents/recall_subagent_local.md",
+  "model_tier": "flash",
+  "enable_write_tools": false,
+  "enable_mcp_tools": false,
+  "enable_subagent_tools": false
+}

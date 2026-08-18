@@ -1,0 +1,10 @@
+{
+  "name": "dream_agent",
+  "role": "Dream Reflection Subagent",
+  "description": "Sleep-time reflection subagent that analyzes session transcripts, captures user preferences (The Annoyance Rule), and updates MemFS memory blocks.",
+  "system_prompt_file": "../prompts/subagents/dream_subagent.md",
+  "model_tier": "inherit",
+  "enable_write_tools": true,
+  "enable_mcp_tools": false,
+  "enable_subagent_tools": false
+}

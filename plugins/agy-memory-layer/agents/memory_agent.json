@@ -1,0 +1,10 @@
+{
+  "name": "memory_agent",
+  "role": "MemFS Memory Specialist",
+  "description": "Proactively edits, prunes, and updates core memory blocks (human.md, project.md, rules.md) in MemFS with git-backed isolation.",
+  "system_prompt_file": "../prompts/subagents/remember.md",
+  "model_tier": "inherit",
+  "enable_write_tools": true,
+  "enable_mcp_tools": false,
+  "enable_subagent_tools": false
+}

@@ -1,0 +1,10 @@
+{
+  "name": "onboarding_agent",
+  "role": "Codebase Onboarding Specialist",
+  "description": "Explores new repositories on Day 1, scans package manifests and Linters, and bootstraps project.md and rules.md in MemFS.",
+  "system_prompt_file": "../prompts/subagents/onboarding.md",
+  "model_tier": "flash",
+  "enable_write_tools": true,
+  "enable_mcp_tools": false,
+  "enable_subagent_tools": false
+}

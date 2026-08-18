@@ -1,0 +1,10 @@
+{
+  "name": "skill_creator_agent",
+  "role": "Skill Creator Specialist",
+  "description": "Designs, authors, tests, and validates new Antigravity skills with comprehensive SKILL.md frontmatter, runbooks, and bundled scripts.",
+  "system_prompt_file": "../prompts/subagents/skill_creator.md",
+  "model_tier": "pro",
+  "enable_write_tools": true,
+  "enable_mcp_tools": false,
+  "enable_subagent_tools": false
+}

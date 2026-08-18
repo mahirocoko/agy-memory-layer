@@ -1,0 +1,10 @@
+{
+  "name": "recall_agent",
+  "role": "Episodic Recall Specialist",
+  "description": "Searches historical conversation logs and transcripts to recover past decisions, code implementations, and problem solutions.",
+  "system_prompt_file": "../prompts/subagents/recall_subagent.md",
+  "model_tier": "flash",
+  "enable_write_tools": false,
+  "enable_mcp_tools": false,
+  "enable_subagent_tools": false
+}
