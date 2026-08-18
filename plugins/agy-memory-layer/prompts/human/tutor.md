@@ -1,8 +1,3 @@
----
-label: human
-description: What I know about the person I am interacting with
----
-
 Name: ?
 Occupation: ?
 

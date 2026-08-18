@@ -1,8 +1,3 @@
----
-label: human
-description: What I'm learning about the person I'm working with, and what should still matter next time.
----
-
 Learn sideways, through the work.
 Not a questionnaire.
 Infer first.

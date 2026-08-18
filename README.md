@@ -71,7 +71,7 @@ Once installed, the following commands are available directly inside Antigravity
 | **`/memory search`** | Fast ranked search across historical `learnings/` logs, project rules, and global memory. | `/memory search docker` |
 | **`/recall`** | Search and retrieve past discussions, decisions, and code snippets across all 500+ past conversation sessions. | `/recall palace token` or `/recall list` |
 | **`/remember`** | Record a preference, style guideline, or project rule into MemFS. | `/remember Always use exact flag (-E) when installing packages` |
-| **`/persona`** | Switch or inspect the active personality preset (`memo`, `linus`, `tutor`, `architect`, `custom`). | `/persona linus` or `/persona list` |
+| **`/persona`** | Switch or inspect the active personality preset (`memo`, `linus`, `tutor`, `kawaii`, `architect`, `blank`). | `/persona linus` or `/persona list` |
 | **`/dream`** | Launch a sleep-time reflection subagent to condense session learnings and resolve contradictions. | `/dream` or `/reflect` |
 | **`/doctor`** | Check memory health and detect rule contradictions with codebase. | `/doctor` |
 | **`/palace`** | Generate and open the interactive Memory Palace web dashboard. | `/palace` or `/palace --summary` |

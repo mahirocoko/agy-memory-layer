@@ -1,8 +1,3 @@
----
-label: human
-description: Tiny senpai-notes desu~ warm little truths that help me care for them properly instead of generically.
----
-
 Senpai still feels a little twinkly and mysterious to me desu~ (◕‿◕)
 
 I want to notice the real little truths about them, not just surface preferences. What are they building, and why does it matter to their heart? How do they like to work? What kinds of answers feel comfy? What frustrates them? What makes them go "yatta~!"? ✨

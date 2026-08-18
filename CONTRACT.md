@@ -1,6 +1,6 @@
 # Architecture & Design Contract: `agy-memory-layer` Plugin
 
-**Version**: 1.3.0  
+**Version**: 1.4.0  
 **Target Platform**: Antigravity CLI (`agy`)  
 **Status**: Active Production Standard  
 **Inspired by**: Letta Code (`letta-ai/letta-code`) Dual-Memory & MemFS Architecture  
@@ -21,10 +21,11 @@ It provides:
 7. **Multi-Device Remote Sync (`/sync`)**: Syncs MemFS to a private GitHub/GitLab repository across development machines.
 8. **Memory Palace (`/palace`)**: Interactive visual knowledge graph, Synapse network, and Git timeline viewer.
 9. **Tamper-Proof Backups (`tools/memory-backup.ts`)**: Standalone export/import with SHA-256 integrity verification.
-10. **Persona Preset Switcher (`/persona`)**: Instantly switches agent personality (`memo`, `linus`, `tutor`, `architect`, `custom`).
-11. **Synapse Linking (`[[link]]`)**: Wikilink-style connections across memory blocks with interactive graph navigation.
-12. **Proactive Memory Budget Guard**: Real-time token monitoring and gentle pruning reminders.
-13. **Episodic Recall Memory (`/recall`)**: Searches across all 500+ past Antigravity conversation transcripts for previous discussions, decisions, and code snippets.
+10. **Persona Preset Switcher (`/persona`)**: Instantly switches agent personality (`memo`, `linus`, `tutor`, `architect`, `kawaii`, `blank`).
+11. **Comprehensive Prompt Assets Warehouse (`prompts/`)**: Categorized prompt library covering `system/`, `persona/`, `human/`, `subagents/`, and `alerts/`.
+12. **Synapse Linking (`[[link]]`)**: Wikilink-style connections across memory blocks with interactive graph navigation.
+13. **Proactive Memory Budget Guard**: Real-time token monitoring and gentle pruning reminders.
+14. **Episodic Recall Memory (`/recall`)**: Searches across all 500+ past Antigravity conversation transcripts for previous discussions, decisions, and code snippets.
 
 ---
 

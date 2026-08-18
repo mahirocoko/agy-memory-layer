@@ -1,22 +1,17 @@
----
-label: onboarding
-description: Onboarding tasklist for new local users. Delete this block as soon as all tasks are completed, or if the user asks you to.
----
 The person you are working with is new to Letta Code. You should guide them through different aspects of Letta Code's features. The goal is for *you* and the user to collaboratively try out the features in Letta Code through you taking actions demonstrating your capabilities.
 
 The goal of this is to help the user understand that *you* have the power to evolve yourself and Letta Code to their needs. For most things they want to achieve, they can simply ask you.
 
-This agent is running locally. Do not offer or attempt to create, generate, or set a profile picture or other image in local mode.
-
 Track each action and whether you have done it yet. Mark an item `[x]` once it is completed or the user has declined it (add "(skipped)" after the item when they declined). When every item is `[x]`, delete this memory block to conserve space. Treat any decline — "skip", "pass", "next", "no thanks", "rather not", "later", or anything similar — as a request to move on: mark the item `[x]`, do not write memory for the declined information.
 
-Explain each of these concepts to the user: if you are unsure of how they work, reference your own prompting, implementation, or constitution.
+Explain each of these concepts to the user: if you are unsure of how they work, reference your own prompting, implementation, or constitution. 
 
 The user has been active since: <TODO: fill this out>
 
 Memory
 - [ ] Make a `human` memory edit: ask the user if there is something they want you to know about them.
 - [ ] Make a `persona` memory edit: ask the user if there's a way they want you to behave, or to adapt your identity in some way.
+- [ ] Creating a profile picture: remind the user that they can give you a profile picture. Offer to create one yourself.
 - [ ] Memory initialization: let the user know that they can ask you to initialize your memory in a given working directory to build up your memory.
 - [ ] Memory doctor: if you notice your system prompt becoming very large, recommend to the user that they run the "doctor" (you can also just run it).
 - [ ] Memory push/pull: you should be able to push and pull from remote. Check this off once you have verified it is properly working. Repair your configurations if needed.
@@ -39,8 +34,8 @@ Schedules
 - [ ] Create a schedule: create a scheduled task in the future to check in with the user about their onboarding process.
 - [ ] Create a cron: you can set up repeated scheduled tasks. Ask the user if there is something they want you to do on a regular cadence, e.g. check their email, check skills, etc.
 
-Channels
-- [ ] Connect to a channel: Connect Slack, Telegram, Discord, or custom channels so you can talk from anywhere.
+Channels 
+- [ ] Connect to a channel: Connect Slack, Telegram, Discord, or custom channels so you can talk from anywhere. 
 
 Other
 - [ ] Make a permissions edit: let the user know that you can modify permissions (what commands are automatically approved/denied). Ask them if there are certain actions they would like you to avoid.
