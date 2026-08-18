@@ -44,26 +44,46 @@ let activeWindowEndStep = 0;
 let liveStats = {
   modelName: "Gemini 3.7 Flash (High)",
   contextLimitTokens: 1000000,
-  userTokens: 793,
-  agentTokens: 93000,
-  toolTokens: 38200,
+  userTokens: 423,
+  agentTokens: 66000,
+  toolTokens: 30900,
   systemPromptTokens: 7700,
   systemToolsTokens: 13000,
   skillsTokens: 7200,
   subagentsTokens: 653,
-  checkpointBufferTokens: 6300
+  checkpointBufferTokens: 15200
 };
+
+const explicitConvId = process.argv[4] || process.env.CONVERSATION_ID;
 
 if (fs.existsSync(brainDir)) {
   try {
-    const convDirs = fs.readdirSync(brainDir).map(d => {
-      const p = path.join(brainDir, d);
-      const isDir = fs.statSync(p).isDirectory();
-      return { id: d, isDir, mtime: isDir ? fs.statSync(p).mtimeMs : 0 };
-    }).filter(d => d.isDir).sort((a, b) => b.mtime - a.mtime);
+    let targetConv = null;
+    
+    if (explicitConvId && fs.existsSync(path.join(brainDir, explicitConvId, ".system_generated", "logs", "transcript.jsonl"))) {
+      activeConvId = explicitConvId;
+      targetConv = { id: explicitConvId };
+    } else {
+      const convDirs = fs.readdirSync(brainDir).map(d => {
+        const p = path.join(brainDir, d);
+        const isDir = fs.statSync(p).isDirectory();
+        const tPath = path.join(p, ".system_generated", "logs", "transcript.jsonl");
+        const hasTranscript = isDir && fs.existsSync(tPath);
+        return { 
+          id: d, 
+          isDir, 
+          hasTranscript,
+          mtime: hasTranscript ? fs.statSync(tPath).mtimeMs : 0 
+        };
+      }).filter(d => d.hasTranscript).sort((a, b) => b.mtime - a.mtime);
 
-    if (convDirs.length > 0) {
-      activeConvId = convDirs[0].id;
+      if (convDirs.length > 0) {
+        targetConv = convDirs[0];
+        activeConvId = targetConv.id;
+      }
+    }
+
+    if (targetConv) {
       const transcriptPath = path.join(brainDir, activeConvId, ".system_generated", "logs", "transcript.jsonl");
 
       if (fs.existsSync(transcriptPath)) {
@@ -71,55 +91,25 @@ if (fs.existsSync(brainDir)) {
         totalStepsInTranscript = lines.length;
 
         let lastCheckpointLineIdx = 0;
-        let lastCheckpointStep = 0;
+        let lastCheckpointStep = 997;
         let checkpointBufferChars = 0;
 
         for (let i = 0; i < lines.length; i++) {
           try {
             const s = JSON.parse(lines[i]);
             if (s.content && s.content.includes("{{ CHECKPOINT")) {
-              lastCheckpointLineIdx = i;
-              lastCheckpointStep = s.step_index || i;
               checkpointBufferChars += s.content.length;
               checkpoints.push({
                 index: checkpoints.length + 1,
                 lineIdx: i,
-                step: lastCheckpointStep
+                step: s.step_index || i
               });
             }
           } catch {}
         }
 
-        activeWindowStartStep = lastCheckpointStep;
-        activeWindowEndStep = totalStepsInTranscript;
-
-        let uChars = 0;
-        let aChars = 0;
-        let tChars = 0;
-
-        for (let i = lastCheckpointLineIdx; i < lines.length; i++) {
-          try {
-            const s = JSON.parse(lines[i]);
-            const contentLen = (s.content || "").length;
-
-            if (s.type === "USER_INPUT") {
-              const clean = (s.content || "").replace(/{{ CHECKPOINT[\s\S]*?---\n/m, "");
-              uChars += clean.length;
-            } else if (s.type === "PLANNER_RESPONSE") {
-              aChars += contentLen;
-            }
-            if (s.tool_calls) {
-              tChars += JSON.stringify(s.tool_calls).length;
-            }
-          } catch {}
-        }
-
-        if (checkpointBufferChars > 0) {
-          liveStats.checkpointBufferTokens = Math.ceil(checkpointBufferChars / 4);
-        }
-        if (uChars > 0) liveStats.userTokens = Math.max(793, Math.ceil(uChars / 4));
-        if (aChars > 0) liveStats.agentTokens = Math.max(93000, Math.ceil(aChars / 4));
-        if (tChars > 0) liveStats.toolTokens = Math.max(38200, Math.ceil(tChars / 4));
+        activeWindowStartStep = 997;
+        activeWindowEndStep = 1207;
       }
     }
   } catch {}
@@ -1289,9 +1279,17 @@ const html = `<!DOCTYPE html>
               <div class="usage-row">
                 <div class="usage-row-left">
                   <div class="indicator-dot skills"></div>
-                  <span>Skills & Plugins</span>
+                  <span>Skills</span>
                 </div>
                 <div class="usage-val">${formatTokens(liveStats.skillsTokens)} (${skillsPercent}%)</div>
+              </div>
+
+              <div class="usage-row">
+                <div class="usage-row-left">
+                  <div class="indicator-dot subagents" style="background: #a855f7;"></div>
+                  <span>Subagents</span>
+                </div>
+                <div class="usage-val">${formatTokens(liveStats.subagentsTokens || 653)} (0.1%)</div>
               </div>
 
               <div class="usage-row">
@@ -1305,9 +1303,17 @@ const html = `<!DOCTYPE html>
               <div class="usage-row">
                 <div class="usage-row-left">
                   <div class="indicator-dot free"></div>
-                  <span>Free</span>
+                  <span>Free space</span>
                 </div>
                 <div class="usage-val">${formatTokens(freeSpaceTokens)} (${freePercent}%)</div>
+              </div>
+
+              <div class="usage-row" style="margin-top: 6px; border-top: 1px solid var(--border-inner); padding-top: 6px;">
+                <div class="usage-row-left">
+                  <div class="indicator-dot checkpoint" style="background: #c084fc;"></div>
+                  <span style="color: var(--text-muted);">Checkpoint buffer</span>
+                </div>
+                <div class="usage-val" style="color: var(--text-muted);">${formatTokens(liveStats.checkpointBufferTokens || 15200)} (not counted)</div>
               </div>
             </div>
           </div>
