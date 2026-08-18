@@ -24,6 +24,21 @@ const { scanPendingConversations, synthesizeConversationLearning, printStatus } 
   path.join(SCRIPTS_DIR, 'dream-daemon.ts')
 )
 const { listSubagents, getSubagent } = await import(path.join(SCRIPTS_DIR, 'agent-launcher.ts'))
+const {
+  createIsolatedWorktree,
+  getWorktreeDiff,
+  applyWorktreeChanges,
+  cleanupWorktree,
+  listActiveWorktrees,
+} = await import(path.join(SCRIPTS_DIR, 'worktree-manager.ts'))
+const {
+  getApprovalPolicy,
+  getApprovalModeForFile,
+  proposeMemoryUpdate,
+  listPendingProposals,
+  getPendingProposal,
+  reviewProposal,
+} = await import(path.join(SCRIPTS_DIR, 'memory-approval.ts'))
 
 describe('Unit Coverage Extensions', () => {
   it('tests init-project-memory with Rust, Go, Python, and Docker manifests', () => {
@@ -193,5 +208,87 @@ describe('Unit Coverage Extensions', () => {
 
     const nonExistent = getSubagent('non_existent_random_agent_xyz')
     assert.strictEqual(nonExistent, null)
+  })
+
+  it('tests worktree-manager isolation, diffing, patch apply, and cleanup', () => {
+    const testId = `test-wt-${Date.now().toString(36)}`
+    const wt = createIsolatedWorktree(ROOT_DIR, { subagentId: testId })
+
+    assert.strictEqual(fs.existsSync(wt.worktreePath), true)
+    assert.strictEqual(typeof wt.branchName, 'string')
+
+    // Modify a test file inside the isolated worktree
+    const tempFileInWt = path.join(wt.worktreePath, 'WORKTREE_TEST_TEMP.md')
+    fs.writeFileSync(
+      tempFileInWt,
+      '# Isolated Subagent Test File\nContent written inside worktree.',
+    )
+
+    // Verify diff in worktree
+    const diff = getWorktreeDiff(wt.worktreePath)
+    assert.strictEqual(diff.hasChanges, true)
+    assert.strictEqual(
+      diff.files.some((f) => f.includes('WORKTREE_TEST_TEMP.md')),
+      true,
+    )
+
+    // Check listActiveWorktrees
+    const activeList = listActiveWorktrees(ROOT_DIR)
+    assert.strictEqual(
+      activeList.some((p) => p.includes(testId)),
+      true,
+    )
+
+    // Clean up worktree
+    cleanupWorktree(wt, { deleteBranch: true })
+    assert.strictEqual(fs.existsSync(wt.worktreePath), false)
+  })
+
+  it('tests memory-approval dual-mode policy, proposals, and reviews', () => {
+    const policy = getApprovalPolicy()
+    assert.strictEqual(policy.defaultMode, 'auto')
+
+    // Mode check
+    const learningMode = getApprovalModeForFile('projects/test/learnings/2026-08-18_note.md')
+    const projectMode = getApprovalModeForFile('projects/test/project.md')
+    const rulesMode = getApprovalModeForFile('projects/test/rules.md')
+    const humanMode = getApprovalModeForFile('global/human.md')
+
+    assert.strictEqual(learningMode, 'auto')
+    assert.strictEqual(humanMode, 'auto')
+    assert.strictEqual(projectMode, 'explicit')
+    assert.strictEqual(rulesMode, 'explicit')
+
+    // Test explicit mode -> creates proposal
+    const propRes = proposeMemoryUpdate(
+      'projects/test-approval-slug/project.md',
+      '# Test Project Architecture\nNew Proposed Rules',
+      { reason: 'Refactored backend architecture' },
+    )
+    assert.strictEqual(propRes.status, 'PENDING_APPROVAL')
+    assert.strictEqual(typeof propRes.proposalId, 'string')
+
+    const pending = listPendingProposals()
+    assert.strictEqual(
+      pending.some((p) => p.id === propRes.proposalId),
+      true,
+    )
+
+    const fetched = getPendingProposal(propRes.proposalId!)
+    assert.strictEqual(fetched?.reason, 'Refactored backend architecture')
+
+    // Review approve
+    const reviewApprove = reviewProposal(propRes.proposalId!, 'approve')
+    assert.strictEqual(reviewApprove.decision, 'approve')
+    assert.strictEqual(reviewApprove.success, true)
+
+    // Clean up test file created by approval
+    const testFile = path.join(MEMORY_ROOT, 'projects', 'test-approval-slug', 'project.md')
+    if (fs.existsSync(testFile)) {
+      fs.rmSync(path.join(MEMORY_ROOT, 'projects', 'test-approval-slug'), {
+        recursive: true,
+        force: true,
+      })
+    }
   })
 })
