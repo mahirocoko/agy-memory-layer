@@ -1271,7 +1271,7 @@ const html = `<!DOCTYPE html>
     <div class="top-header">
       <div class="brand-left">
         <span>🧠 Antigravity MemFS</span>
-        <span class="brand-badge">agy-memory-layer v1.4.0</span>
+        <span class="brand-badge">agy-memory-layer v1.5.0</span>
         ${memfsGitStatus.state === 'dirty' 
           ? `<span class="brand-badge" style="background: rgba(245, 158, 11, 0.15); color: #fde047; border-color: rgba(245, 158, 11, 0.4);">🧠 MemFS: +${memfsGitStatus.dirtyCount} dirty</span>` 
           : `<span class="brand-badge" style="background: rgba(34, 197, 94, 0.15); color: #86efac; border-color: rgba(34, 197, 94, 0.4);">🧠 MemFS: Synced ✓</span>`}
