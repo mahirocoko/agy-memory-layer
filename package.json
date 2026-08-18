@@ -1,12 +1,12 @@
 {
   "name": "agy-memory-layer",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "type": "module",
   "description": "Stateful Git-backed MemFS, sleep-time reflection, codebase onboarding, and Memory Palace plugin for Antigravity CLI",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsc --noEmit && node --experimental-strip-types --test tests/run-test-suite.ts tests/unit-coverage.test.ts",
-    "test:coverage": "tsc --noEmit && node --experimental-strip-types --experimental-test-coverage --test tests/run-test-suite.ts tests/unit-coverage.test.ts",
+    "test": "tsc --noEmit && node --experimental-strip-types --test --test-concurrency=1 tests/run-test-suite.ts tests/unit-coverage.test.ts",
+    "test:coverage": "tsc --noEmit && node --experimental-strip-types --experimental-test-coverage --test --test-concurrency=1 tests/run-test-suite.ts tests/unit-coverage.test.ts",
     "check": "tsc --noEmit && biome check .",
     "lint": "biome lint .",
     "format": "biome format --write .",
@@ -26,6 +26,6 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.9",
     "@types/node": "26.2.0",
-    "typescript": "7.0.2"
+    "typescript": "5.8.2"
   }
 }

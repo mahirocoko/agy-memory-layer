@@ -25,11 +25,7 @@ export type TestResult = {
 
 const results: TestResult[] = []
 
-function runTest(
-  suite: string,
-  name: string,
-  testFn: () => string | void,
-): void {
+function runTest(suite: string, name: string, testFn: () => string | void): void {
   const startTime = Date.now()
   console.log(`▶ [${suite}] ${name}...`)
   try {
@@ -97,13 +93,7 @@ function setupSandbox() {
     '# Alpha Rules\nUse exact versions with -E.',
   )
   fs.writeFileSync(
-    path.join(
-      SANDBOX_DIR,
-      'projects',
-      'proj-alpha',
-      'learnings',
-      '2026-08-18_db.md',
-    ),
+    path.join(SANDBOX_DIR, 'projects', 'proj-alpha', 'learnings', '2026-08-18_db.md'),
     '# Learning: Database Migrations\nUse D1 execSync for batch migration.',
   )
 
@@ -143,9 +133,7 @@ runTest('Export', 'Generates valid JSON bundle with SHA-256 checksums', () => {
   )
 
   if (exportProc.status !== 0) {
-    throw new Error(
-      `Export command failed: ${exportProc.stderr || exportProc.stdout}`,
-    )
+    throw new Error(`Export command failed: ${exportProc.stderr || exportProc.stdout}`)
   }
 
   assert.ok(fs.existsSync(TEST_BUNDLE_PATH), 'Bundle file must exist')
@@ -153,21 +141,14 @@ runTest('Export', 'Generates valid JSON bundle with SHA-256 checksums', () => {
 
   assert.strictEqual(bundle.format, 'agy-memfs-bundle/v1')
   assert.strictEqual(bundle.manifest.fileCount, 6)
-  assert.ok(
-    bundle.payloadChecksum.length === 64,
-    'Payload checksum must be 64-char SHA256 hex',
-  )
+  assert.ok(bundle.payloadChecksum.length === 64, 'Payload checksum must be 64-char SHA256 hex')
 
   // Check file entries
-  const relPaths = bundle.manifest.files.map(
-    (f: { relativePath: string }) => f.relativePath,
-  )
+  const relPaths = bundle.manifest.files.map((f: { relativePath: string }) => f.relativePath)
   assert.ok(relPaths.includes('global/human.md'))
   assert.ok(relPaths.includes('global/persona.md'))
   assert.ok(relPaths.includes('projects/proj-alpha/project.md'))
-  assert.ok(
-    relPaths.includes('projects/proj-alpha/learnings/2026-08-18_db.md'),
-  )
+  assert.ok(relPaths.includes('projects/proj-alpha/learnings/2026-08-18_db.md'))
   assert.ok(relPaths.includes('projects/proj-beta/project.md'))
 
   return `Exported ${bundle.manifest.fileCount} files successfully.`
@@ -177,21 +158,12 @@ runTest('Export', 'Generates valid JSON bundle with SHA-256 checksums', () => {
 runTest('Verify', 'Validates untampered bundle successfully', () => {
   const verifyProc = spawnSync(
     'node',
-    [
-      '--experimental-strip-types',
-      BACKUP_TOOL_TS,
-      'verify',
-      '--input',
-      TEST_BUNDLE_PATH,
-      '--json',
-    ],
+    ['--experimental-strip-types', BACKUP_TOOL_TS, 'verify', '--input', TEST_BUNDLE_PATH, '--json'],
     { encoding: 'utf-8' },
   )
 
   if (verifyProc.status !== 0) {
-    throw new Error(
-      `Verify command failed: ${verifyProc.stderr || verifyProc.stdout}`,
-    )
+    throw new Error(`Verify command failed: ${verifyProc.stderr || verifyProc.stdout}`)
   }
 
   const result = JSON.parse(verifyProc.stdout)
@@ -204,27 +176,17 @@ runTest('Verify', 'Validates untampered bundle successfully', () => {
 runTest('Tamper Detection', 'Detects corrupted or modified payload', () => {
   const bundle = JSON.parse(fs.readFileSync(TEST_BUNDLE_PATH, 'utf-8'))
 
-  // Maliciously modify human.md payload without updating checksum
-  const humanFile = bundle.files.find(
+  const humanFile = bundle.manifest.files.find(
     (f: { relativePath: string }) => f.relativePath === 'global/human.md',
   )
-  humanFile.contentBase64 = Buffer.from(
-    '# HACKED PREFERENCES\nMalicious injected content!',
-  ).toString('base64')
+  humanFile.content = '# HACKED PREFERENCES\nMalicious injected content!'
 
   const tamperedPath = '/tmp/test-tampered-bundle.json'
   fs.writeFileSync(tamperedPath, JSON.stringify(bundle, null, 2), 'utf-8')
 
   const verifyProc = spawnSync(
     'node',
-    [
-      '--experimental-strip-types',
-      BACKUP_TOOL_TS,
-      'verify',
-      '--input',
-      tamperedPath,
-      '--json',
-    ],
+    ['--experimental-strip-types', BACKUP_TOOL_TS, 'verify', '--input', tamperedPath, '--json'],
     { encoding: 'utf-8' },
   )
 
@@ -232,59 +194,43 @@ runTest('Tamper Detection', 'Detects corrupted or modified payload', () => {
 
   // Must fail validation (non-zero status or valid: false in JSON)
   const result = JSON.parse(verifyProc.stdout || verifyProc.stderr)
-  assert.strictEqual(
-    result.valid,
-    false,
-    'Verification must report invalid for tampered bundle',
-  )
-  assert.ok(
-    result.errors.length > 0,
-    'Must list checksum mismatch errors',
-  )
+  assert.strictEqual(result.valid, false, 'Verification must report invalid for tampered bundle')
+  assert.ok(result.errors.length > 0, 'Must list checksum mismatch errors')
 
   return `Tamper detected: ${result.errors[0]}`
 })
 
 // 4. Import / Restore Dry-Run Test
-runTest(
-  'Import Dry-Run',
-  'Simulates restore without writing files to disk',
-  () => {
-    const importProc = spawnSync(
-      'node',
-      [
-        '--experimental-strip-types',
-        BACKUP_TOOL_TS,
-        'import',
-        '--input',
-        TEST_BUNDLE_PATH,
-        '--target-dir',
-        SANDBOX_DIR,
-        '--dry-run',
-        '--json',
-      ],
-      { encoding: 'utf-8' },
-    )
+runTest('Import Dry-Run', 'Simulates restore without writing files to disk', () => {
+  const importProc = spawnSync(
+    'node',
+    [
+      '--experimental-strip-types',
+      BACKUP_TOOL_TS,
+      'import',
+      '--input',
+      TEST_BUNDLE_PATH,
+      '--target-dir',
+      SANDBOX_DIR,
+      '--dry-run',
+      '--json',
+    ],
+    { encoding: 'utf-8' },
+  )
 
-    if (importProc.status !== 0) {
-      throw new Error(
-        `Import dry-run failed: ${importProc.stderr || importProc.stdout}`,
-      )
-    }
+  if (importProc.status !== 0) {
+    throw new Error(`Import dry-run failed: ${importProc.stderr || importProc.stdout}`)
+  }
 
-    const result = JSON.parse(importProc.stdout)
-    assert.strictEqual(result.dryRun, true)
-    assert.strictEqual(result.filesRestored, 6)
-    return `Simulated restore of ${result.filesRestored} files safely.`
-  },
-)
+  const result = JSON.parse(importProc.stdout)
+  assert.strictEqual(result.dryRun, true)
+  assert.strictEqual(result.restoredFiles.length, 6)
+  return `Simulated restore of ${result.restoredFiles.length} files safely.`
+})
 
 // 5. Full Restore to Empty Directory
 runTest('Import Real', 'Restores entire MemFS tree to empty target', () => {
-  const RESTORE_TARGET = path.join(
-    '/tmp',
-    'agy-memory-test-restore-destination',
-  )
+  const RESTORE_TARGET = path.join('/tmp', 'agy-memory-test-restore-destination')
   if (fs.existsSync(RESTORE_TARGET)) {
     fs.rmSync(RESTORE_TARGET, { recursive: true, force: true })
   }
@@ -305,16 +251,11 @@ runTest('Import Real', 'Restores entire MemFS tree to empty target', () => {
   )
 
   if (importProc.status !== 0) {
-    throw new Error(
-      `Import failed: ${importProc.stderr || importProc.stdout}`,
-    )
+    throw new Error(`Import failed: ${importProc.stderr || importProc.stdout}`)
   }
 
   // Verify all files exist in restore target with exact contents
-  const humanContent = fs.readFileSync(
-    path.join(RESTORE_TARGET, 'global', 'human.md'),
-    'utf-8',
-  )
+  const humanContent = fs.readFileSync(path.join(RESTORE_TARGET, 'global', 'human.md'), 'utf-8')
   assert.ok(humanContent.includes('Preferences: Fast, concise, Thai language.'))
 
   const alphaRuleContent = fs.readFileSync(
@@ -324,13 +265,7 @@ runTest('Import Real', 'Restores entire MemFS tree to empty target', () => {
   assert.ok(alphaRuleContent.includes('Use exact versions with -E.'))
 
   const learningContent = fs.readFileSync(
-    path.join(
-      RESTORE_TARGET,
-      'projects',
-      'proj-alpha',
-      'learnings',
-      '2026-08-18_db.md',
-    ),
+    path.join(RESTORE_TARGET, 'projects', 'proj-alpha', 'learnings', '2026-08-18_db.md'),
     'utf-8',
   )
   assert.ok(learningContent.includes('Use D1 execSync for batch migration.'))
@@ -365,29 +300,16 @@ runTest(
     )
 
     if (filterProc.status !== 0) {
-      throw new Error(
-        `Filtered export failed: ${filterProc.stderr || filterProc.stdout}`,
-      )
+      throw new Error(`Filtered export failed: ${filterProc.stderr || filterProc.stdout}`)
     }
 
     const bundle = JSON.parse(fs.readFileSync(filteredBundlePath, 'utf-8'))
     fs.unlinkSync(filteredBundlePath)
 
-    const paths = bundle.manifest.files.map(
-      (f: { relativePath: string }) => f.relativePath,
-    )
-    assert.ok(
-      paths.includes('global/human.md'),
-      'Global profile must be included',
-    )
-    assert.ok(
-      paths.includes('projects/proj-alpha/project.md'),
-      'proj-alpha must be included',
-    )
-    assert.ok(
-      !paths.includes('projects/proj-beta/project.md'),
-      'proj-beta must NOT be included',
-    )
+    const paths = bundle.manifest.files.map((f: { relativePath: string }) => f.relativePath)
+    assert.ok(paths.includes('global/human.md'), 'Global profile must be included')
+    assert.ok(paths.includes('projects/proj-alpha/project.md'), 'proj-alpha must be included')
+    assert.ok(!paths.includes('projects/proj-beta/project.md'), 'proj-beta must NOT be included')
 
     return `Filtered bundle contains ${bundle.manifest.fileCount} files (proj-alpha included, proj-beta excluded).`
   },
@@ -401,9 +323,7 @@ const passed = results.filter((r) => r.status === 'PASSED').length
 const failed = results.filter((r) => r.status === 'FAILED').length
 
 console.log('\n==================================================')
-console.log(
-  `📊 Result: ${passed}/${total} passed (${failed === 0 ? 'ALL PASSED' : 'FAILED'})`,
-)
+console.log(`📊 Result: ${passed}/${total} passed (${failed === 0 ? 'ALL PASSED' : 'FAILED'})`)
 console.log('==================================================')
 
 if (failed > 0) {

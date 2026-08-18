@@ -39,6 +39,7 @@ const {
   getPendingProposal,
   reviewProposal,
 } = await import(path.join(SCRIPTS_DIR, 'memory-approval.ts'))
+const { createTsInspector } = await import(path.join(SCRIPTS_DIR, 'ts-inspector.ts'))
 
 describe('Unit Coverage Extensions', () => {
   it('tests init-project-memory with Rust, Go, Python, and Docker manifests', () => {
@@ -290,5 +291,33 @@ describe('Unit Coverage Extensions', () => {
         force: true,
       })
     }
+  })
+
+  it('tests ts-inspector in-memory diagnostics, type resolution, and definition lookup', () => {
+    const inspector = createTsInspector(ROOT_DIR)
+
+    // 1. Diagnostics test
+    const diags = inspector.getDiagnostics('plugins/agy-memory-layer/scripts/worktree-manager.ts')
+    assert.strictEqual(Array.isArray(diags), true)
+    assert.strictEqual(diags.length, 0) // Should have zero errors
+
+    // 2. Type at position test
+    const typeInfo = inspector.getTypeAtPosition(
+      'plugins/agy-memory-layer/scripts/worktree-manager.ts',
+      42,
+      17,
+    )
+    assert.strictEqual(Boolean(typeInfo), true)
+    assert.strictEqual(typeInfo?.typeString.includes('getGitRoot'), true)
+
+    // 3. Definition lookup test
+    const defs = inspector.getDefinition(
+      'plugins/agy-memory-layer/scripts/worktree-manager.ts',
+      42,
+      17,
+    )
+    assert.strictEqual(Array.isArray(defs), true)
+    assert.strictEqual(defs.length > 0, true)
+    assert.strictEqual(defs[0].file.includes('worktree-manager.ts'), true)
   })
 })

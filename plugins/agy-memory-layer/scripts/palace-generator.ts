@@ -472,7 +472,9 @@ try {
           item.preview = item.isReflection
             ? `Reviewed transcript: ${transcriptFullPath}`
             : item.files && item.files.length > 0
-              ? item.files.map((f: string) => path.join(memoryRoot, f.trim().split(' ')[0])).join(', ')
+              ? item.files
+                  .map((f: string) => path.join(memoryRoot, f.trim().split(' ')[0]))
+                  .join(', ')
               : `${memoryRoot}/`
 
           return item
@@ -1394,7 +1396,7 @@ const html = `<!DOCTYPE html>
     <div class="top-header">
       <div class="brand-left">
         <span>🧠 Antigravity MemFS</span>
-        <span class="brand-badge">agy-memory-layer v1.7.0</span>
+        <span class="brand-badge">agy-memory-layer v1.8.0</span>
         ${
           memfsGitStatus.state === 'dirty'
             ? `<span class="brand-badge" style="background: rgba(245, 158, 11, 0.15); color: #fde047; border-color: rgba(245, 158, 11, 0.4);">🧠 MemFS: +${memfsGitStatus.dirtyCount} dirty</span>`

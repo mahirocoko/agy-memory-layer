@@ -565,7 +565,7 @@ export const runCli = (args: string[]): void => {
     if (command === 'export') {
       const defaultName = `memory-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`
       const outputPath = getArg(['--output', '-o']) || path.join(process.cwd(), defaultName)
-      const sourceDir = getArg(['--source', '-s'])
+      const sourceDir = getArg(['--source', '-s', '--memory-dir'])
       const projectFilter = getMultiArg(['--project', '-p'])
       const pretty = hasFlag(['--pretty']) || !hasFlag(['--compact'])
 
@@ -638,7 +638,7 @@ export const runCli = (args: string[]): void => {
         process.exit(1)
       }
 
-      const targetDir = getArg(['--target', '-t'])
+      const targetDir = getArg(['--target', '-t', '--target-dir'])
       const overwrite = !hasFlag(['--no-overwrite'])
       const cleanTarget = hasFlag(['--clean'])
       const dryRun = hasFlag(['--dry-run'])

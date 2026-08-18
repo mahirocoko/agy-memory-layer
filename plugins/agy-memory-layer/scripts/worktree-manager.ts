@@ -237,7 +237,9 @@ if (process.argv[1]?.endsWith('worktree-manager.ts')) {
     if (list.length === 0) {
       console.log('   No active isolated worktrees.')
     } else {
-      list.forEach((wt, i) => console.log(`   [${i + 1}] ${wt}`))
+      list.forEach((wt, i) => {
+        console.log(`   [${i + 1}] ${wt}`)
+      })
     }
     console.log('')
   } else if (cmd === 'diff') {

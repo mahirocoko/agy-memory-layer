@@ -40,17 +40,18 @@ async function runTest(
       error: null,
     })
     console.log(`  ✔ PASSED (${duration}ms)`)
-  } catch (err: any) {
+  } catch (err: unknown) {
     const duration = Date.now() - startTime
+    const errMsg = err instanceof Error ? err.message : String(err)
     results.push({
       suite,
       name,
       status: 'FAILED',
       duration,
       detail: null,
-      error: err?.message || String(err),
+      error: errMsg,
     })
-    console.error(`  ✖ FAILED (${duration}ms): ${err?.message}`)
+    console.error(`  ✖ FAILED (${duration}ms): ${errMsg}`)
   }
 }
 
