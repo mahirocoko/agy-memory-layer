@@ -1,0 +1,6 @@
+# Agent & Temporary State
+.agent-state/
+node_modules/
+.DS_Store
+*.log
+/tmp/

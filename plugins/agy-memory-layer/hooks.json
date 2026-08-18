@@ -1,0 +1,20 @@
+{
+  "memfs-injector": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "./scripts/hook-inject-memory.sh",
+        "timeout": 5
+      }
+    ]
+  },
+  "memfs-auto-commit": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "./scripts/hook-auto-commit.sh",
+        "timeout": 10
+      }
+    ]
+  }
+}
