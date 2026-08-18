@@ -37,7 +37,7 @@ Clone this repository and run the installation script:
 
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/agy-memory-layer.git
+git clone https://github.com/mahirocoko/agy-memory-layer.git
 cd agy-memory-layer
 
 # Run one-command installer

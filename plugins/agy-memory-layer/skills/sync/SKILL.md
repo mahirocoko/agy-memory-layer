@@ -9,7 +9,7 @@ Sync your MemFS Git repository (`~/.gemini/memory/`) with a remote private Git r
 /sync
 
 # 2. Setup remote private repository URL
-/sync setup git@github.com:your-username/my-gemini-memory.git
+/sync setup git@github.com:mahirocoko/my-gemini-memory.git
 
 # 3. Pull latest memories from remote
 /sync pull
