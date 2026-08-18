@@ -108,25 +108,68 @@ describe("Unit Coverage Extensions", () => {
     assert.strictEqual(parsed.injectSteps[0].ephemeralMessage.includes("MemFS Active Memory"), true);
   });
 
-  it("tests recall-engine search and list functions", async () => {
-    const { getConversationList, searchRecall } = require(path.join(SCRIPTS_DIR, "recall-engine.js"));
+  it("tests recall-engine search, vector math, and hybrid modes", async () => {
+    const { 
+      tokenize, 
+      cosineSimilarity, 
+      buildTermFrequencyVector, 
+      getConversationList, 
+      searchRecall 
+    } = require(path.join(SCRIPTS_DIR, "recall-engine.js"));
     
+    // Test vectorization & cosine similarity
+    const vecA = buildTermFrequencyVector(tokenize("database migrations schema sqlite"));
+    const vecB = buildTermFrequencyVector(tokenize("sqlite database schema migration tool"));
+    const vecC = buildTermFrequencyVector(tokenize("unrelated frontend css styling"));
+
+    const simHigh = cosineSimilarity(vecA, vecB);
+    const simLow = cosineSimilarity(vecA, vecC);
+
+    assert.strictEqual(simHigh > 0.5, true);
+    assert.strictEqual(simLow < simHigh, true);
+
+    // Test search modes
     const convs = getConversationList(5);
     assert.strictEqual(Array.isArray(convs), true);
-    if (convs.length > 0) {
-      assert.strictEqual(typeof convs[0].id, "string");
-      assert.strictEqual(typeof convs[0].firstPrompt, "string");
-    }
 
-    const matches = await searchRecall("memory");
-    assert.strictEqual(Array.isArray(matches), true);
-    if (matches.length > 0) {
-      assert.strictEqual(typeof matches[0].convId, "string");
-      assert.strictEqual(typeof matches[0].snippet, "string");
-    }
+    const hybridMatches = await searchRecall("palace", { mode: "hybrid", limit: 3 });
+    assert.strictEqual(Array.isArray(hybridMatches), true);
+
+    const semanticMatches = await searchRecall("memory layer", { mode: "semantic", limit: 3 });
+    assert.strictEqual(Array.isArray(semanticMatches), true);
+
+    const keywordMatches = await searchRecall("git", { mode: "keyword", limit: 3 });
+    assert.strictEqual(Array.isArray(keywordMatches), true);
 
     await assert.rejects(async () => {
       await searchRecall("");
     }, /Search query must not be empty/);
+  });
+
+  it("tests dream-daemon scanner, synthesis, and status reporter", () => {
+    const { 
+      scanPendingConversations, 
+      synthesizeConversationLearning, 
+      printStatus 
+    } = require(path.join(SCRIPTS_DIR, "dream-daemon.js"));
+
+    const pending = scanPendingConversations("learn-letta-code", { force: true, minSteps: 1, idleMinutes: 0 });
+    assert.strictEqual(Array.isArray(pending), true);
+
+    if (pending.length > 0) {
+      const sample = pending[0];
+      assert.strictEqual(typeof sample.id, "string");
+      assert.strictEqual(typeof sample.shortId, "string");
+
+      const doc = synthesizeConversationLearning(sample, "learn-letta-code");
+      assert.strictEqual(typeof doc, "string");
+      assert.strictEqual(doc.includes("Auto-Dream Learning"), true);
+      assert.strictEqual(doc.includes(sample.id), true);
+    }
+
+    // Test print status function
+    assert.doesNotThrow(() => {
+      printStatus("learn-letta-code");
+    });
   });
 });

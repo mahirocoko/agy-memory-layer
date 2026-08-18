@@ -69,10 +69,10 @@ Once installed, the following commands are available directly inside Antigravity
 | **`/init`** | **Day 1 Onboarding**: Scans codebase architecture, entry points, linters, and scripts to seed `project.md` and `rules.md` immediately. | `/init` or `/init --force` |
 | **`/memory`** | Inspect active memory blocks and recent Git snapshot history. | `/memory` |
 | **`/memory search`** | Fast ranked search across historical `learnings/` logs, project rules, and global memory. | `/memory search docker` |
-| **`/recall`** | Search and retrieve past discussions, decisions, and code snippets across all 500+ past conversation sessions. | `/recall palace token` or `/recall list` |
+| **`/recall`** | Hybrid Semantic Search across all 500+ past conversation sessions (Keywords + Vector Cosine Similarity). | `/recall palace token` or `/recall search "setup" --semantic` |
 | **`/remember`** | Record a preference, style guideline, or project rule into MemFS. | `/remember Always use exact flag (-E) when installing packages` |
 | **`/persona`** | Switch or inspect the active personality preset (`memo`, `linus`, `tutor`, `kawaii`, `architect`, `blank`). | `/persona linus` or `/persona list` |
-| **`/dream`** | Launch a sleep-time reflection subagent to condense session learnings and resolve contradictions. | `/dream` or `/reflect` |
+| **`/dream`** | Sleep-time reflection subagent and background daemon (`dream-daemon.js`) to synthesize session learnings. | `/dream` or `node scripts/dream-daemon.js --run-now` |
 | **`/doctor`** | Check memory health and detect rule contradictions with codebase. | `/doctor` |
 | **`/palace`** | Generate and open the interactive Memory Palace web dashboard. | `/palace` or `/palace --summary` |
 | **`/sync`** | Sync MemFS with a remote private Git repository across multiple development machines. | `/sync setup <repo-url>` or `/sync push` |

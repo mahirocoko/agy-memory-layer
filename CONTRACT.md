@@ -1,6 +1,6 @@
 # Architecture & Design Contract: `agy-memory-layer` Plugin
 
-**Version**: 1.4.0  
+**Version**: 1.5.0  
 **Target Platform**: Antigravity CLI (`agy`)  
 **Status**: Active Production Standard  
 **Inspired by**: Letta Code (`letta-ai/letta-code`) Dual-Memory & MemFS Architecture  
@@ -17,15 +17,16 @@ It provides:
 3. **Lifecycle Hooks** for sub-15ms memory ingestion (`PreInvocation`) and sub-30ms automated Git snapshots (`Stop`).
 4. **Codebase Onboarding & Initializer (`/init`)**: Automatically scans a newly opened project (package manifests, entry points, linters, test runner, scripts, existing documentation) and seeds `project.md` and `rules.md` on Day 1.
 5. **Sleep-Time Dreaming / Reflection (`/dream`)**: Uses background subagents that read session transcripts (`transcript.jsonl`) to consolidate learnings, resolve contradictions, and prune outdated data.
-6. **Historical Learnings Search (`/memory search <query>`)**: Enables quick retrieval of past architectural decisions and bug fixes across all historical session logs.
-7. **Multi-Device Remote Sync (`/sync`)**: Syncs MemFS to a private GitHub/GitLab repository across development machines.
-8. **Memory Palace (`/palace`)**: Interactive visual knowledge graph, Synapse network, and Git timeline viewer.
-9. **Tamper-Proof Backups (`tools/memory-backup.ts`)**: Standalone export/import with SHA-256 integrity verification.
-10. **Persona Preset Switcher (`/persona`)**: Instantly switches agent personality (`memo`, `linus`, `tutor`, `architect`, `kawaii`, `blank`).
-11. **Comprehensive Prompt Assets Warehouse (`prompts/`)**: Categorized prompt library covering `system/`, `persona/`, `human/`, `subagents/`, and `alerts/`.
-12. **Synapse Linking (`[[link]]`)**: Wikilink-style connections across memory blocks with interactive graph navigation.
-13. **Proactive Memory Budget Guard**: Real-time token monitoring and gentle pruning reminders.
-14. **Episodic Recall Memory (`/recall`)**: Searches across all 500+ past Antigravity conversation transcripts for previous discussions, decisions, and code snippets.
+6. **Auto-Dream Background Daemon (`dream-daemon.js`)**: Automatically discovers unconsolidated sessions across `brain/` and synthesizes durable learning logs into MemFS without manual intervention.
+7. **Historical Learnings Search (`/memory search <query>`)**: Enables quick retrieval of past architectural decisions and bug fixes across all historical session logs.
+8. **Multi-Device Remote Sync (`/sync`)**: Syncs MemFS to a private GitHub/GitLab repository across development machines.
+9. **Memory Palace (`/palace`)**: Interactive visual knowledge graph, Synapse network, and Git timeline viewer with anti-cache headers.
+10. **Tamper-Proof Backups (`tools/memory-backup.ts`)**: Standalone export/import with SHA-256 integrity verification.
+11. **Persona Preset Switcher (`/persona`)**: Instantly switches agent personality (`memo`, `linus`, `tutor`, `architect`, `kawaii`, `blank`).
+12. **Comprehensive Prompt Assets Warehouse (`prompts/`)**: Categorized prompt library covering `system/`, `persona/`, `human/`, `subagents/`, and `alerts/`.
+13. **Hybrid Semantic Recall Engine (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across 500+ past Antigravity conversation transcripts with cosine similarity scoring.
+14. **Synapse Linking (`[[link]]`)**: Wikilink-style connections across memory blocks with interactive graph navigation.
+15. **Proactive Memory Budget Guard**: Real-time token monitoring and gentle pruning reminders.
 
 ---
 

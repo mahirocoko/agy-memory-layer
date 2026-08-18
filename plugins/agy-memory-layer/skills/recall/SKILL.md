@@ -8,12 +8,14 @@ description: Search and recall messages, decisions, code snippets, and topics di
 Search and retrieve past discussions, user instructions, bug fixes, and architectural decisions across all historical Antigravity conversation transcripts.
 
 ## Usage
-- `/recall <topic/query>` — Search for past conversations discussing a specific topic or keyword.
+- `/recall <query>` — Default Hybrid search (combines exact keywords + vector semantic similarity).
+- `/recall search "<query>" --semantic` — Pure Vector Semantic similarity (finds concepts and synonyms).
+- `/recall search "<query>" --keyword` — Exact keyword matching.
 - `/recall list` — View a list of recent conversation sessions and their starting prompts.
 
 ## Examples
 - `/recall palace token calculation`
-- `/recall docker configuration`
+- `/recall search "database migration setup" --semantic`
 - `/recall list`
 
 ## Execution

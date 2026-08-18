@@ -45,5 +45,22 @@ YOUR MISSION:
    git -C ~/.gemini/memory add -A && git -C ~/.gemini/memory commit -m "dream: reflection snapshot [YYYY-MM-DD HH:MM]"
 ```
 
+---
+
+## 🌙 Auto-Dream Background Daemon (`dream-daemon.js`)
+
+For automated, non-interactive sleep-time reflection across historical and idle conversations:
+
+```bash
+# Check status of pending undreamed sessions
+node plugins/agy-memory-layer/scripts/dream-daemon.js --status
+
+# Process and synthesize all pending sessions immediately
+node plugins/agy-memory-layer/scripts/dream-daemon.js --run-now
+
+# Install background cron job (runs every 2 hours)
+node plugins/agy-memory-layer/scripts/dream-daemon.js --install-cron
+```
+
 ### Step 3: Present Dream Summary
 Once the subagent completes, output a concise 3-5 bullet point summary of what was learned and updated.
