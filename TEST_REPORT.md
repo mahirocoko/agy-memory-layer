@@ -1,6 +1,6 @@
 # 🧪 Comprehensive Test & Verification Report: `agy-memory-layer`
 
-**Date**: 2026-08-18 08:58:21 UTC  
+**Date**: 2026-08-18 09:07:54 UTC  
 **Environment**: macOS (Darwin) · Antigravity CLI 1.1.14 · Node v22.22.3  
 **Storage Target**: `~/.gemini/memory/` (Git-backed MemFS)  
 **Overall Result**: 🔴 **SOME TESTS FAILED**
@@ -12,9 +12,9 @@
 | Metric | Result |
 | :--- | :--- |
 | **Total Test Scenarios** | **11** |
-| **Passed** | **9** (82%) |
-| **Failed** | **2** |
-| **Total Execution Time** | **2428 ms** |
+| **Passed** | **10** (91%) |
+| **Failed** | **1** |
+| **Total Execution Time** | **2622 ms** |
 
 ---
 
@@ -22,17 +22,17 @@
 
 | Test Suite | Scenario | Status | Time | Verification Evidence |
 | :--- | :--- | :---: | :---: | :--- |
-| **Hooks Contract** | PreInvocation Hook outputs valid AGY JSON schema | 🟢 PASSED | 78ms | Valid JSON schema with 1 injected steps. Execution speed: fast. |
-| **Hooks Contract** | Stop Hook triggers automated Git commit on memory mutation | 🔴 FAILED | 46ms | Git memory repository was not committed by Stop hook |
-| **Workspace Isolation** | Separates Project A and Project B while preserving Global User profile | 🟢 PASSED | 158ms | Project A and Project B contexts are strictly isolated; Global profile is shared 100%. |
-| **Memory Palace** | Palace generator builds interactive HTML with all live projects & git timeline | 🔴 FAILED | 1528ms | Palace HTML is missing key dashboard headers |
-| **Git Versioning** | Memory changes can be audited with git log and rolled back cleanly | 🟢 PASSED | 100ms | Successfully proved Git revert and rollback capability. Base hash: adc5894 |
-| **AGY Plugin Schema** | Plugin passes 'agy plugin validate' with zero errors | 🟢 PASSED | 49ms | Native AGY plugin validation: 7 skills, 2 hooks processed with 0 errors. |
+| **Hooks Contract** | PreInvocation Hook outputs valid AGY JSON schema | 🟢 PASSED | 71ms | Valid JSON schema with 1 injected steps. Execution speed: fast. |
+| **Hooks Contract** | Stop Hook triggers automated Git commit on memory mutation | 🟢 PASSED | 76ms | Verified automatic git add & commit on memory modifications. |
+| **Workspace Isolation** | Separates Project A and Project B while preserving Global User profile | 🟢 PASSED | 149ms | Project A and Project B contexts are strictly isolated; Global profile is shared 100%. |
+| **Memory Palace** | Palace generator builds interactive HTML with all live projects & git timeline | 🔴 FAILED | 1547ms | Palace HTML is missing key dashboard headers |
+| **Git Versioning** | Memory changes can be audited with git log and rolled back cleanly | 🟢 PASSED | 101ms | Successfully proved Git revert and rollback capability. Base hash: 24d8447 |
+| **AGY Plugin Schema** | Plugin passes 'agy plugin validate' with zero errors | 🟢 PASSED | 196ms | Native AGY plugin validation: 7 skills, 2 hooks processed with 0 errors. |
 | **Autonomous Directives** | rules/AGENTS.md adheres to Letta-style proactive autonomous learning | 🟢 PASSED | 0ms | All 7 core autonomous directives verified in rules/AGENTS.md. |
-| **Codebase Scanner (/init)** | Scans repository architecture and seeds project.md on Day 1 | 🟢 PASSED | 64ms | Scanner accurately detected React, Vite, TypeScript, Vitest, and seeded Day 1 MemFS blocks. |
-| **Memory Search Engine** | Searches across global, project, and historical learnings with ranked snippets | 🟢 PASSED | 2ms | Search engine returned 2 ranked matches with line snippets in < 10ms. |
-| **Remote Git Sync** | Manages remote URL setup and sync status cleanly | 🟢 PASSED | 36ms | Remote setup and sync status verified. |
-| **Backup & Integrity** | Exports, verifies SHA-256 signatures, detects tampering, and restores bundle byte-for-byte | 🟢 PASSED | 367ms | All 5 backup unit tests passed (SHA-256 integrity, tamper detection, byte-for-byte restore, zero interfaces). |
+| **Codebase Scanner (/init)** | Scans repository architecture and seeds project.md on Day 1 | 🟢 PASSED | 69ms | Scanner accurately detected React, Vite, TypeScript, Vitest, and seeded Day 1 MemFS blocks. |
+| **Memory Search Engine** | Searches across global, project, and historical learnings with ranked snippets | 🟢 PASSED | 1ms | Search engine returned 2 ranked matches with line snippets in < 10ms. |
+| **Remote Git Sync** | Manages remote URL setup and sync status cleanly | 🟢 PASSED | 40ms | Remote setup and sync status verified. |
+| **Backup & Integrity** | Exports, verifies SHA-256 signatures, detects tampering, and restores bundle byte-for-byte | 🟢 PASSED | 372ms | All 5 backup unit tests passed (SHA-256 integrity, tamper detection, byte-for-byte restore, zero interfaces). |
 
 ---
 

@@ -13,9 +13,11 @@
 │   └── plugins/agy-memory-layer/
 │       ├── plugin.json
 │       ├── hooks.json
+│       ├── agents/                  [First-Class Subagent Manifests (6 Subagents)]
+│       ├── prompts/                 [Prompt Warehouse (system, persona, subagents)]
 │       ├── rules/AGENTS.md
 │       ├── skills/*/SKILL.md
-│       └── scripts/*.sh
+│       └── scripts/*.js / *.sh
 │
 ├── 2. Antigravity Plugins Directory (ระดับ Global)
 │   └── ~/.gemini/antigravity-cli/plugins/

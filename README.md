@@ -11,7 +11,31 @@
 
 ![agy-memory-layer Architecture & Lifecycle Flow](./assets/architecture-flow.jpg)
 
-`agy-memory-layer` is an installable, self-contained **Antigravity CLI Plugin** that transforms Antigravity into a stateful pair programmer. It maintains long-term memory across sessions using Git version control, automatically injects relevant context into active chats, runs sleep-time reflection over interaction transcripts, and provides an interactive visual **Memory Palace** dashboard.
+---
+
+## 🤖 Full 6-Subagent Suite (Complete Letta Code Parity)
+
+`agy-memory-layer` ships with 6 declarative First-Class Subagents designed for Antigravity CLI:
+
+![First-Class Subagents Suite](./assets/subagents-architecture.jpg)
+
+| Subagent (`agents/*.json`) | Role / Responsibility | Model Tier | Tools Allowed | System Prompt |
+| :--- | :--- | :---: | :---: | :--- |
+| **`dream_agent`** | **Dream Reflection Subagent**: Analyzes transcripts, captures user rules (The Annoyance Rule), and updates MemFS. | `inherit` | `Write` (MemFS) | `prompts/subagents/dream_subagent.md` |
+| **`recall_agent`** | **Episodic Recall Specialist**: Searches past 500+ transcripts via Hybrid Cosine Similarity. | `flash` | `Read-only` | `prompts/subagents/recall_subagent.md` |
+| **`onboarding_agent`** | **Codebase Onboarding Specialist**: Explores repos on Day 1 to seed `project.md` and `rules.md`. | `flash` | `Write` (MemFS) | `prompts/subagents/onboarding.md` |
+| **`memory_agent`** | **MemFS Memory Specialist**: Proactively updates and organizes core memory blocks. | `inherit` | `Write` (MemFS) | `prompts/subagents/remember.md` |
+| **`history_analyzer_agent`** | **Deep History Analyzer**: Investigates multi-step debugging traces across local transcripts. | `flash` | `Read-only` | `prompts/subagents/recall_subagent_local.md` |
+| **`skill_creator_agent`** | **Skill Creator Specialist**: Authors, tests, and validates new Antigravity skills. | `pro` | `Write` | `prompts/subagents/skill_creator.md` |
+
+---
+
+## 🧠 Hybrid Semantic Recall & Auto-Dream Lifecycle
+
+![Hybrid Semantic Recall & Sleep-Time Reflection Lifecycle](./assets/semantic-recall-lifecycle.jpg)
+
+- **Vector Semantic Search**: Subword n-gram vector embeddings + BM25 keyword matching with cosine similarity scoring.
+- **Autonomous Sleep-Time Reflection**: Background daemon (`dream-daemon.js`) discovers undreamed sessions across `brain/` and distills permanent learnings automatically.
 
 ---
 
@@ -22,8 +46,9 @@
 - ⚡ **Zero-Friction Lifecycle Hooks**:
   - `PreInvocation`: Ingests active memory blocks into the prompt context via `ephemeralMessage`.
   - `Stop`: Auto-commits memory snapshots to Git after every turn with zero manual effort.
-- 🌙 **Sleep-Time Dreaming (`/dream`)**: Spawns a background subagent to analyze `transcript.jsonl`, distill user corrections, prune stale knowledge, and update memory blocks.
-- 🏛️ **Memory Palace (`/palace`)**: Opens an interactive visual dashboard in your browser to inspect memory graphs and Git commit timelines.
+- 🧠 **Hybrid Semantic Recall (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across 500+ past Antigravity conversation transcripts.
+- 🌙 **Sleep-Time Dreaming (`/dream` & `dream-daemon.js`)**: Spawns background subagents or background cron daemon to distill learnings into MemFS.
+- 🏛️ **Memory Palace (`/palace`)**: Interactive visual dashboard in your browser to inspect memory graphs, synapses, and Git commit timelines with anti-cache headers.
 - 🩺 **Memory Health Auditor (`/doctor`)**: Audits memory consistency and flags drift between memory rules and actual codebase state.
 - 🔌 **Standard Plugin Lifecycle**: Installs via symlink, toggleable with `agy plugin enable/disable`, and cleanly uninstallable.
 
