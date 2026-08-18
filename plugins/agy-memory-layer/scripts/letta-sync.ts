@@ -447,6 +447,35 @@ export function syncLettaMemory(
             }
           }
         }
+
+        // Sync project rules from Letta projects
+        if (options.syncProjects !== false && payload.projectRules.length > 0) {
+          for (const pRule of payload.projectRules) {
+            const memfsProjectDir = path.join(memoryRoot, 'projects', pRule.projectSlug)
+            const dstRulesPath = path.join(memfsProjectDir, 'rules.md')
+            const existingRules = fs.existsSync(dstRulesPath)
+              ? fs.readFileSync(dstRulesPath, 'utf-8')
+              : ''
+
+            const mergedRules = mergeMarkdownDocs(
+              existingRules,
+              pRule.content,
+              `Imported from Letta Project (${pRule.projectSlug})`,
+            )
+
+            if (mergedRules !== existingRules) {
+              importedRulesCount++
+              syncedProjectsCount++
+              details.push(
+                `Synced project rules for [${pRule.projectSlug}] from ${pRule.sourceFile}`,
+              )
+              if (!isDryRun) {
+                fs.mkdirSync(memfsProjectDir, { recursive: true })
+                fs.writeFileSync(dstRulesPath, mergedRules, 'utf-8')
+              }
+            }
+          }
+        }
       } else {
         // Project-scoped sync
         const targetProjDir = path.join(memoryRoot, 'projects', projectSlug)

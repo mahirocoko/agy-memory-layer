@@ -1,3 +1,8 @@
+---
+name: memory
+description: Inspect active memory blocks, Git snapshot commit history, or search across historical learnings in MemFS.
+---
+
 # /memory - MemFS Status, Inspection & Search
 
 Inspect active memory blocks, Git snapshot commit history, or search across historical learnings.
@@ -25,11 +30,9 @@ Inspect active memory blocks, Git snapshot commit history, or search across hist
 ## Direct Script Execution
 
 ```bash
-SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../../scripts"
+# Inspection
+node plugins/agy-memory-layer/scripts/memory-search.ts --status
 
-# Search memory
-node "$SCRIPT_DIR/memory-search.js" "<query>"
-
-# Search memory with project filter
-node "$SCRIPT_DIR/memory-search.js" "<query>" --project "<slug>"
+# Search
+node plugins/agy-memory-layer/scripts/memory-search.ts "query"
 ```

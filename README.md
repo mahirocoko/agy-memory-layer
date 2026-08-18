@@ -1,7 +1,7 @@
 # 🧠 agy-memory-layer
 
-[![Coverage](https://img.shields.io/badge/Coverage-85.5%25-brightgreen.svg)](./TEST_REPORT.md)
-[![Tests](https://img.shields.io/badge/Tests-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
+[![Coverage](https://img.shields.io/badge/Coverage-92.4%25-brightgreen.svg)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/Tests-16%2F16%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -106,6 +106,7 @@ Once installed, the following commands are available directly inside Antigravity
 | **`/dream`** | Sleep-time reflection subagent and background daemon (`dream-daemon.js`) to synthesize session learnings. | `/dream` or `node scripts/dream-daemon.js --run-now` |
 | **`/doctor`** | Check memory health and detect rule contradictions with codebase. | `/doctor` |
 | **`/palace`** | Generate and open the interactive Memory Palace web dashboard. | `/palace` or `/palace --summary` |
+| **`/sync-letta`** | 4-step Agentic Cognitive Grooming to sync core memory from Letta Code (`~/.letta`). | `/sync-letta` |
 | **`/sync`** | Sync MemFS with a remote private Git repository across multiple development machines. | `/sync setup <repo-url>` or `/sync push` |
 | **`/update`** | Update plugin to latest version while safely preserving all stored MemFS memory. | `/update` |
 

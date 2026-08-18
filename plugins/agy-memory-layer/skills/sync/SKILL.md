@@ -1,3 +1,8 @@
+---
+name: sync
+description: Sync your MemFS Git repository (~/.gemini/memory/) with a remote private Git repository across development machines.
+---
+
 # /sync - Remote Git Synchronization
 
 Sync your MemFS Git repository (`~/.gemini/memory/`) with a remote private Git repository (GitHub / GitLab) across development machines.
@@ -23,7 +28,4 @@ Sync your MemFS Git repository (`~/.gemini/memory/`) with a remote private Git r
 
 ## How It Works
 - MemFS is an independent Git repository at `~/.gemini/memory/`.
-- Connecting a remote private repository enables cross-machine continuity:
-  - Work on your laptop &rarr; push snapshots.
-  - Switch to your desktop / dev server &rarr; pull snapshots.
-- Memory remains completely private to your Git account.
+- `/sync` manages git remotes, branch tracking, and safe rebasing to allow multi-device pair programming continuity.

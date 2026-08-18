@@ -1,3 +1,8 @@
+---
+name: init
+description: Onboard a newly opened codebase into MemFS by automatically scanning repository architecture, package manifests, entry points, linters, scripts, and documentation, then seeding project.md and rules.md on Day 1.
+---
+
 # /init - Codebase Memory Initializer & Day 1 Onboarding
 
 Onboard a newly opened codebase into MemFS by automatically scanning repository architecture, package manifests, entry points, linters, scripts, and documentation, then seeding `project.md` and `rules.md` on Day 1.
@@ -12,7 +17,7 @@ Onboard a newly opened codebase into MemFS by automatically scanning repository 
 ```bash
 WORKSPACE_DIR="$(pwd)"
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../../scripts"
-node "$SCRIPT_DIR/init-project-memory.js" "$WORKSPACE_DIR"
+node "$SCRIPT_DIR/init-project-memory.ts" "$WORKSPACE_DIR"
 ```
 
 ## Options
@@ -23,5 +28,4 @@ node "$SCRIPT_DIR/init-project-memory.js" "$WORKSPACE_DIR"
 1. Detects languages, package managers, and framework ecosystems (`Node`, `Rust`, `Go`, `Python`, `Cloudflare Workers`, `Docker`, etc.).
 2. Analyzes entry points (`src/index.ts`, `app/page.tsx`, `main.go`, `src/main.rs`, etc.).
 3. Extracts test runners (`vitest`, `jest`, `pytest`, `cargo test`) and linters (`eslint`, `oxlint`, `biome`).
-4. Writes initial high-signal `project.md` and `rules.md` to `~/.gemini/memory/projects/<slug>/`.
-5. Automatically commits a snapshot to Git MemFS.
+4. Generates initial `project.md` and `rules.md` inside `~/.gemini/memory/projects/<slug>/`.

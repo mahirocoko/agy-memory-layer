@@ -503,6 +503,9 @@ describe('Unit Coverage Extensions', () => {
     // 2. Mock Letta sandbox sync test
     const tempLetta = '/tmp/test-letta-sync-root'
     const tempMemfs = '/tmp/test-letta-sync-memfs'
+    fs.rmSync(tempLetta, { recursive: true, force: true })
+    fs.rmSync(tempMemfs, { recursive: true, force: true })
+
     const agentDir = path.join(tempLetta, 'agents', 'agent-test-1234', 'memory')
 
     fs.mkdirSync(path.join(agentDir, 'system'), { recursive: true })

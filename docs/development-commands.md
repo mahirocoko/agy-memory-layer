@@ -92,3 +92,39 @@ node plugins/agy-memory-layer/scripts/switch-persona.js linus
 # Switch to Memo (Default Letta Code) preset
 node plugins/agy-memory-layer/scripts/switch-persona.js memo
 ```
+
+---
+
+## 🤖 Letta Memory Sync & Cognitive Grooming Engine
+
+Synchronizes core memory blocks from Letta Code (`~/.letta`) into Antigravity MemFS.
+
+```bash
+# List all stateful agents (excluding subagent manifests)
+node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts list
+
+# Extract raw payload for LLM cognitive grooming
+node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts payload --agent-id <agent-id>
+
+# Run dry-run sync simulation
+node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts status --dry-run
+```
+
+---
+
+## ⚡ Advanced Engine Subsystems
+
+```bash
+# 1. In-Memory TypeScript Language Inspector (<50ms AST diagnostics)
+node --experimental-strip-types plugins/agy-memory-layer/scripts/ts-inspector.ts check
+
+# 2. Memory Auto-Compactor & Lossless Token Pruner
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-compactor.ts compact
+
+# 3. Autonomous Skill Synthesizer & Auto-Promotion Engine
+node --experimental-strip-types plugins/agy-memory-layer/scripts/skill-synthesizer.ts scan
+
+# 4. Cross-Project Knowledge Synapse Matching
+node --experimental-strip-types plugins/agy-memory-layer/scripts/cross-project-synapse.ts "docker setup"
+```
+
