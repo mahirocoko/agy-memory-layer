@@ -47,8 +47,10 @@ plugins/agy-memory-layer/
 │   │   └── SKILL.md             # /doctor: Memory integrity & drift audit
 │   ├── palace/
 │   │   └── SKILL.md             # /palace: Visual Memory Palace dashboard & timeline viewer
-│   └── sync/
-│       └── SKILL.md             # /sync: Remote Git synchronization with private repos
+│   ├── sync/
+│   │   └── SKILL.md             # /sync: Remote Git synchronization with private repos
+│   └── update/
+│       └── SKILL.md             # /update: Update plugin to latest version preserving MemFS
 └── scripts/
     ├── hook-inject-memory.sh    # PreInvocation: Reads memory & outputs ephemeralMessage
     ├── hook-auto-commit.sh      # Stop: Performs git add & commit on memory repository
@@ -57,6 +59,7 @@ plugins/agy-memory-layer/
     ├── sync-memory.sh           # Remote Git sync manager (push/pull/status)
     ├── palace-generator.js      # Memory Palace HTML generator
     ├── palace-server.sh         # Generates/opens interactive local Memory Palace HTML viewer
+    ├── update.sh                # Automated in-place plugin updater
     ├── install.sh               # Bootstraps memory git repo & installs plugin
     └── uninstall.sh             # Safely disables and removes the plugin
 ```
@@ -107,6 +110,7 @@ All memory is decoupled from individual workspace trees and maintained as an ind
 | **`doctor`** | `/doctor` or `/memory-doctor` | Runs an audit against the active codebase to detect if memory rules or architecture assumptions have drifted from codebase reality. |
 | **`palace`** | `/palace` or `/palace --summary` | Visual Memory Palace viewer: Generates an interactive visual map of all memory nodes, file connections, commit history timeline, and diffs (standalone HTML viewer or Mermaid Artifact). |
 | **`sync`** | `/sync` or `/sync setup <url>` | Syncs MemFS with a remote private Git repository (GitHub/GitLab) across multiple machines with automatic push/pull. |
+| **`update`** | `/update` | Automated in-place plugin updater: Pulls latest release, preserves all stored MemFS data, and updates hooks/skills. |
 
 ---
 
@@ -136,10 +140,25 @@ The scanner inspects the active workspace heuristics:
 - [x] **Milestone 1**: Scaffolding & Manifest (`plugin.json`, `rules/AGENTS.md`)
 - [x] **Milestone 2**: Ingestion & Persistence Hooks (`hook-inject-memory.sh`, `hook-auto-commit.sh`, `hooks.json`)
 - [x] **Milestone 3**: Core Skills Suite (`/memory`, `/remember`, `/dream`, `/doctor`, `/palace`)
-- [x] **Milestone 4**: Palace Visualizer UI (`palace-server.sh` & `palace-generator.js` HTML dashboard)
+- [x] **Milestone 4**: Palace Visualizer UI (`palace-server.sh` & `palace-generator.js` HTML dashboard with 1200px centered card, Git Diff bar, and real disk paths)
 - [x] **Milestone 5**: Tamper-Proof Backup & Restore Utility (`tools/memory-backup.ts` with SHA-256 verification)
-- [x] **Milestone 6**: End-to-End Test Suite (8/8 Automated Suites passing in < 1s)
-- [ ] **Milestone 7**: Codebase Scanner & Day 1 Onboarding (`/init` Skill & `scripts/init-project-memory.js`)
-- [ ] **Milestone 8**: Historical Memory Search Engine (`/memory search` & `scripts/memory-search.js`)
-- [ ] **Milestone 9**: Remote Git Synchronization (`/sync` & `scripts/sync-memory.sh`)
-- [ ] **Milestone 10**: Validation, Live CLI Verification & GitHub Release
+- [x] **Milestone 6**: End-to-End Test Suite (11/11 Automated Suites passing in < 2.5s)
+- [x] **Milestone 7**: Codebase Scanner & Day 1 Onboarding (`/init` Skill & `scripts/init-project-memory.js`)
+- [x] **Milestone 8**: Historical Memory Search Engine (`/memory search` & `scripts/memory-search.js`)
+- [x] **Milestone 9**: Remote Git Synchronization (`/sync` & `scripts/sync-memory.sh`)
+- [x] **Milestone 10**: Universal One-Liner Installer (`curl | bash`), `/update` Subsystem & v1.1.0 GitHub Release
+
+---
+
+## 6. Official Release & Distribution Contract
+
+- **Release Tag**: `v1.1.0`
+- **GitHub Repository**: `https://github.com/mahirocoko/agy-memory-layer`
+- **Zero-Clone Quickstart**:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/mahirocoko/agy-memory-layer/main/install.sh | bash
+  ```
+- **In-Chat Auto-Update**:
+  ```text
+  /update
+  ```
