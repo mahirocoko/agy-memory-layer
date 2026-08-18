@@ -47,6 +47,9 @@ const {
   compactProjectMemory,
   runAutoCompaction,
 } = await import(path.join(SCRIPTS_DIR, 'memory-compactor.ts'))
+const { scanAndSynthesizeSkills, generateDraftSkill, scanMemfsLearnings } = await import(
+  path.join(SCRIPTS_DIR, 'skill-synthesizer.ts')
+)
 
 describe('Unit Coverage Extensions', () => {
   it('tests init-project-memory with Rust, Go, Python, and Docker manifests', () => {
@@ -368,6 +371,73 @@ describe('Unit Coverage Extensions', () => {
     const autoRes = runAutoCompaction(tempMemfs, { dryRun: true })
     assert.strictEqual(typeof autoRes.timestamp, 'string')
     assert.strictEqual(Array.isArray(autoRes.projects), true)
+
+    // Clean up
+    fs.rmSync(tempMemfs, { recursive: true, force: true })
+  })
+
+  it('tests skill-synthesizer clustering, draft generation, and scanMemfsLearnings', () => {
+    // 1. Test draft skill markdown generator
+    const sampleCluster = [
+      {
+        filePath: '/tmp/learnings/1.md',
+        fileName: '1.md',
+        projectSlug: 'proj-a',
+        title: 'Fix SQLite WAL Lock',
+        content: 'Fix sqlite lock by setting busy_timeout to 5000',
+        vector: {},
+      },
+      {
+        filePath: '/tmp/learnings/2.md',
+        fileName: '2.md',
+        projectSlug: 'proj-b',
+        title: 'Fix SQLite WAL Lock Contention',
+        content: 'Fix sqlite lock by setting busy_timeout to 5000',
+        vector: {},
+      },
+      {
+        filePath: '/tmp/learnings/3.md',
+        fileName: '3.md',
+        projectSlug: 'proj-c',
+        title: 'Prevent SQLite Database Locked Errors',
+        content: 'Fix sqlite lock by setting busy_timeout to 5000',
+        vector: {},
+      },
+    ]
+
+    const draft = generateDraftSkill(
+      'sqlite-lock-recovery',
+      'Fix SQLite Database Lock',
+      sampleCluster,
+    )
+    assert.strictEqual(draft.includes('name: sqlite-lock-recovery'), true)
+    assert.strictEqual(draft.includes('Fix SQLite Database Lock'), true)
+    assert.strictEqual(draft.includes('Synthesized by `agy-memory-layer` Skill Synthesizer'), true)
+
+    // 2. Test sandbox scan & synthesis
+    const tempMemfs = '/tmp/test-synthesizer-memfs'
+    const tempProjDir = path.join(tempMemfs, 'projects', 'test-app', 'learnings')
+    fs.mkdirSync(tempProjDir, { recursive: true })
+
+    // Write 3 similar learnings to trigger clustering threshold (minOccurrences = 3)
+    fs.writeFileSync(
+      path.join(tempProjDir, '2026-08-18_d1_setup_1.md'),
+      '# Cloudflare D1 Setup\nStep 1: wrangler d1 create\nStep 2: bind in wrangler.jsonc\nStep 3: execute migrations\n',
+    )
+    fs.writeFileSync(
+      path.join(tempProjDir, '2026-08-18_d1_setup_2.md'),
+      '# Cloudflare D1 Setup Guide\nStep 1: wrangler d1 create\nStep 2: bind in wrangler.jsonc\nStep 3: execute migrations\n',
+    )
+    fs.writeFileSync(
+      path.join(tempProjDir, '2026-08-18_d1_setup_3.md'),
+      '# Cloudflare D1 Database Configuration\nStep 1: wrangler d1 create\nStep 2: bind in wrangler.jsonc\nStep 3: execute migrations\n',
+    )
+
+    const scanRes = scanAndSynthesizeSkills({ minOccurrences: 3, minSimilarity: 0.6 }, tempMemfs)
+
+    assert.strictEqual(scanRes.totalLearningsScanned, 3)
+    assert.strictEqual(scanRes.candidates.length >= 1, true)
+    assert.strictEqual(scanRes.candidates[0].occurrenceCount, 3)
 
     // Clean up
     fs.rmSync(tempMemfs, { recursive: true, force: true })
