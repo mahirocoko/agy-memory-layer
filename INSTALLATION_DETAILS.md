@@ -32,6 +32,21 @@
                 ├── project.md
                 ├── rules.md
                 └── learnings/
+---
+
+## ⚡ วิธีการติดตั้ง (Installation Methods)
+
+### 1. แบบ One-Liner (คำสั่งเดียว ไม่ต้อง Clone - แนะนำ)
+รันคำสั่งนี้ใน Terminal เครื่องใดก็ได้:
+```bash
+curl -fsSL https://raw.githubusercontent.com/mahirocoko/agy-memory-layer/main/install.sh | bash
+```
+
+### 2. แบบ Clone Source Code
+```bash
+git clone https://github.com/mahirocoko/agy-memory-layer.git
+cd agy-memory-layer
+./install.sh
 ```
 
 ---

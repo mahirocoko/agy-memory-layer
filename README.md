@@ -31,17 +31,22 @@
 
 ## 🚀 Quick Start
 
-### 1. Installation
+### 1. One-Line Installation (No Clone Needed)
 
-Clone this repository and run the installation script:
+Install directly to your machine with a single terminal command:
 
 ```bash
-# Clone the repository
+curl -fsSL https://raw.githubusercontent.com/mahirocoko/agy-memory-layer/main/install.sh | bash
+```
+
+### 2. Manual Installation from Source
+
+If you prefer to clone and develop locally:
+
+```bash
 git clone https://github.com/mahirocoko/agy-memory-layer.git
 cd agy-memory-layer
-
-# Run one-command installer
-./plugins/agy-memory-layer/scripts/install.sh
+./install.sh
 ```
 
 The installer will:
