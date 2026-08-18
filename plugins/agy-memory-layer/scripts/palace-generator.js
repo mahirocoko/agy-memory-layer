@@ -320,12 +320,15 @@ try {
           item.add = add;
           item.del = del;
 
+          const transcriptFullPath = path.join(brainDir, activeConvId, ".system_generated", "logs", "transcript.jsonl");
           const lowerMsg = (item.msg || "").toLowerCase();
           item.isReflection = lowerMsg.includes("dream") || lowerMsg.includes("reflection");
           item.author = item.isReflection ? "Reflection Subagent" : "Antigravity Agent";
           item.preview = item.isReflection 
-            ? `Reviewed transcript: ~/.gemini/antigravity-cli/brain/${activeConvId}/...`
-            : (item.files && item.files.length > 0 ? item.files.join(", ") : "MemFS Snapshot");
+            ? `Reviewed transcript: ${transcriptFullPath}`
+            : (item.files && item.files.length > 0 
+                ? item.files.map(f => path.join(memoryRoot, f.trim().split(" ")[0])).join(", ") 
+                : `${memoryRoot}/`);
 
           return item;
         } catch { return null; }
@@ -1472,8 +1475,8 @@ const html = `<!DOCTYPE html>
                 <div class="commit-full-body">${escapeHtml(c.msg)}</div>
                 ${c.files && c.files.length > 0 ? `
                   <div class="commit-stats">
-                    <div style="font-weight:600; color:var(--text-white); margin-bottom:6px;">Changed files:</div>
-                    ${c.files.map(f => `<div class="stat-row">↳ ${escapeHtml(f)}</div>`).join('')}
+                    <div style="font-weight:600; color:var(--text-white); margin-bottom:6px;">Changed files in MemFS (<span style="color:#a78bfa;">${memoryRoot}</span>):</div>
+                    ${c.files.map(f => `<div class="stat-row">↳ <span style="color:#a78bfa;">${memoryRoot}/</span>${escapeHtml(f)}</div>`).join('')}
                   </div>
                 ` : ''}
                 ${c.diff ? `
