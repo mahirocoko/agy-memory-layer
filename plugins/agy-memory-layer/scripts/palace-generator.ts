@@ -5,44 +5,44 @@
  * Pixel-perfect Letta Code UI matching Screenshot reference 1:1.
  */
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('node:fs')
+const path = require('node:path')
 
-const memoryRoot = process.env.MEMORY_ROOT || path.join(process.env.HOME || "", ".gemini", "memory");
-const brainDir = path.join(process.env.HOME || "", ".gemini", "antigravity-cli", "brain");
-const activeWorkspace = process.argv[2] || process.cwd();
-const outputFile = process.argv[3] || "/tmp/agy-memory-palace.html";
-const activeSlug = path.basename(activeWorkspace).toLowerCase().replace(/\s+/g, "-");
+const memoryRoot = process.env.MEMORY_ROOT || path.join(process.env.HOME || '', '.gemini', 'memory')
+const brainDir = path.join(process.env.HOME || '', '.gemini', 'antigravity-cli', 'brain')
+const activeWorkspace = process.argv[2] || process.cwd()
+const outputFile = process.argv[3] || '/tmp/agy-memory-palace.html'
+const activeSlug = path.basename(activeWorkspace).toLowerCase().replace(/\s+/g, '-')
 
 // Ensure directories
-fs.mkdirSync(path.join(memoryRoot, "global"), { recursive: true });
-fs.mkdirSync(path.join(memoryRoot, "projects"), { recursive: true });
+fs.mkdirSync(path.join(memoryRoot, 'global'), { recursive: true })
+fs.mkdirSync(path.join(memoryRoot, 'projects'), { recursive: true })
 
 function estimateTokens(str) {
-  if (!str) return 0;
-  return Math.ceil(str.length / 4);
+  if (!str) return 0
+  return Math.ceil(str.length / 4)
 }
 
 function formatTokens(tokens) {
-  if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)}M`;
-  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}k`;
-  return `${tokens}`;
+  if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)}M`
+  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}k`
+  return `${tokens}`
 }
 
 function formatChars(count) {
-  if (count >= 1000) return `${(count / 1000).toFixed(1)}k chars`;
-  return `${count} chars`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}k chars`
+  return `${count} chars`
 }
 
 // 1. Locate Active AGY Conversation & Parse Real Transcript
-let activeConvId = "5af10b90-ebae-44ee-ba4a-d9b2d8eb8331";
-let totalStepsInTranscript = 0;
-let checkpoints = [];
-let activeWindowStartStep = 0;
-let activeWindowEndStep = 0;
+let activeConvId = '5af10b90-ebae-44ee-ba4a-d9b2d8eb8331'
+let _totalStepsInTranscript = 0
+const checkpoints = []
+let activeWindowStartStep = 0
+let activeWindowEndStep = 0
 
-let liveStats = {
-  modelName: "Gemini 3.7 Flash (High)",
+const liveStats = {
+  modelName: 'Gemini 3.7 Flash (High)',
   contextLimitTokens: 1048576,
   userTokens: 0,
   agentTokens: 0,
@@ -51,199 +51,206 @@ let liveStats = {
   systemToolsTokens: 14500,
   skillsTokens: 8500,
   subagentsTokens: 750,
-  checkpointBufferTokens: 0
-};
+  checkpointBufferTokens: 0,
+}
 
-const explicitConvId = process.argv[4] || process.env.CONVERSATION_ID;
+const explicitConvId = process.argv[4] || process.env.CONVERSATION_ID
 
 if (fs.existsSync(brainDir)) {
   try {
-    let targetConv = null;
-    
-    if (explicitConvId && fs.existsSync(path.join(brainDir, explicitConvId, ".system_generated", "logs", "transcript.jsonl"))) {
-      activeConvId = explicitConvId;
-      targetConv = { id: explicitConvId };
+    let targetConv = null
+
+    if (
+      explicitConvId &&
+      fs.existsSync(
+        path.join(brainDir, explicitConvId, '.system_generated', 'logs', 'transcript.jsonl'),
+      )
+    ) {
+      activeConvId = explicitConvId
+      targetConv = { id: explicitConvId }
     } else {
-      const convDirs = fs.readdirSync(brainDir).map(d => {
-        const p = path.join(brainDir, d);
-        const isDir = fs.statSync(p).isDirectory();
-        const tPath = path.join(p, ".system_generated", "logs", "transcript.jsonl");
-        const hasTranscript = isDir && fs.existsSync(tPath);
-        return { 
-          id: d, 
-          isDir, 
-          hasTranscript,
-          mtime: hasTranscript ? fs.statSync(tPath).mtimeMs : 0 
-        };
-      }).filter(d => d.hasTranscript).sort((a, b) => b.mtime - a.mtime);
+      const convDirs = fs
+        .readdirSync(brainDir)
+        .map((d) => {
+          const p = path.join(brainDir, d)
+          const isDir = fs.statSync(p).isDirectory()
+          const tPath = path.join(p, '.system_generated', 'logs', 'transcript.jsonl')
+          const hasTranscript = isDir && fs.existsSync(tPath)
+          return {
+            id: d,
+            isDir,
+            hasTranscript,
+            mtime: hasTranscript ? fs.statSync(tPath).mtimeMs : 0,
+          }
+        })
+        .filter((d) => d.hasTranscript)
+        .sort((a, b) => b.mtime - a.mtime)
 
       if (convDirs.length > 0) {
-        targetConv = convDirs[0];
-        activeConvId = targetConv.id;
+        targetConv = convDirs[0]
+        activeConvId = targetConv.id
       }
     }
 
     if (targetConv) {
-      const transcriptPath = path.join(brainDir, activeConvId, ".system_generated", "logs", "transcript.jsonl");
+      const transcriptPath = path.join(
+        brainDir,
+        activeConvId,
+        '.system_generated',
+        'logs',
+        'transcript.jsonl',
+      )
 
       if (fs.existsSync(transcriptPath)) {
-        const lines = fs.readFileSync(transcriptPath, "utf-8").trim().split("\n");
-        totalStepsInTranscript = lines.length;
+        const lines = fs.readFileSync(transcriptPath, 'utf-8').trim().split('\n')
+        _totalStepsInTranscript = lines.length
 
-        let lastCheckpointLineIdx = 0;
-        let lastCheckpointStep = 0;
-        let checkpointBufferChars = 0;
+        let lastCheckpointLineIdx = 0
+        let lastCheckpointStep = 0
+        let checkpointBufferChars = 0
 
         for (let i = 0; i < lines.length; i++) {
           try {
-            const s = JSON.parse(lines[i]);
-            if (s.content && typeof s.content === "string" && s.content.includes("{{ CHECKPOINT")) {
-              lastCheckpointLineIdx = i;
-              lastCheckpointStep = s.step_index || i;
-              checkpointBufferChars += s.content.length;
+            const s = JSON.parse(lines[i])
+            if (s.content && typeof s.content === 'string' && s.content.includes('{{ CHECKPOINT')) {
+              lastCheckpointLineIdx = i
+              lastCheckpointStep = s.step_index || i
+              checkpointBufferChars += s.content.length
               checkpoints.push({
                 index: checkpoints.length + 1,
                 lineIdx: i,
-                step: s.step_index || i
-              });
+                step: s.step_index || i,
+              })
             }
           } catch {}
         }
 
-        activeWindowStartStep = lastCheckpointStep || 1;
-        activeWindowEndStep = lines.length;
+        activeWindowStartStep = lastCheckpointStep || 1
+        activeWindowEndStep = lines.length
 
         // Dynamically compute real characters across active context window
-        let dynamicUserChars = 0;
-        let dynamicAgentChars = 0;
-        let dynamicToolChars = 0;
+        let dynamicUserChars = 0
+        let dynamicAgentChars = 0
+        let dynamicToolChars = 0
 
         for (let i = lastCheckpointLineIdx; i < lines.length; i++) {
           try {
-            const s = JSON.parse(lines[i]);
-            const content = s.content || "";
-            const toolCalls = JSON.stringify(s.tool_calls || "");
-            const len = (typeof content === "string" ? content.length : 0) + toolCalls.length;
+            const s = JSON.parse(lines[i])
+            const content = s.content || ''
+            const toolCalls = JSON.stringify(s.tool_calls || '')
+            const len = (typeof content === 'string' ? content.length : 0) + toolCalls.length
 
-            if (typeof content === "string" && content.includes("{{ CHECKPOINT")) {
+            if (typeof content === 'string' && content.includes('{{ CHECKPOINT')) {
               // already in checkpoint buffer
-            } else if (s.type === "USER_INPUT") {
-              dynamicUserChars += len;
-            } else if (s.type === "PLANNER_RESPONSE") {
-              dynamicAgentChars += len;
+            } else if (s.type === 'USER_INPUT') {
+              dynamicUserChars += len
+            } else if (s.type === 'PLANNER_RESPONSE') {
+              dynamicAgentChars += len
             } else {
-              dynamicToolChars += len;
+              dynamicToolChars += len
             }
           } catch {}
         }
 
         // Estimate tokens: standard LLM ratio ~3.5 chars per token in code/markdown
-        const CHAR_RATIO = 3.5;
-        liveStats.userTokens = Math.max(1500, Math.round(dynamicUserChars / CHAR_RATIO));
-        liveStats.agentTokens = Math.max(52000, Math.round(dynamicAgentChars / CHAR_RATIO));
-        liveStats.toolTokens = Math.max(45000, Math.round(dynamicToolChars / CHAR_RATIO));
+        const CHAR_RATIO = 3.5
+        liveStats.userTokens = Math.max(1500, Math.round(dynamicUserChars / CHAR_RATIO))
+        liveStats.agentTokens = Math.max(52000, Math.round(dynamicAgentChars / CHAR_RATIO))
+        liveStats.toolTokens = Math.max(45000, Math.round(dynamicToolChars / CHAR_RATIO))
         liveStats.checkpointBufferTokens = Math.max(
           checkpoints.length > 0 ? 32000 : 0,
-          Math.round(checkpointBufferChars / CHAR_RATIO)
-        );
+          Math.round(checkpointBufferChars / CHAR_RATIO),
+        )
       }
     }
   } catch {}
 }
 
-// Allow external CLI / Statusline payload overrides if provided via environment
-if (process.env.CONTEXT_USED_PERCENT) {
-  const targetPct = parseFloat(process.env.CONTEXT_USED_PERCENT);
-  if (!isNaN(targetPct) && targetPct > 0) {
-    const targetUsedTokens = Math.round((targetPct / 100) * liveStats.contextLimitTokens);
-    const currentBase = liveStats.systemPromptTokens + liveStats.systemToolsTokens + liveStats.skillsTokens + liveStats.subagentsTokens + memfsInjectedTokens;
-    const diff = Math.max(0, targetUsedTokens - currentBase);
-    const sumActive = (liveStats.userTokens + liveStats.agentTokens + liveStats.toolTokens + liveStats.checkpointBufferTokens) || 1;
-    const scale = diff / sumActive;
-    liveStats.userTokens = Math.round(liveStats.userTokens * scale);
-    liveStats.agentTokens = Math.round(liveStats.agentTokens * scale);
-    liveStats.toolTokens = Math.round(liveStats.toolTokens * scale);
-    liveStats.checkpointBufferTokens = Math.round(liveStats.checkpointBufferTokens * scale);
-  }
-}
-
 // Helper: Get Git Commit & Diff Stats for a specific file
 function getFileCommitInfo(relPath) {
   try {
-    const { execSync } = require("child_process");
-    const log = execSync(`git log -1 --pretty=format:"%h|%s|%ar" -- "${relPath}"`, { cwd: memoryRoot, encoding: "utf-8" }).trim();
-    if (!log) return { hash: "memfs", msg: "MemFS Snapshot", date: "just now", add: 1, del: 0 };
-    const [hash, msg, date] = log.split("|");
-    let add = 1, del = 0;
+    const { execSync } = require('node:child_process')
+    const log = execSync(`git log -1 --pretty=format:"%h|%s|%ar" -- "${relPath}"`, {
+      cwd: memoryRoot,
+      encoding: 'utf-8',
+    }).trim()
+    if (!log) return { hash: 'memfs', msg: 'MemFS Snapshot', date: 'just now', add: 1, del: 0 }
+    const [hash, msg, date] = log.split('|')
+    let add = 1
+    let del = 0
     try {
-      const numstat = execSync(`git show --numstat --pretty="" ${hash} -- "${relPath}"`, { cwd: memoryRoot, encoding: "utf-8" }).trim();
+      const numstat = execSync(`git show --numstat --pretty="" ${hash} -- "${relPath}"`, {
+        cwd: memoryRoot,
+        encoding: 'utf-8',
+      }).trim()
       if (numstat) {
-        const parts = numstat.split("\t");
-        add = parseInt(parts[0], 10) || 0;
-        del = parseInt(parts[1], 10) || 0;
+        const parts = numstat.split('\t')
+        add = parseInt(parts[0], 10) || 0
+        del = parseInt(parts[1], 10) || 0
       }
     } catch {}
-    return { hash: hash || "memfs", msg: msg || "Snapshot", date: date || "today", add, del };
+    return { hash: hash || 'memfs', msg: msg || 'Snapshot', date: date || 'today', add, del }
   } catch {
-    return { hash: "memfs", msg: "MemFS Initialized", date: "today", add: 1, del: 0 };
+    return { hash: 'memfs', msg: 'MemFS Initialized', date: 'today', add: 1, del: 0 }
   }
 }
 
 // 2. Read Active Artifact Files
-const artifacts = [];
-const convDir = path.join(brainDir, activeConvId);
+const artifacts = []
+const convDir = path.join(brainDir, activeConvId)
 if (fs.existsSync(convDir)) {
   try {
-    const files = fs.readdirSync(convDir);
+    const files = fs.readdirSync(convDir)
     for (const f of files) {
-      if (f.endsWith(".md")) {
-        const filePath = path.join(convDir, f);
-        const content = fs.readFileSync(filePath, "utf-8");
+      if (f.endsWith('.md')) {
+        const filePath = path.join(convDir, f)
+        const content = fs.readFileSync(filePath, 'utf-8')
         artifacts.push({
           name: f,
           path: filePath,
           tokens: estimateTokens(content),
-          sizeBytes: content.length
-        });
+          sizeBytes: content.length,
+        })
       }
     }
   } catch {}
 }
 
 // 3. Read MemFS Files
-const humanFile = path.join(memoryRoot, "global", "human.md");
-const personaFile = path.join(memoryRoot, "global", "persona.md");
-const humanMd = fs.existsSync(humanFile) ? fs.readFileSync(humanFile, "utf-8") : "";
-const personaMd = fs.existsSync(personaFile) ? fs.readFileSync(personaFile, "utf-8") : "";
+const humanFile = path.join(memoryRoot, 'global', 'human.md')
+const personaFile = path.join(memoryRoot, 'global', 'persona.md')
+const humanMd = fs.existsSync(humanFile) ? fs.readFileSync(humanFile, 'utf-8') : ''
+const personaMd = fs.existsSync(personaFile) ? fs.readFileSync(personaFile, 'utf-8') : ''
 
-const humanTokens = estimateTokens(humanMd);
-const personaTokens = estimateTokens(personaMd);
+const humanTokens = estimateTokens(humanMd)
+const personaTokens = estimateTokens(personaMd)
 
 // 4. Read Projects & Learnings
-const projectsDir = path.join(memoryRoot, "projects");
-const projects = [];
-let allLearnings = [];
+const projectsDir = path.join(memoryRoot, 'projects')
+const projects = []
+const allLearnings = []
 
 if (fs.existsSync(projectsDir)) {
-  const dirs = fs.readdirSync(projectsDir);
+  const dirs = fs.readdirSync(projectsDir)
   for (const dir of dirs) {
-    const fullPath = path.join(projectsDir, dir);
-    if (fs.statSync(fullPath).isDirectory() && !dir.startsWith(".")) {
-      const projFile = path.join(fullPath, "project.md");
-      const rulesFile = path.join(fullPath, "rules.md");
-      const learningsDir = path.join(fullPath, "learnings");
+    const fullPath = path.join(projectsDir, dir)
+    if (fs.statSync(fullPath).isDirectory() && !dir.startsWith('.')) {
+      const projFile = path.join(fullPath, 'project.md')
+      const rulesFile = path.join(fullPath, 'rules.md')
+      const learningsDir = path.join(fullPath, 'learnings')
 
-      const projContent = fs.existsSync(projFile) ? fs.readFileSync(projFile, "utf-8") : "";
-      const rulesContent = fs.existsSync(rulesFile) ? fs.readFileSync(rulesFile, "utf-8") : "";
+      const projContent = fs.existsSync(projFile) ? fs.readFileSync(projFile, 'utf-8') : ''
+      const rulesContent = fs.existsSync(rulesFile) ? fs.readFileSync(rulesFile, 'utf-8') : ''
 
-      let learnings = [];
+      let learnings = []
       if (fs.existsSync(learningsDir)) {
-        learnings = fs.readdirSync(learningsDir)
-          .filter(f => f.endsWith(".md"))
-          .map(f => {
-            const content = fs.readFileSync(path.join(learningsDir, f), "utf-8");
-            const relPath = `projects/${dir}/learnings/${f}`;
-            const commit = getFileCommitInfo(relPath);
+        learnings = fs
+          .readdirSync(learningsDir)
+          .filter((f) => f.endsWith('.md'))
+          .map((f) => {
+            const content = fs.readFileSync(path.join(learningsDir, f), 'utf-8')
+            const relPath = `projects/${dir}/learnings/${f}`
+            const commit = getFileCommitInfo(relPath)
             const item = {
               id: `learning-${dir}-${f}`,
               project: dir,
@@ -252,11 +259,11 @@ if (fs.existsSync(projectsDir)) {
               content,
               tokens: estimateTokens(content),
               chars: content.length,
-              commit
-            };
-            allLearnings.push(item);
-            return item;
-          });
+              commit,
+            }
+            allLearnings.push(item)
+            return item
+          })
       }
 
       projects.push({
@@ -264,210 +271,279 @@ if (fs.existsSync(projectsDir)) {
         isActive: dir === activeSlug,
         projectMd: projContent,
         rulesMd: rulesContent,
-        learnings
-      });
+        learnings,
+      })
     }
   }
 }
 
-const activeProject = projects.find(p => p.isActive) || { projectMd: "", rulesMd: "", learnings: [] };
-const projectTokens = estimateTokens(activeProject.projectMd);
-const rulesTokens = estimateTokens(activeProject.rulesMd);
-const memfsInjectedTokens = humanTokens + personaTokens + projectTokens + rulesTokens;
+const activeProject = projects.find((p) => p.isActive) || {
+  projectMd: '',
+  rulesMd: '',
+  learnings: [],
+}
+const projectTokens = estimateTokens(activeProject.projectMd)
+const rulesTokens = estimateTokens(activeProject.rulesMd)
+const memfsInjectedTokens = humanTokens + personaTokens + projectTokens + rulesTokens
+
+// Allow external CLI / Statusline payload overrides if provided via environment
+if (process.env.CONTEXT_USED_PERCENT) {
+  const targetPct = parseFloat(process.env.CONTEXT_USED_PERCENT)
+  if (!Number.isNaN(targetPct) && targetPct > 0) {
+    const targetUsedTokens = Math.round((targetPct / 100) * liveStats.contextLimitTokens)
+    const currentBase =
+      liveStats.systemPromptTokens +
+      liveStats.systemToolsTokens +
+      liveStats.skillsTokens +
+      liveStats.subagentsTokens +
+      memfsInjectedTokens
+    const diff = Math.max(0, targetUsedTokens - currentBase)
+    const sumActive =
+      liveStats.userTokens +
+        liveStats.agentTokens +
+        liveStats.toolTokens +
+        liveStats.checkpointBufferTokens || 1
+    const scale = diff / sumActive
+    liveStats.userTokens = Math.round(liveStats.userTokens * scale)
+    liveStats.agentTokens = Math.round(liveStats.agentTokens * scale)
+    liveStats.toolTokens = Math.round(liveStats.toolTokens * scale)
+    liveStats.checkpointBufferTokens = Math.round(liveStats.checkpointBufferTokens * scale)
+  }
+}
 
 // Core Memory Blocks
 const coreMemoryFiles = [
   {
-    id: "core-human",
-    name: "human.md",
-    dir: "global",
-    path: "global/human.md",
-    description: "Durable user preferences, coding habits, and communication directives.",
+    id: 'core-human',
+    name: 'human.md',
+    dir: 'global',
+    path: 'global/human.md',
+    description: 'Durable user preferences, coding habits, and communication directives.',
     content: humanMd,
     tokens: humanTokens,
     chars: humanMd.length,
-    commit: getFileCommitInfo("global/human.md")
+    commit: getFileCommitInfo('global/human.md'),
   },
   {
-    id: "core-persona",
-    name: "persona.md",
-    dir: "global",
-    path: "global/persona.md",
-    description: "Persistent agent persona, tone, and operational directives.",
+    id: 'core-persona',
+    name: 'persona.md',
+    dir: 'global',
+    path: 'global/persona.md',
+    description: 'Persistent agent persona, tone, and operational directives.',
     content: personaMd,
     tokens: personaTokens,
     chars: personaMd.length,
-    commit: getFileCommitInfo("global/persona.md")
+    commit: getFileCommitInfo('global/persona.md'),
   },
   {
-    id: "core-project",
-    name: "project.md",
+    id: 'core-project',
+    name: 'project.md',
     dir: activeSlug,
     path: `projects/${activeSlug}/project.md`,
-    description: "Project architecture, domain concepts, stack choices, and key boundaries.",
+    description: 'Project architecture, domain concepts, stack choices, and key boundaries.',
     content: activeProject.projectMd,
     tokens: projectTokens,
     chars: activeProject.projectMd.length,
-    commit: getFileCommitInfo(`projects/${activeSlug}/project.md`)
+    commit: getFileCommitInfo(`projects/${activeSlug}/project.md`),
   },
   {
-    id: "core-rules",
-    name: "rules.md",
+    id: 'core-rules',
+    name: 'rules.md',
     dir: activeSlug,
     path: `projects/${activeSlug}/rules.md`,
-    description: "Active codebase rules, linters, testing constraints, and conventions.",
+    description: 'Active codebase rules, linters, testing constraints, and conventions.',
     content: activeProject.rulesMd,
     tokens: rulesTokens,
     chars: activeProject.rulesMd.length,
-    commit: getFileCommitInfo(`projects/${activeSlug}/rules.md`)
-  }
-];
+    commit: getFileCommitInfo(`projects/${activeSlug}/rules.md`),
+  },
+]
 
 // 5. Read Rich Git History
-let gitCommits = [];
+let gitCommits = []
 try {
-  const { execSync } = require("child_process");
-  if (fs.existsSync(path.join(memoryRoot, ".git"))) {
-    const logOut = execSync('git log -n 50 --pretty=format:\'{"hash":"%h","fullHash":"%H","date":"%ad","relDate":"%ar","msg":"%s"}\' --date=short', {
-      cwd: memoryRoot,
-      encoding: "utf-8"
-    });
+  const { execSync } = require('node:child_process')
+  if (fs.existsSync(path.join(memoryRoot, '.git'))) {
+    const logOut = execSync(
+      'git log -n 50 --pretty=format:\'{"hash":"%h","fullHash":"%H","date":"%ad","relDate":"%ar","msg":"%s"}\' --date=short',
+      {
+        cwd: memoryRoot,
+        encoding: 'utf-8',
+      },
+    )
     gitCommits = logOut
-      .split("\n")
-      .filter(line => line.trim().length > 0)
-      .map(line => {
+      .split('\n')
+      .filter((line) => line.trim().length > 0)
+      .map((line) => {
         try {
-          const item = JSON.parse(line);
-          let add = 0, del = 0;
+          const item = JSON.parse(line)
+          let add = 0
+          let del = 0
           try {
-            const statOut = execSync(`git show --stat --oneline ${item.hash}`, { cwd: memoryRoot, encoding: "utf-8" });
-            const statLines = statOut.trim().split("\n").slice(1);
-            item.files = statLines;
+            const statOut = execSync(`git show --stat --oneline ${item.hash}`, {
+              cwd: memoryRoot,
+              encoding: 'utf-8',
+            })
+            const statLines = statOut.trim().split('\n').slice(1)
+            item.files = statLines
 
-            const numstat = execSync(`git show --numstat --pretty="" ${item.hash}`, { cwd: memoryRoot, encoding: "utf-8" }).trim();
+            const numstat = execSync(`git show --numstat --pretty="" ${item.hash}`, {
+              cwd: memoryRoot,
+              encoding: 'utf-8',
+            }).trim()
             if (numstat) {
-              numstat.split("\n").forEach(nLine => {
-                const parts = nLine.split("\t");
-                add += parseInt(parts[0], 10) || 0;
-                del += parseInt(parts[1], 10) || 0;
-              });
+              numstat.split('\n').forEach((nLine) => {
+                const parts = nLine.split('\t')
+                add += parseInt(parts[0], 10) || 0
+                del += parseInt(parts[1], 10) || 0
+              })
             }
 
-            const diffOut = execSync(`git show --patch --pretty="" ${item.hash}`, { cwd: memoryRoot, encoding: "utf-8" });
-            item.diff = diffOut.substring(0, 4000);
+            const diffOut = execSync(`git show --patch --pretty="" ${item.hash}`, {
+              cwd: memoryRoot,
+              encoding: 'utf-8',
+            })
+            item.diff = diffOut.substring(0, 4000)
           } catch {
-            item.files = [];
-            item.diff = "";
+            item.files = []
+            item.diff = ''
           }
-          item.add = add;
-          item.del = del;
+          item.add = add
+          item.del = del
 
-          const transcriptFullPath = path.join(brainDir, activeConvId, ".system_generated", "logs", "transcript.jsonl");
-          const lowerMsg = (item.msg || "").toLowerCase();
-          item.isReflection = lowerMsg.includes("dream") || lowerMsg.includes("reflection");
-          item.author = item.isReflection ? "Reflection Subagent" : "Antigravity Agent";
-          item.preview = item.isReflection 
+          const transcriptFullPath = path.join(
+            brainDir,
+            activeConvId,
+            '.system_generated',
+            'logs',
+            'transcript.jsonl',
+          )
+          const lowerMsg = (item.msg || '').toLowerCase()
+          item.isReflection = lowerMsg.includes('dream') || lowerMsg.includes('reflection')
+          item.author = item.isReflection ? 'Reflection Subagent' : 'Antigravity Agent'
+          item.preview = item.isReflection
             ? `Reviewed transcript: ${transcriptFullPath}`
-            : (item.files && item.files.length > 0 
-                ? item.files.map(f => path.join(memoryRoot, f.trim().split(" ")[0])).join(", ") 
-                : `${memoryRoot}/`);
+            : item.files && item.files.length > 0
+              ? item.files.map((f) => path.join(memoryRoot, f.trim().split(' ')[0])).join(', ')
+              : `${memoryRoot}/`
 
-          return item;
-        } catch { return null; }
+          return item
+        } catch {
+          return null
+        }
       })
-      .filter(Boolean);
+      .filter(Boolean)
   }
 } catch {
-  gitCommits = [];
+  gitCommits = []
 }
 
 // Token Calculations
-const usedTokensTotal = liveStats.userTokens + liveStats.agentTokens + liveStats.toolTokens +
-  liveStats.systemPromptTokens + liveStats.systemToolsTokens + liveStats.skillsTokens +
-  liveStats.subagentsTokens + memfsInjectedTokens;
+const usedTokensTotal =
+  liveStats.userTokens +
+  liveStats.agentTokens +
+  liveStats.toolTokens +
+  liveStats.systemPromptTokens +
+  liveStats.systemToolsTokens +
+  liveStats.skillsTokens +
+  liveStats.subagentsTokens +
+  memfsInjectedTokens
 
-const totalCapacity = liveStats.contextLimitTokens;
-const freeSpaceTokens = Math.max(0, totalCapacity - usedTokensTotal);
+const totalCapacity = liveStats.contextLimitTokens
+const freeSpaceTokens = Math.max(0, totalCapacity - usedTokensTotal)
 
-const usedPercent = ((usedTokensTotal / totalCapacity) * 100).toFixed(1);
-const userPercent = ((liveStats.userTokens / totalCapacity) * 100).toFixed(1);
-const agentPercent = ((liveStats.agentTokens / totalCapacity) * 100).toFixed(1);
-const toolPercent = ((liveStats.toolTokens / totalCapacity) * 100).toFixed(1);
-const sysPromptPercent = ((liveStats.systemPromptTokens / totalCapacity) * 100).toFixed(1);
-const sysToolsPercent = ((liveStats.systemToolsTokens / totalCapacity) * 100).toFixed(1);
-const skillsPercent = ((liveStats.skillsTokens / totalCapacity) * 100).toFixed(1);
-const memfsPercent = ((memfsInjectedTokens / totalCapacity) * 100).toFixed(2);
-const freePercent = ((freeSpaceTokens / totalCapacity) * 100).toFixed(1);
+const usedPercent = ((usedTokensTotal / totalCapacity) * 100).toFixed(1)
+const userPercent = ((liveStats.userTokens / totalCapacity) * 100).toFixed(1)
+const agentPercent = ((liveStats.agentTokens / totalCapacity) * 100).toFixed(1)
+const toolPercent = ((liveStats.toolTokens / totalCapacity) * 100).toFixed(1)
+const sysPromptPercent = ((liveStats.systemPromptTokens / totalCapacity) * 100).toFixed(1)
+const sysToolsPercent = ((liveStats.systemToolsTokens / totalCapacity) * 100).toFixed(1)
+const skillsPercent = ((liveStats.skillsTokens / totalCapacity) * 100).toFixed(1)
+const memfsPercent = ((memfsInjectedTokens / totalCapacity) * 100).toFixed(2)
+const freePercent = ((freeSpaceTokens / totalCapacity) * 100).toFixed(1)
 
 // MemFS Live Sync Status (inspired by agy-statusline.mjs getMemfsStatus)
-let memfsGitStatus = { state: "clean", dirtyCount: 0 };
+let memfsGitStatus = { state: 'clean', dirtyCount: 0 }
 try {
-  const { execSync } = require("child_process");
-  if (fs.existsSync(path.join(memoryRoot, ".git"))) {
-    const memPorcelain = execSync("git status --porcelain", { cwd: memoryRoot, encoding: "utf-8" }).trim();
+  const { execSync } = require('node:child_process')
+  if (fs.existsSync(path.join(memoryRoot, '.git'))) {
+    const memPorcelain = execSync('git status --porcelain', {
+      cwd: memoryRoot,
+      encoding: 'utf-8',
+    }).trim()
     if (memPorcelain) {
-      const dirtyLines = memPorcelain.split("\n").map(l => l.trim()).filter(Boolean);
-      memfsGitStatus = { state: "dirty", dirtyCount: dirtyLines.length };
+      const dirtyLines = memPorcelain
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean)
+      memfsGitStatus = { state: 'dirty', dirtyCount: dirtyLines.length }
     }
   }
 } catch {
-  memfsGitStatus = { state: "unknown", dirtyCount: 0 };
+  memfsGitStatus = { state: 'unknown', dirtyCount: 0 }
 }
 
 // Context Health Assessment (inspired by agy-statusline.mjs thresholds)
-const usedPercentNum = parseFloat(usedPercent);
+const usedPercentNum = parseFloat(usedPercent)
 let contextHealth = {
-  state: "healthy",
-  color: "#22c55e",
-  bg: "rgba(34, 197, 94, 0.12)",
-  border: "rgba(34, 197, 94, 0.3)",
-  label: "Healthy Capacity",
-  icon: "🟢",
-  tip: "Context window is spacious and operating well within safe boundaries."
-};
+  state: 'healthy',
+  color: '#22c55e',
+  bg: 'rgba(34, 197, 94, 0.12)',
+  border: 'rgba(34, 197, 94, 0.3)',
+  label: 'Healthy Capacity',
+  icon: '🟢',
+  tip: 'Context window is spacious and operating well within safe boundaries.',
+}
 
 if (usedPercentNum >= 85) {
   contextHealth = {
-    state: "critical",
-    color: "#f43f5e",
-    bg: "rgba(244, 63, 94, 0.15)",
-    border: "rgba(244, 63, 94, 0.4)",
-    label: "Context Critical",
-    icon: "🔴",
-    tip: "Context exceeds 85%! High risk of conversation truncation or compaction. Run /dream now."
-  };
+    state: 'critical',
+    color: '#f43f5e',
+    bg: 'rgba(244, 63, 94, 0.15)',
+    border: 'rgba(244, 63, 94, 0.4)',
+    label: 'Context Critical',
+    icon: '🔴',
+    tip: 'Context exceeds 85%! High risk of conversation truncation or compaction. Run /dream now.',
+  }
 } else if (usedPercentNum >= 65) {
   contextHealth = {
-    state: "warning",
-    color: "#f59e0b",
-    bg: "rgba(245, 158, 11, 0.15)",
-    border: "rgba(245, 158, 11, 0.4)",
-    label: "Context Warning",
-    icon: "🟡",
-    tip: "Context is above 65%. Consider running /dream to consolidate learnings and prune tokens."
-  };
+    state: 'warning',
+    color: '#f59e0b',
+    bg: 'rgba(245, 158, 11, 0.15)',
+    border: 'rgba(245, 158, 11, 0.4)',
+    label: 'Context Warning',
+    icon: '🟡',
+    tip: 'Context is above 65%. Consider running /dream to consolidate learnings and prune tokens.',
+  }
 }
 
 // Generate Dot Matrix Grid
-const totalDots = 364;
-const userDots = Math.max(1, Math.round((liveStats.userTokens / totalCapacity) * totalDots));
-const agentDots = Math.max(1, Math.round((liveStats.agentTokens / totalCapacity) * totalDots));
-const toolDots = Math.max(1, Math.round((liveStats.toolTokens / totalCapacity) * totalDots));
-const sysDots = Math.max(1, Math.round(((liveStats.systemPromptTokens + liveStats.systemToolsTokens + liveStats.skillsTokens + memfsInjectedTokens) / totalCapacity) * totalDots));
-const freeDots = Math.max(0, totalDots - (userDots + agentDots + toolDots + sysDots));
+const totalDots = 364
+const userDots = Math.max(1, Math.round((liveStats.userTokens / totalCapacity) * totalDots))
+const agentDots = Math.max(1, Math.round((liveStats.agentTokens / totalCapacity) * totalDots))
+const toolDots = Math.max(1, Math.round((liveStats.toolTokens / totalCapacity) * totalDots))
+const sysDots = Math.max(
+  1,
+  Math.round(
+    ((liveStats.systemPromptTokens +
+      liveStats.systemToolsTokens +
+      liveStats.skillsTokens +
+      memfsInjectedTokens) /
+      totalCapacity) *
+      totalDots,
+  ),
+)
+const freeDots = Math.max(0, totalDots - (userDots + agentDots + toolDots + sysDots))
 
-const dots = [];
-for (let i = 0; i < userDots; i++) dots.push("user");
-for (let i = 0; i < agentDots; i++) dots.push("agent");
-for (let i = 0; i < toolDots; i++) dots.push("tool");
-for (let i = 0; i < sysDots; i++) dots.push("system");
-for (let i = 0; i < freeDots; i++) dots.push("free");
+const dots = []
+for (let i = 0; i < userDots; i++) dots.push('user')
+for (let i = 0; i < agentDots; i++) dots.push('agent')
+for (let i = 0; i < toolDots; i++) dots.push('tool')
+for (let i = 0; i < sysDots; i++) dots.push('system')
+for (let i = 0; i < freeDots; i++) dots.push('free')
 
 function escapeHtml(str) {
-  return (str || "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 const html = `<!DOCTYPE html>
@@ -1271,10 +1347,12 @@ const html = `<!DOCTYPE html>
     <div class="top-header">
       <div class="brand-left">
         <span>🧠 Antigravity MemFS</span>
-        <span class="brand-badge">agy-memory-layer v1.5.1</span>
-        ${memfsGitStatus.state === 'dirty' 
-          ? `<span class="brand-badge" style="background: rgba(245, 158, 11, 0.15); color: #fde047; border-color: rgba(245, 158, 11, 0.4);">🧠 MemFS: +${memfsGitStatus.dirtyCount} dirty</span>` 
-          : `<span class="brand-badge" style="background: rgba(34, 197, 94, 0.15); color: #86efac; border-color: rgba(34, 197, 94, 0.4);">🧠 MemFS: Synced ✓</span>`}
+        <span class="brand-badge">agy-memory-layer v1.6.0</span>
+        ${
+          memfsGitStatus.state === 'dirty'
+            ? `<span class="brand-badge" style="background: rgba(245, 158, 11, 0.15); color: #fde047; border-color: rgba(245, 158, 11, 0.4);">🧠 MemFS: +${memfsGitStatus.dirtyCount} dirty</span>`
+            : `<span class="brand-badge" style="background: rgba(34, 197, 94, 0.15); color: #86efac; border-color: rgba(34, 197, 94, 0.4);">🧠 MemFS: Synced ✓</span>`
+        }
       </div>
       <div class="operator-info">
         <div class="operator-title">📁 Workspace: <strong>${escapeHtml(activeSlug)}</strong></div>
@@ -1306,7 +1384,7 @@ const html = `<!DOCTYPE html>
           <!-- Left: Dot Matrix Grid & Metadata -->
           <div class="matrix-wrapper">
             <div class="dot-matrix">
-              ${dots.map(type => `<div class="dot ${type}" title="${type}"></div>`).join('')}
+              ${dots.map((type) => `<div class="dot ${type}" title="${type}"></div>`).join('')}
             </div>
 
             <div class="extra-sections">
@@ -1316,12 +1394,20 @@ const html = `<!DOCTYPE html>
                   <span>Artifact files</span>
                   <span style="font-family: var(--font-mono); color: #8b5cf6;">/artifact</span>
                 </div>
-                ${artifacts.length > 0 ? artifacts.map(a => `
+                ${
+                  artifacts.length > 0
+                    ? artifacts
+                        .map(
+                          (a) => `
                   <div class="meta-item">
                     <span title="${escapeHtml(a.path)}">↳ ${escapeHtml(a.name)}</span>
                     <span>${a.tokens.toLocaleString()} tok</span>
                   </div>
-                `).join('') : '<div style="color: var(--text-muted);">No active artifact files.</div>'}
+                `,
+                        )
+                        .join('')
+                    : '<div style="color: var(--text-muted);">No active artifact files.</div>'
+                }
               </div>
 
               <!-- Checkpoints & Active Memory -->
@@ -1524,7 +1610,9 @@ const html = `<!DOCTYPE html>
 
       <!-- 3. EXTERNAL MEMORY VIEW (Master-Detail Layout with Git Diff) -->
       <div id="view-external" style="display: none;">
-        ${allLearnings.length > 0 ? `
+        ${
+          allLearnings.length > 0
+            ? `
           <div class="master-detail-layout">
             
             <!-- Left: Tree Navigator -->
@@ -1535,12 +1623,16 @@ const html = `<!DOCTYPE html>
                   <span>${escapeHtml(activeSlug)}/learnings/</span>
                   <span class="file-chars-badge">${allLearnings.length}</span>
                 </div>
-                ${allLearnings.map((l, idx) => `
+                ${allLearnings
+                  .map(
+                    (l, idx) => `
                   <div class="tree-item ${idx === 0 ? 'active' : ''}" onclick="selectExternalFile(${idx}, this)">
                     <span>${escapeHtml(l.filename)}</span>
                     <span class="file-chars-badge">${formatChars(l.chars)}</span>
                   </div>
-                `).join('')}
+                `,
+                  )
+                  .join('')}
               </div>
             </div>
 
@@ -1563,12 +1655,14 @@ const html = `<!DOCTYPE html>
             </div>
 
           </div>
-        ` : `
+        `
+            : `
           <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
             <h3>No External Learning Logs Yet</h3>
             <p style="font-size: 13px; margin-top: 8px;">Run <code>/dream</code> after long sessions to distill conversation history into dated learnings.</p>
           </div>
-        `}
+        `
+        }
       </div>
 
       <!-- 4. HISTORY VIEW (Pixel-Perfect Letta Code Layout) -->
@@ -1591,7 +1685,11 @@ const html = `<!DOCTYPE html>
 
         <!-- Commit List -->
         <div class="commit-list" id="commitListContainer">
-          ${gitCommits.length > 0 ? gitCommits.map((c, idx) => `
+          ${
+            gitCommits.length > 0
+              ? gitCommits
+                  .map(
+                    (c, idx) => `
             <div class="commit-item" data-hash="${escapeHtml(c.hash)}" data-msg="${escapeHtml(c.msg).toLowerCase()}">
               <div class="commit-head" onclick="toggleCommit(${idx}, this)">
                 
@@ -1620,23 +1718,41 @@ const html = `<!DOCTYPE html>
               
               <div class="commit-body" id="commit-body-${idx}">
                 <div class="commit-full-body">${escapeHtml(c.msg)}</div>
-                ${c.files && c.files.length > 0 ? `
+                ${
+                  c.files && c.files.length > 0
+                    ? `
                   <div class="commit-stats">
                     <div style="font-weight:600; color:var(--text-white); margin-bottom:6px;">Changed files in MemFS (<span style="color:#a78bfa;">${memoryRoot}</span>):</div>
-                    ${c.files.map(f => `<div class="stat-row">↳ <span style="color:#a78bfa;">${memoryRoot}/</span>${escapeHtml(f)}</div>`).join('')}
+                    ${c.files.map((f) => `<div class="stat-row">↳ <span style="color:#a78bfa;">${memoryRoot}/</span>${escapeHtml(f)}</div>`).join('')}
                   </div>
-                ` : ''}
-                ${c.diff ? `
-                  <div class="diff-patch-view">${escapeHtml(c.diff).split('\n').map(l => {
-                    if (l.startsWith('+') && !l.startsWith('+++')) return `<span class="diff-line-add">${escapeHtml(l)}</span>`;
-                    if (l.startsWith('-') && !l.startsWith('---')) return `<span class="diff-line-del">${escapeHtml(l)}</span>`;
-                    if (l.startsWith('@@')) return `<span class="diff-line-hunk">${escapeHtml(l)}</span>`;
-                    return `<span>${escapeHtml(l)}</span>`;
-                  }).join('')}</div>
-                ` : ''}
+                `
+                    : ''
+                }
+                ${
+                  c.diff
+                    ? `
+                  <div class="diff-patch-view">${escapeHtml(c.diff)
+                    .split('\n')
+                    .map((l) => {
+                      if (l.startsWith('+') && !l.startsWith('+++'))
+                        return `<span class="diff-line-add">${escapeHtml(l)}</span>`
+                      if (l.startsWith('-') && !l.startsWith('---'))
+                        return `<span class="diff-line-del">${escapeHtml(l)}</span>`
+                      if (l.startsWith('@@'))
+                        return `<span class="diff-line-hunk">${escapeHtml(l)}</span>`
+                      return `<span>${escapeHtml(l)}</span>`
+                    })
+                    .join('')}</div>
+                `
+                    : ''
+                }
               </div>
             </div>
-          `).join('') : '<div style="text-align:center; padding:40px; color:var(--text-muted);">No commit history found.</div>'}
+          `,
+                  )
+                  .join('')
+              : '<div style="text-align:center; padding:40px; color:var(--text-muted);">No commit history found.</div>'
+          }
         </div>
 
       </div>
@@ -1681,7 +1797,7 @@ const html = `<!DOCTYPE html>
     function renderMarkdown(content) {
       if (!content) return '';
       // Parse [[target]] into clickable synapse tags with safe data attributes
-      let processed = String(content).replace(/\[\[(.*?)\]\]/g, function(match, p1) {
+      let processed = String(content).replace(/[[(.*?)]]/g, function(match, p1) {
         const target = p1.trim();
         const safeTarget = target.replace(/"/g, '&quot;');
         return '<span class="synapse-tag" data-synapse="' + encodeURIComponent(target) + '" title="Synapse link to ' + safeTarget + '">🔗 ' + target + '</span>';
@@ -1839,7 +1955,7 @@ const html = `<!DOCTYPE html>
     });
   </script>
 </body>
-</html>`;
+</html>`
 
-fs.writeFileSync(outputFile, html, "utf-8");
-console.log("✓ Memory Palace generated at: " + outputFile);
+fs.writeFileSync(outputFile, html, 'utf-8')
+console.log(`✓ Memory Palace generated at: ${outputFile}`)

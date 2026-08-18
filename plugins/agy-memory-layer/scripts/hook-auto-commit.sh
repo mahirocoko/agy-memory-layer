@@ -18,9 +18,10 @@ if [ -d "${MEMORY_ROOT}/.git" ]; then
 fi
 
 # 2. Asynchronously check step-count trigger & auto-dream in background (Non-blocking)
-DAEMON_SCRIPT="${SCRIPT_DIR}/dream-daemon.js"
-if [ -f "$DAEMON_SCRIPT" ]; then
-  (node "$DAEMON_SCRIPT" --auto-check >/dev/null 2>&1 &) || true
+if [ -f "${SCRIPT_DIR}/dream-daemon.ts" ]; then
+  (node --experimental-strip-types "${SCRIPT_DIR}/dream-daemon.ts" --auto-check >/dev/null 2>&1 &) || true
+elif [ -f "${SCRIPT_DIR}/dream-daemon.js" ]; then
+  (node "${SCRIPT_DIR}/dream-daemon.js" --auto-check >/dev/null 2>&1 &) || true
 fi
 
 # Return JSON decision allowing stop

@@ -1,6 +1,6 @@
 # 🧪 Comprehensive Test & Verification Report: `agy-memory-layer`
 
-**Date**: 2026-08-18 09:22:21 UTC  
+**Date**: 2026-08-18 09:54:43 UTC  
 **Environment**: macOS (Darwin) · Antigravity CLI 1.1.14 · Node v22.22.3  
 **Storage Target**: `~/.gemini/memory/` (Git-backed MemFS)  
 **Overall Result**: 🔴 **SOME TESTS FAILED**
@@ -14,7 +14,7 @@
 | **Total Test Scenarios** | **11** |
 | **Passed** | **10** (91%) |
 | **Failed** | **1** |
-| **Total Execution Time** | **3167 ms** |
+| **Total Execution Time** | **16322 ms** |
 
 ---
 
@@ -22,17 +22,30 @@
 
 | Test Suite | Scenario | Status | Time | Verification Evidence |
 | :--- | :--- | :---: | :---: | :--- |
-| **Hooks Contract** | PreInvocation Hook outputs valid AGY JSON schema | 🟢 PASSED | 78ms | Valid JSON schema with 1 injected steps. Execution speed: fast. |
-| **Hooks Contract** | Stop Hook triggers automated Git commit on memory mutation | 🟢 PASSED | 84ms | Verified automatic git add & commit on memory modifications. |
+| **Hooks Contract** | PreInvocation Hook outputs valid AGY JSON schema | 🟢 PASSED | 80ms | Valid JSON schema with 1 injected steps. Execution speed: fast. |
+| **Hooks Contract** | Stop Hook triggers automated Git commit on memory mutation | 🟢 PASSED | 90ms | Verified automatic git add & commit on memory modifications. |
 | **Workspace Isolation** | Separates Project A and Project B while preserving Global User profile | 🟢 PASSED | 161ms | Project A and Project B contexts are strictly isolated; Global profile is shared 100%. |
-| **Memory Palace** | Palace generator builds interactive HTML with all live projects & git timeline | 🔴 FAILED | 1936ms | Palace HTML is missing key dashboard headers |
-| **Git Versioning** | Memory changes can be audited with git log and rolled back cleanly | 🟢 PASSED | 162ms | Successfully proved Git revert and rollback capability. Base hash: 386ed55 |
-| **AGY Plugin Schema** | Plugin passes 'agy plugin validate' with zero errors | 🟢 PASSED | 202ms | Native AGY plugin validation: 7 skills, 2 hooks processed with 0 errors. |
-| **Autonomous Directives** | rules/AGENTS.md adheres to Letta-style proactive autonomous learning | 🟢 PASSED | 0ms | All 7 core autonomous directives verified in rules/AGENTS.md. |
-| **Codebase Scanner (/init)** | Scans repository architecture and seeds project.md on Day 1 | 🟢 PASSED | 76ms | Scanner accurately detected React, Vite, TypeScript, Vitest, and seeded Day 1 MemFS blocks. |
-| **Memory Search Engine** | Searches across global, project, and historical learnings with ranked snippets | 🟢 PASSED | 29ms | Search engine returned 6 ranked matches with line snippets in < 10ms. |
-| **Remote Git Sync** | Manages remote URL setup and sync status cleanly | 🟢 PASSED | 37ms | Remote setup and sync status verified. |
-| **Backup & Integrity** | Exports, verifies SHA-256 signatures, detects tampering, and restores bundle byte-for-byte | 🟢 PASSED | 402ms | All 5 backup unit tests passed (SHA-256 integrity, tamper detection, byte-for-byte restore, zero interfaces). |
+| **Memory Palace** | Palace generator builds interactive HTML with all live projects & git timeline | 🟢 PASSED | 15617ms | HTML dashboard verified (1278 KB) with complete memory palace nodes. |
+| **Git Versioning** | Memory changes can be audited with git log and rolled back cleanly | 🟢 PASSED | 109ms | Successfully proved Git revert and rollback capability. Base hash: d739249 |
+| **AGY Plugin Schema** | Plugin passes 'agy plugin validate' with zero errors | 🟢 PASSED | 52ms | Native AGY plugin validation: 7 skills, 2 hooks processed with 0 errors. |
+| **Autonomous Directives** | rules/AGENTS.md adheres to Letta-style proactive autonomous learning | 🟢 PASSED | 1ms | All 7 core autonomous directives verified in rules/AGENTS.md. |
+| **Codebase Scanner (/init)** | Scans repository architecture and seeds project.md on Day 1 | 🟢 PASSED | 100ms | Scanner accurately detected React, Vite, TypeScript, Vitest, and seeded Day 1 MemFS blocks. |
+| **Memory Search Engine** | Searches across global, project, and historical learnings with ranked snippets | 🟢 PASSED | 15ms | Search engine returned 14 ranked matches with line snippets in < 10ms. |
+| **Remote Git Sync** | Manages remote URL setup and sync status cleanly | 🟢 PASSED | 40ms | Remote setup and sync status verified. |
+| **Backup & Integrity** | Exports, verifies SHA-256 signatures, detects tampering, and restores bundle byte-for-byte | 🔴 FAILED | 57ms | test-memory-backup.ts failed:
+
+file:///Users/mahiro/Git/me/sandbox/learn-letta-code/tests/test-memory-backup.ts:8
+const fs = require('node:fs')
+           ^
+
+ReferenceError: require is not defined in ES module scope, you can use import instead
+    at file:///Users/mahiro/Git/me/sandbox/learn-letta-code/tests/test-memory-backup.ts:8:12
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v22.22.3
+ |
 
 ---
 
