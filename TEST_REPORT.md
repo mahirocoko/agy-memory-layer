@@ -1,9 +1,9 @@
 # 🧪 Comprehensive Test & Verification Report: `agy-memory-layer`
 
-**Date**: 2026-08-18 05:30:41 UTC  
+**Date**: 2026-08-18 06:49:54 UTC  
 **Environment**: macOS (Darwin) · Antigravity CLI 1.1.14 · Node v22.22.3  
 **Storage Target**: `~/.gemini/memory/` (Git-backed MemFS)  
-**Overall Result**: 🟢 **ALL TESTS PASSED (100%)**
+**Overall Result**: 🔴 **SOME TESTS FAILED**
 
 ---
 
@@ -12,9 +12,9 @@
 | Metric | Result |
 | :--- | :--- |
 | **Total Test Scenarios** | **11** |
-| **Passed** | **11** (100%) |
-| **Failed** | **0** |
-| **Total Execution Time** | **953 ms** |
+| **Passed** | **10** (91%) |
+| **Failed** | **1** |
+| **Total Execution Time** | **1009 ms** |
 
 ---
 
@@ -22,17 +22,17 @@
 
 | Test Suite | Scenario | Status | Time | Verification Evidence |
 | :--- | :--- | :---: | :---: | :--- |
-| **Hooks Contract** | PreInvocation Hook outputs valid AGY JSON schema | 🟢 PASSED | 78ms | Valid JSON schema with 1 injected steps. Execution speed: fast. |
-| **Hooks Contract** | Stop Hook triggers automated Git commit on memory mutation | 🟢 PASSED | 71ms | Verified automatic git add & commit on memory modifications. |
-| **Workspace Isolation** | Separates Project A and Project B while preserving Global User profile | 🟢 PASSED | 154ms | Project A and Project B contexts are strictly isolated; Global profile is shared 100%. |
-| **Memory Palace** | Palace generator builds interactive HTML with all live projects & git timeline | 🟢 PASSED | 40ms | HTML dashboard verified (11 KB) with complete timeline and memory nodes. |
-| **Git Versioning** | Memory changes can be audited with git log and rolled back cleanly | 🟢 PASSED | 94ms | Successfully proved Git revert and rollback capability. Base hash: abe9248 |
-| **AGY Plugin Schema** | Plugin passes 'agy plugin validate' with zero errors | 🟢 PASSED | 48ms | Native AGY plugin validation: 7 skills, 2 hooks processed with 0 errors. |
-| **Autonomous Directives** | rules/AGENTS.md adheres to Letta-style proactive autonomous learning | 🟢 PASSED | 0ms | All 7 core autonomous directives verified in rules/AGENTS.md. |
-| **Codebase Scanner (/init)** | Scans repository architecture and seeds project.md on Day 1 | 🟢 PASSED | 60ms | Scanner accurately detected React, Vite, TypeScript, Vitest, and seeded Day 1 MemFS blocks. |
+| **Hooks Contract** | PreInvocation Hook outputs valid AGY JSON schema | 🟢 PASSED | 83ms | Valid JSON schema with 1 injected steps. Execution speed: fast. |
+| **Hooks Contract** | Stop Hook triggers automated Git commit on memory mutation | 🟢 PASSED | 82ms | Verified automatic git add & commit on memory modifications. |
+| **Workspace Isolation** | Separates Project A and Project B while preserving Global User profile | 🟢 PASSED | 160ms | Project A and Project B contexts are strictly isolated; Global profile is shared 100%. |
+| **Memory Palace** | Palace generator builds interactive HTML with all live projects & git timeline | 🔴 FAILED | 64ms | Palace HTML is missing key dashboard headers |
+| **Git Versioning** | Memory changes can be audited with git log and rolled back cleanly | 🟢 PASSED | 108ms | Successfully proved Git revert and rollback capability. Base hash: c4e6eaa |
+| **AGY Plugin Schema** | Plugin passes 'agy plugin validate' with zero errors | 🟢 PASSED | 54ms | Native AGY plugin validation: 7 skills, 2 hooks processed with 0 errors. |
+| **Autonomous Directives** | rules/AGENTS.md adheres to Letta-style proactive autonomous learning | 🟢 PASSED | 1ms | All 7 core autonomous directives verified in rules/AGENTS.md. |
+| **Codebase Scanner (/init)** | Scans repository architecture and seeds project.md on Day 1 | 🟢 PASSED | 65ms | Scanner accurately detected React, Vite, TypeScript, Vitest, and seeded Day 1 MemFS blocks. |
 | **Memory Search Engine** | Searches across global, project, and historical learnings with ranked snippets | 🟢 PASSED | 1ms | Search engine returned 2 ranked matches with line snippets in < 10ms. |
 | **Remote Git Sync** | Manages remote URL setup and sync status cleanly | 🟢 PASSED | 34ms | Remote setup and sync status verified. |
-| **Backup & Integrity** | Exports, verifies SHA-256 signatures, detects tampering, and restores bundle byte-for-byte | 🟢 PASSED | 373ms | All 5 backup unit tests passed (SHA-256 integrity, tamper detection, byte-for-byte restore, zero interfaces). |
+| **Backup & Integrity** | Exports, verifies SHA-256 signatures, detects tampering, and restores bundle byte-for-byte | 🟢 PASSED | 357ms | All 5 backup unit tests passed (SHA-256 integrity, tamper detection, byte-for-byte restore, zero interfaces). |
 
 ---
 
