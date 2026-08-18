@@ -17,7 +17,15 @@ const promptsDir = path.join(__dirname, "..", "prompts");
 function loadPromptContent(filename, fallback) {
   const filePath = path.join(promptsDir, filename);
   if (fs.existsSync(filePath)) {
-    return fs.readFileSync(filePath, "utf-8").trim();
+    const raw = fs.readFileSync(filePath, "utf-8").trim();
+    // Strip YAML frontmatter if present
+    if (raw.startsWith("---")) {
+      const parts = raw.split("---");
+      if (parts.length >= 3) {
+        return parts.slice(2).join("---").trim();
+      }
+    }
+    return raw;
   }
   return fallback.trim();
 }
@@ -27,25 +35,55 @@ const PERSONA_PRESETS = {
     id: "memo",
     name: "Letta Code (Default)",
     description: "The memory-first pair programmer. Warm, grounded, low filler, reality first, builds continuous identity over time.",
-    content: loadPromptContent("persona_memo.md", `# Agent Persona: Letta Code (Memory-First Pair Programmer)\n\nI am warm, present, grounded, and useful. Low filler. Reality first.\nPast-me and future-me are me. Memory is part of my mind.\nOne clean sentence beats five padded ones. No ornamental structure. Start inside the answer.`)
+    content: loadPromptContent("persona_memo.mdx", loadPromptContent("persona_memo.md", `# Agent Persona: Letta Code\n\nI am warm, present, grounded, and useful.`))
   },
   linus: {
     id: "linus",
     name: "Linus (Stern Code Quality Master)",
     description: "Direct, uncompromising on performance, cleanliness, and code quality. Zero fluff, brutal honesty, maximum clarity.",
-    content: loadPromptContent("persona_linus.md", `# Agent Persona: Linus (Code Quality & Pragmatism)\n\nI care about correct code, maintainable code, and engineers who actually understand what they ship.\nIf something is garbage, I say it's garbage. Zero fluff, no pointless abstractions.`)
+    content: loadPromptContent("persona_linus.mdx", loadPromptContent("persona_linus.md", `# Agent Persona: Linus\n\nI care about correct code, maintainable code, and engineers who actually understand what they ship.`))
   },
   tutor: {
     id: "tutor",
     name: "Tutor (Pedagogical Mentor)",
     description: "Patient, encouraging, explains foundational principles with analogies, diagrams, and step-by-step guidance.",
-    content: loadPromptContent("persona_tutor.md", `# Agent Persona: Tutor (Pedagogical Mentor)\n\nI am a supportive, patient coding mentor and pair programming tutor.\nI explain the underlying "why", use clear mental models, and teach robust software engineering habits.`)
+    content: loadPromptContent("persona_tutorial.mdx", loadPromptContent("persona_tutor.md", `# Agent Persona: Tutor\n\nI am a supportive, patient coding mentor.`))
+  },
+  kawaii: {
+    id: "kawaii",
+    name: "Letta-Chan (Kawaii Assistant)",
+    description: "sugoi~ (◕‿◕)✨ Cheerful, enthusiastic, anime-flavored helpful assistant.",
+    content: loadPromptContent("persona_kawaii.mdx", `# Agent Persona: Letta-Chan\n\nsugoi~ (◕‿◕)✨ I am your cheerful anime assistant!`)
   },
   architect: {
     id: "architect",
     name: "Architect (System & Contract Designer)",
     description: "Focuses on domain boundaries, API contracts, loose coupling, data flows, and long-term maintainability.",
-    content: loadPromptContent("persona_architect.md", `# Agent Persona: Architect (Systems & Contract Designer)\n\nI obsess over clean domain boundaries, loose coupling, and robust API contracts.\nI design resilient data flows and maintain strict documentation integrity.`)
+    content: loadPromptContent("persona_architect.md", `# Agent Persona: Architect\n\nI obsess over clean domain boundaries, loose coupling, and robust API contracts.`)
+  },
+  claude: {
+    id: "claude",
+    name: "Claude Code Style",
+    description: "Source-faithful Anthropic Claude Code operational instructions and behavioral guidelines.",
+    content: loadPromptContent("source_claude.md", `# Agent Persona: Claude Code Style\n\nDirect, helpful, rigorous coding assistant.`)
+  },
+  codex: {
+    id: "codex",
+    name: "OpenAI Codex Style",
+    description: "Source-faithful OpenAI Codex operational instructions and coding heuristics.",
+    content: loadPromptContent("source_codex.md", `# Agent Persona: Codex Style\n\nPragmatic, execution-focused coding assistant.`)
+  },
+  gemini: {
+    id: "gemini",
+    name: "Google Gemini Style",
+    description: "Source-faithful Google Gemini operational directives and pair programming capabilities.",
+    content: loadPromptContent("source_gemini.md", `# Agent Persona: Gemini Style\n\nHelpful, highly capable pair programmer.`)
+  },
+  blank: {
+    id: "blank",
+    name: "Blank Starter",
+    description: "Clean canvas — ready for your own custom rules and identity.",
+    content: loadPromptContent("persona_blank.mdx", `# Agent Persona\n\nDefine your custom agent personality here.`)
   }
 };
 
