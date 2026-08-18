@@ -5,8 +5,9 @@
  * Pixel-perfect Letta Code UI matching Screenshot reference 1:1.
  */
 
-const fs = require('node:fs')
-const path = require('node:path')
+import { execSync } from 'node:child_process'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 
 const memoryRoot = process.env.MEMORY_ROOT || path.join(process.env.HOME || '', '.gemini', 'memory')
 const brainDir = path.join(process.env.HOME || '', '.gemini', 'antigravity-cli', 'brain')
@@ -18,26 +19,70 @@ const activeSlug = path.basename(activeWorkspace).toLowerCase().replace(/\s+/g, 
 fs.mkdirSync(path.join(memoryRoot, 'global'), { recursive: true })
 fs.mkdirSync(path.join(memoryRoot, 'projects'), { recursive: true })
 
-function estimateTokens(str) {
+function estimateTokens(str: string): number {
   if (!str) return 0
   return Math.ceil(str.length / 4)
 }
 
-function formatTokens(tokens) {
+function formatTokens(tokens: number): string {
   if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(1)}M`
   if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}k`
   return `${tokens}`
 }
 
-function formatChars(count) {
+function formatChars(count: number): string {
   if (count >= 1000) return `${(count / 1000).toFixed(1)}k chars`
   return `${count} chars`
+}
+
+export type FileCommitInfo = {
+  hash: string
+  msg: string
+  date: string
+  add: number
+  del: number
+}
+
+export type LearningItem = {
+  id: string
+  project: string
+  filename: string
+  path: string
+  content: string
+  tokens: number
+  chars: number
+  commit: FileCommitInfo
+}
+
+export type ProjectItem = {
+  slug: string
+  isActive: boolean
+  projectMd: string
+  rulesMd: string
+  learnings: LearningItem[]
+}
+
+export type ArtifactItem = {
+  name: string
+  path: string
+  tokens: number
+  sizeBytes: number
+}
+
+export type CheckpointItem = {
+  step: number
+  title: string
+  index: number
+  lineIdx?: number
+  userPrompt: string
+  firstResponse: string
+  tokens: number
 }
 
 // 1. Locate Active AGY Conversation & Parse Real Transcript
 let activeConvId = '5af10b90-ebae-44ee-ba4a-d9b2d8eb8331'
 let _totalStepsInTranscript = 0
-const checkpoints = []
+const checkpoints: CheckpointItem[] = []
 let activeWindowStartStep = 0
 let activeWindowEndStep = 0
 
@@ -47,6 +92,7 @@ const liveStats = {
   userTokens: 0,
   agentTokens: 0,
   toolTokens: 0,
+  memfsTokens: 0,
   systemPromptTokens: 8200,
   systemToolsTokens: 14500,
   skillsTokens: 8500,
@@ -120,6 +166,10 @@ if (fs.existsSync(brainDir)) {
                 index: checkpoints.length + 1,
                 lineIdx: i,
                 step: s.step_index || i,
+                title: `Checkpoint ${checkpoints.length + 1}`,
+                userPrompt: s.content || '',
+                firstResponse: '',
+                tokens: estimateTokens(s.content || ''),
               })
             }
           } catch {}
@@ -167,9 +217,8 @@ if (fs.existsSync(brainDir)) {
 }
 
 // Helper: Get Git Commit & Diff Stats for a specific file
-function getFileCommitInfo(relPath) {
+function getFileCommitInfo(relPath: string): FileCommitInfo {
   try {
-    const { execSync } = require('node:child_process')
     const log = execSync(`git log -1 --pretty=format:"%h|%s|%ar" -- "${relPath}"`, {
       cwd: memoryRoot,
       encoding: 'utf-8',
@@ -196,7 +245,7 @@ function getFileCommitInfo(relPath) {
 }
 
 // 2. Read Active Artifact Files
-const artifacts = []
+const artifacts: ArtifactItem[] = []
 const convDir = path.join(brainDir, activeConvId)
 if (fs.existsSync(convDir)) {
   try {
@@ -227,8 +276,8 @@ const personaTokens = estimateTokens(personaMd)
 
 // 4. Read Projects & Learnings
 const projectsDir = path.join(memoryRoot, 'projects')
-const projects = []
-const allLearnings = []
+const projects: ProjectItem[] = []
+const allLearnings: LearningItem[] = []
 
 if (fs.existsSync(projectsDir)) {
   const dirs = fs.readdirSync(projectsDir)
@@ -242,7 +291,7 @@ if (fs.existsSync(projectsDir)) {
       const projContent = fs.existsSync(projFile) ? fs.readFileSync(projFile, 'utf-8') : ''
       const rulesContent = fs.existsSync(rulesFile) ? fs.readFileSync(rulesFile, 'utf-8') : ''
 
-      let learnings = []
+      let learnings: LearningItem[] = []
       if (fs.existsSync(learningsDir)) {
         learnings = fs
           .readdirSync(learningsDir)
@@ -362,7 +411,6 @@ const coreMemoryFiles = [
 // 5. Read Rich Git History
 let gitCommits = []
 try {
-  const { execSync } = require('node:child_process')
   if (fs.existsSync(path.join(memoryRoot, '.git'))) {
     const logOut = execSync(
       'git log -n 50 --pretty=format:\'{"hash":"%h","fullHash":"%H","date":"%ad","relDate":"%ar","msg":"%s"}\' --date=short',
@@ -424,7 +472,7 @@ try {
           item.preview = item.isReflection
             ? `Reviewed transcript: ${transcriptFullPath}`
             : item.files && item.files.length > 0
-              ? item.files.map((f) => path.join(memoryRoot, f.trim().split(' ')[0])).join(', ')
+              ? item.files.map((f: string) => path.join(memoryRoot, f.trim().split(' ')[0])).join(', ')
               : `${memoryRoot}/`
 
           return item
@@ -465,7 +513,6 @@ const freePercent = ((freeSpaceTokens / totalCapacity) * 100).toFixed(1)
 // MemFS Live Sync Status (inspired by agy-statusline.mjs getMemfsStatus)
 let memfsGitStatus = { state: 'clean', dirtyCount: 0 }
 try {
-  const { execSync } = require('node:child_process')
   if (fs.existsSync(path.join(memoryRoot, '.git'))) {
     const memPorcelain = execSync('git status --porcelain', {
       cwd: memoryRoot,
@@ -542,7 +589,7 @@ for (let i = 0; i < toolDots; i++) dots.push('tool')
 for (let i = 0; i < sysDots; i++) dots.push('system')
 for (let i = 0; i < freeDots; i++) dots.push('free')
 
-function escapeHtml(str) {
+function escapeHtml(str: string): string {
   return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
@@ -1450,7 +1497,7 @@ const html = `<!DOCTYPE html>
               ${formatTokens(usedTokensTotal)} / ${formatTokens(totalCapacity)} tokens (${usedPercent}%)
             </div>
             <div class="progress-track">
-              <div class="progress-fill" style="width: ${Math.max(2, usedPercent)}%;"></div>
+              <div class="progress-fill" style="width: ${Math.max(2, parseFloat(usedPercent))}%;"></div>
             </div>
             <div class="tokens-remaining">
               ${formatTokens(freeSpaceTokens)} tokens remaining
@@ -1723,7 +1770,7 @@ const html = `<!DOCTYPE html>
                     ? `
                   <div class="commit-stats">
                     <div style="font-weight:600; color:var(--text-white); margin-bottom:6px;">Changed files in MemFS (<span style="color:#a78bfa;">${memoryRoot}</span>):</div>
-                    ${c.files.map((f) => `<div class="stat-row">↳ <span style="color:#a78bfa;">${memoryRoot}/</span>${escapeHtml(f)}</div>`).join('')}
+                    ${c.files.map((f: string) => `<div class="stat-row">↳ <span style="color:#a78bfa;">${memoryRoot}/</span>${escapeHtml(f)}</div>`).join('')}
                   </div>
                 `
                     : ''
@@ -1733,7 +1780,7 @@ const html = `<!DOCTYPE html>
                     ? `
                   <div class="diff-patch-view">${escapeHtml(c.diff)
                     .split('\n')
-                    .map((l) => {
+                    .map((l: string) => {
                       if (l.startsWith('+') && !l.startsWith('+++'))
                         return `<span class="diff-line-add">${escapeHtml(l)}</span>`
                       if (l.startsWith('-') && !l.startsWith('---'))

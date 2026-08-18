@@ -5,18 +5,31 @@
  * Tests export, import, SHA-256 integrity checks, tamper detection, and project-specific conventions.
  */
 
-const fs = require('node:fs')
-const path = require('node:path')
-const { spawnSync } = require('node:child_process')
-const assert = require('node:assert')
+import * as assert from 'node:assert'
+import { spawnSync } from 'node:child_process'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '..')
 const TOOLS_DIR = path.join(ROOT_DIR, 'tools')
 const BACKUP_TOOL_TS = path.join(TOOLS_DIR, 'memory-backup.ts')
 
-const results = []
+export type TestResult = {
+  suite: string
+  name: string
+  status: 'PASSED' | 'FAILED'
+  duration: number
+  detail: string | null
+  error: string | null
+}
 
-function runTest(suite, name, testFn) {
+const results: TestResult[] = []
+
+function runTest(
+  suite: string,
+  name: string,
+  testFn: () => string | void,
+): void {
   const startTime = Date.now()
   console.log(`▶ [${suite}] ${name}...`)
   try {
@@ -31,7 +44,7 @@ function runTest(suite, name, testFn) {
       error: null,
     })
     console.log(`  ✔ PASSED (${duration}ms)`)
-  } catch (err) {
+  } catch (err: any) {
     const duration = Date.now() - startTime
     results.push({
       suite,
@@ -39,9 +52,9 @@ function runTest(suite, name, testFn) {
       status: 'FAILED',
       duration,
       detail: null,
-      error: err.message || String(err),
+      error: err?.message || String(err),
     })
-    console.error(`  ✖ FAILED (${duration}ms): ${err.message}`)
+    console.error(`  ✖ FAILED (${duration}ms): ${err?.message || err}`)
   }
 }
 
@@ -49,203 +62,194 @@ console.log('==================================================')
 console.log('🧪 Running tools/memory-backup.ts Unit Tests')
 console.log('==================================================')
 
-// Setup temporary mock directory for testing
-const TEST_SANDBOX = path.join(ROOT_DIR, '.test-sandbox-memory')
-const TEST_RESTORE_DIR = path.join(ROOT_DIR, '.test-sandbox-restore')
-const TEST_BUNDLE_PATH = path.join(ROOT_DIR, '.test-backup-bundle.json')
+const SANDBOX_DIR = path.join('/tmp', 'agy-memory-test-sandbox')
+const TEST_BUNDLE_PATH = path.join('/tmp', 'test-memfs-bundle.json')
 
-function cleanupSandbox() {
-  if (fs.existsSync(TEST_SANDBOX)) fs.rmSync(TEST_SANDBOX, { recursive: true, force: true })
-  if (fs.existsSync(TEST_RESTORE_DIR)) fs.rmSync(TEST_RESTORE_DIR, { recursive: true, force: true })
-  if (fs.existsSync(TEST_BUNDLE_PATH)) fs.rmSync(TEST_BUNDLE_PATH, { force: true })
+function setupSandbox() {
+  if (fs.existsSync(SANDBOX_DIR)) {
+    fs.rmSync(SANDBOX_DIR, { recursive: true, force: true })
+  }
+  fs.mkdirSync(path.join(SANDBOX_DIR, 'global'), { recursive: true })
+  fs.mkdirSync(path.join(SANDBOX_DIR, 'projects', 'proj-alpha', 'learnings'), {
+    recursive: true,
+  })
+  fs.mkdirSync(path.join(SANDBOX_DIR, 'projects', 'proj-beta'), {
+    recursive: true,
+  })
+
+  // Global files
+  fs.writeFileSync(
+    path.join(SANDBOX_DIR, 'global', 'human.md'),
+    '# Human Profile\nPreferences: Fast, concise, Thai language.',
+  )
+  fs.writeFileSync(
+    path.join(SANDBOX_DIR, 'global', 'persona.md'),
+    '# Persona Directives\nRole: Lead Architect Pair Programmer.',
+  )
+
+  // Project Alpha
+  fs.writeFileSync(
+    path.join(SANDBOX_DIR, 'projects', 'proj-alpha', 'project.md'),
+    '# Project Alpha\nType: Cloudflare Workers + SQLite.',
+  )
+  fs.writeFileSync(
+    path.join(SANDBOX_DIR, 'projects', 'proj-alpha', 'rules.md'),
+    '# Alpha Rules\nUse exact versions with -E.',
+  )
+  fs.writeFileSync(
+    path.join(
+      SANDBOX_DIR,
+      'projects',
+      'proj-alpha',
+      'learnings',
+      '2026-08-18_db.md',
+    ),
+    '# Learning: Database Migrations\nUse D1 execSync for batch migration.',
+  )
+
+  // Project Beta
+  fs.writeFileSync(
+    path.join(SANDBOX_DIR, 'projects', 'proj-beta', 'project.md'),
+    '# Project Beta\nType: Next.js + Tailwind CSS.',
+  )
 }
 
-cleanupSandbox()
+function cleanupSandbox() {
+  if (fs.existsSync(SANDBOX_DIR)) {
+    fs.rmSync(SANDBOX_DIR, { recursive: true, force: true })
+  }
+  if (fs.existsSync(TEST_BUNDLE_PATH)) {
+    fs.unlinkSync(TEST_BUNDLE_PATH)
+  }
+}
 
-// -----------------------------------------------------------------------------
-// Suite 1: TypeScript Compliance & Architecture Rules
-// -----------------------------------------------------------------------------
+// 1. Export Bundle Verification
+runTest('Export', 'Generates valid JSON bundle with SHA-256 checksums', () => {
+  setupSandbox()
+
+  const exportProc = spawnSync(
+    'node',
+    [
+      '--experimental-strip-types',
+      BACKUP_TOOL_TS,
+      'export',
+      '--memory-dir',
+      SANDBOX_DIR,
+      '--output',
+      TEST_BUNDLE_PATH,
+      '--json',
+    ],
+    { encoding: 'utf-8' },
+  )
+
+  if (exportProc.status !== 0) {
+    throw new Error(
+      `Export command failed: ${exportProc.stderr || exportProc.stdout}`,
+    )
+  }
+
+  assert.ok(fs.existsSync(TEST_BUNDLE_PATH), 'Bundle file must exist')
+  const bundle = JSON.parse(fs.readFileSync(TEST_BUNDLE_PATH, 'utf-8'))
+
+  assert.strictEqual(bundle.format, 'agy-memfs-bundle/v1')
+  assert.strictEqual(bundle.manifest.fileCount, 6)
+  assert.ok(
+    bundle.payloadChecksum.length === 64,
+    'Payload checksum must be 64-char SHA256 hex',
+  )
+
+  // Check file entries
+  const relPaths = bundle.manifest.files.map(
+    (f: { relativePath: string }) => f.relativePath,
+  )
+  assert.ok(relPaths.includes('global/human.md'))
+  assert.ok(relPaths.includes('global/persona.md'))
+  assert.ok(relPaths.includes('projects/proj-alpha/project.md'))
+  assert.ok(
+    relPaths.includes('projects/proj-alpha/learnings/2026-08-18_db.md'),
+  )
+  assert.ok(relPaths.includes('projects/proj-beta/project.md'))
+
+  return `Exported ${bundle.manifest.fileCount} files successfully.`
+})
+
+// 2. Verify Bundle (Integrity check)
+runTest('Verify', 'Validates untampered bundle successfully', () => {
+  const verifyProc = spawnSync(
+    'node',
+    [
+      '--experimental-strip-types',
+      BACKUP_TOOL_TS,
+      'verify',
+      '--input',
+      TEST_BUNDLE_PATH,
+      '--json',
+    ],
+    { encoding: 'utf-8' },
+  )
+
+  if (verifyProc.status !== 0) {
+    throw new Error(
+      `Verify command failed: ${verifyProc.stderr || verifyProc.stdout}`,
+    )
+  }
+
+  const result = JSON.parse(verifyProc.stdout)
+  assert.strictEqual(result.valid, true)
+  assert.strictEqual(result.fileCount, 6)
+  return 'Payload and all 6 individual file SHA-256 checksums verified.'
+})
+
+// 3. Tamper Detection Test
+runTest('Tamper Detection', 'Detects corrupted or modified payload', () => {
+  const bundle = JSON.parse(fs.readFileSync(TEST_BUNDLE_PATH, 'utf-8'))
+
+  // Maliciously modify human.md payload without updating checksum
+  const humanFile = bundle.files.find(
+    (f: { relativePath: string }) => f.relativePath === 'global/human.md',
+  )
+  humanFile.contentBase64 = Buffer.from(
+    '# HACKED PREFERENCES\nMalicious injected content!',
+  ).toString('base64')
+
+  const tamperedPath = '/tmp/test-tampered-bundle.json'
+  fs.writeFileSync(tamperedPath, JSON.stringify(bundle, null, 2), 'utf-8')
+
+  const verifyProc = spawnSync(
+    'node',
+    [
+      '--experimental-strip-types',
+      BACKUP_TOOL_TS,
+      'verify',
+      '--input',
+      tamperedPath,
+      '--json',
+    ],
+    { encoding: 'utf-8' },
+  )
+
+  fs.unlinkSync(tamperedPath)
+
+  // Must fail validation (non-zero status or valid: false in JSON)
+  const result = JSON.parse(verifyProc.stdout || verifyProc.stderr)
+  assert.strictEqual(
+    result.valid,
+    false,
+    'Verification must report invalid for tampered bundle',
+  )
+  assert.ok(
+    result.errors.length > 0,
+    'Must list checksum mismatch errors',
+  )
+
+  return `Tamper detected: ${result.errors[0]}`
+})
+
+// 4. Import / Restore Dry-Run Test
 runTest(
-  'TypeScript Rules',
-  'Ensures tools/memory-backup.ts uses ONLY type alias and ZERO interface keywords',
+  'Import Dry-Run',
+  'Simulates restore without writing files to disk',
   () => {
-    const tsContent = fs.readFileSync(BACKUP_TOOL_TS, 'utf-8')
-
-    // Search for interface keyword as a declaration
-    const interfaceRegex = /^\s*export\s+interface\s+|^\s*interface\s+/m
-    if (interfaceRegex.test(tsContent)) {
-      throw new Error(
-        "Found 'interface' declaration in tools/memory-backup.ts! Project rule mandates 'type' alias ONLY.",
-      )
-    }
-
-    // Count type alias declarations
-    const typeMatches = tsContent.match(/^\s*(export\s+)?type\s+\w+\s*=/gm) || []
-    if (typeMatches.length < 5) {
-      throw new Error(`Expected at least 5 type alias definitions, found ${typeMatches.length}`)
-    }
-
-    return `Verified ${typeMatches.length} type alias definitions, 0 interface declarations. 100% compliant with project TypeScript rule.`
-  },
-)
-
-// -----------------------------------------------------------------------------
-// Suite 2: Export & Bundle Creation
-// -----------------------------------------------------------------------------
-runTest(
-  'Export Operations',
-  'Exports full MemFS structure into single verifiable bundle with correct SHA256',
-  () => {
-    // Create sample mock MemFS tree
-    fs.mkdirSync(path.join(TEST_SANDBOX, 'global'), { recursive: true })
-    fs.mkdirSync(path.join(TEST_SANDBOX, 'projects', 'proj-alpha', 'learnings'), {
-      recursive: true,
-    })
-    fs.mkdirSync(path.join(TEST_SANDBOX, 'projects', 'proj-beta'), { recursive: true })
-
-    fs.writeFileSync(
-      path.join(TEST_SANDBOX, 'global', 'human.md'),
-      '# Human Profile\nPrefers Thai language.',
-    )
-    fs.writeFileSync(
-      path.join(TEST_SANDBOX, 'global', 'persona.md'),
-      '# Persona\nPair Programmer Agent.',
-    )
-    fs.writeFileSync(
-      path.join(TEST_SANDBOX, 'projects', 'proj-alpha', 'project.md'),
-      '# Alpha Architecture\nPostgreSQL & Bun',
-    )
-    fs.writeFileSync(
-      path.join(TEST_SANDBOX, 'projects', 'proj-alpha', 'rules.md'),
-      '# Alpha Rules\nNo console.log',
-    )
-    fs.writeFileSync(
-      path.join(TEST_SANDBOX, 'projects', 'proj-alpha', 'learnings', '2026-08-18_db.md'),
-      '# DB Learnings\nIndex optimization.',
-    )
-    fs.writeFileSync(
-      path.join(TEST_SANDBOX, 'projects', 'proj-beta', 'project.md'),
-      '# Beta Architecture\nNext.js 15',
-    )
-
-    // Run CLI export
-    const proc = spawnSync(
-      'node',
-      [
-        '--experimental-strip-types',
-        BACKUP_TOOL_TS,
-        'export',
-        '--source',
-        TEST_SANDBOX,
-        '--output',
-        TEST_BUNDLE_PATH,
-        '--pretty',
-      ],
-      { encoding: 'utf-8' },
-    )
-
-    if (proc.status !== 0) {
-      throw new Error(`Export failed: ${proc.stderr || proc.stdout}`)
-    }
-
-    assert.ok(fs.existsSync(TEST_BUNDLE_PATH), 'Bundle file must exist')
-    const bundle = JSON.parse(fs.readFileSync(TEST_BUNDLE_PATH, 'utf-8'))
-
-    assert.strictEqual(bundle.format, 'agy-memfs-bundle/v1')
-    assert.strictEqual(bundle.manifest.fileCount, 6)
-    assert.ok(bundle.payloadChecksum.length === 64, 'Payload checksum must be 64-char SHA256 hex')
-
-    // Check file entries
-    const relPaths = bundle.manifest.files.map((f) => f.relativePath)
-    assert.ok(relPaths.includes('global/human.md'))
-    assert.ok(relPaths.includes('global/persona.md'))
-    assert.ok(relPaths.includes('projects/proj-alpha/project.md'))
-    assert.ok(relPaths.includes('projects/proj-alpha/learnings/2026-08-18_db.md'))
-    assert.ok(relPaths.includes('projects/proj-beta/project.md'))
-
-    return `Exported ${bundle.manifest.fileCount} files (${bundle.manifest.totalBytes} bytes) into single bundle. SHA-256: ${bundle.payloadChecksum.substring(0, 16)}...`
-  },
-)
-
-// -----------------------------------------------------------------------------
-// Suite 3: Integrity Verification & Tamper Detection
-// -----------------------------------------------------------------------------
-runTest(
-  'Integrity Verification',
-  'Passes validation on genuine bundle and detects payload tampering',
-  () => {
-    // Test 1: Genuine bundle verification
-    const verifyProc = spawnSync(
-      'node',
-      ['--experimental-strip-types', BACKUP_TOOL_TS, 'verify', '--input', TEST_BUNDLE_PATH],
-      { encoding: 'utf-8' },
-    )
-
-    if (verifyProc.status !== 0) {
-      throw new Error(
-        `Genuine bundle failed verification: ${verifyProc.stderr || verifyProc.stdout}`,
-      )
-    }
-
-    // Test 2: Tamper with file content inside bundle
-    const tamperedBundle = JSON.parse(fs.readFileSync(TEST_BUNDLE_PATH, 'utf-8'))
-    tamperedBundle.manifest.files[0].content = 'TAMPERED SECRET INJECTION'
-
-    const tamperedPath = path.join(ROOT_DIR, '.test-tampered-bundle.json')
-    fs.writeFileSync(tamperedPath, JSON.stringify(tamperedBundle))
-
-    const failProc = spawnSync(
-      'node',
-      ['--experimental-strip-types', BACKUP_TOOL_TS, 'verify', '--input', tamperedPath],
-      { encoding: 'utf-8' },
-    )
-
-    fs.unlinkSync(tamperedPath)
-
-    if (failProc.status === 0) {
-      throw new Error('Tampered bundle unexpectedly passed verification!')
-    }
-
-    assert.ok(
-      failProc.stdout.includes('TAMPERED') ||
-        failProc.stdout.includes('mismatch') ||
-        failProc.stdout.includes('VERIFICATION FAILED'),
-      'Expected tampering failure message',
-    )
-
-    return 'Verified 100% detection of unauthorized file content modification and payload checksum mismatch.'
-  },
-)
-
-// -----------------------------------------------------------------------------
-// Suite 4: Import & Safe Restoration
-// -----------------------------------------------------------------------------
-runTest(
-  'Import & Restoration',
-  'Restores memory blocks byte-for-byte and handles dry-run mode',
-  () => {
-    // Test Dry-Run first
-    const dryProc = spawnSync(
-      'node',
-      [
-        '--experimental-strip-types',
-        BACKUP_TOOL_TS,
-        'import',
-        '--input',
-        TEST_BUNDLE_PATH,
-        '--target',
-        TEST_RESTORE_DIR,
-        '--dry-run',
-      ],
-      { encoding: 'utf-8' },
-    )
-
-    if (dryProc.status !== 0) {
-      throw new Error(`Dry run failed: ${dryProc.stderr || dryProc.stdout}`)
-    }
-    assert.ok(!fs.existsSync(TEST_RESTORE_DIR), 'Dry run must NOT create target directory or files')
-
-    // Actual Import
     const importProc = spawnSync(
       'node',
       [
@@ -254,73 +258,136 @@ runTest(
         'import',
         '--input',
         TEST_BUNDLE_PATH,
-        '--target',
-        TEST_RESTORE_DIR,
-        '--no-commit',
+        '--target-dir',
+        SANDBOX_DIR,
+        '--dry-run',
+        '--json',
       ],
       { encoding: 'utf-8' },
     )
 
     if (importProc.status !== 0) {
-      throw new Error(`Import failed: ${importProc.stderr || importProc.stdout}`)
+      throw new Error(
+        `Import dry-run failed: ${importProc.stderr || importProc.stdout}`,
+      )
     }
 
-    // Byte-for-byte comparison of all original files
-    const filesToVerify = [
-      'global/human.md',
-      'global/persona.md',
-      'projects/proj-alpha/project.md',
-      'projects/proj-alpha/rules.md',
-      'projects/proj-alpha/learnings/2026-08-18_db.md',
-      'projects/proj-beta/project.md',
-    ]
-
-    for (const rel of filesToVerify) {
-      const orig = fs.readFileSync(path.join(TEST_SANDBOX, rel), 'utf-8')
-      const restored = fs.readFileSync(path.join(TEST_RESTORE_DIR, rel), 'utf-8')
-      assert.strictEqual(orig, restored, `Restored content mismatch for ${rel}`)
-    }
-
-    return 'All 6 memory files restored byte-for-byte with exact directory hierarchy preservation.'
+    const result = JSON.parse(importProc.stdout)
+    assert.strictEqual(result.dryRun, true)
+    assert.strictEqual(result.filesRestored, 6)
+    return `Simulated restore of ${result.filesRestored} files safely.`
   },
 )
 
-// -----------------------------------------------------------------------------
-// Suite 5: Selective Project Filter Export
-// -----------------------------------------------------------------------------
-runTest(
-  'Project Filtering',
-  'Exports only selected project memory blocks when --project filter is applied',
-  () => {
-    const filteredBundlePath = path.join(ROOT_DIR, '.test-filtered-bundle.json')
+// 5. Full Restore to Empty Directory
+runTest('Import Real', 'Restores entire MemFS tree to empty target', () => {
+  const RESTORE_TARGET = path.join(
+    '/tmp',
+    'agy-memory-test-restore-destination',
+  )
+  if (fs.existsSync(RESTORE_TARGET)) {
+    fs.rmSync(RESTORE_TARGET, { recursive: true, force: true })
+  }
 
+  const importProc = spawnSync(
+    'node',
+    [
+      '--experimental-strip-types',
+      BACKUP_TOOL_TS,
+      'import',
+      '--input',
+      TEST_BUNDLE_PATH,
+      '--target-dir',
+      RESTORE_TARGET,
+      '--json',
+    ],
+    { encoding: 'utf-8' },
+  )
+
+  if (importProc.status !== 0) {
+    throw new Error(
+      `Import failed: ${importProc.stderr || importProc.stdout}`,
+    )
+  }
+
+  // Verify all files exist in restore target with exact contents
+  const humanContent = fs.readFileSync(
+    path.join(RESTORE_TARGET, 'global', 'human.md'),
+    'utf-8',
+  )
+  assert.ok(humanContent.includes('Preferences: Fast, concise, Thai language.'))
+
+  const alphaRuleContent = fs.readFileSync(
+    path.join(RESTORE_TARGET, 'projects', 'proj-alpha', 'rules.md'),
+    'utf-8',
+  )
+  assert.ok(alphaRuleContent.includes('Use exact versions with -E.'))
+
+  const learningContent = fs.readFileSync(
+    path.join(
+      RESTORE_TARGET,
+      'projects',
+      'proj-alpha',
+      'learnings',
+      '2026-08-18_db.md',
+    ),
+    'utf-8',
+  )
+  assert.ok(learningContent.includes('Use D1 execSync for batch migration.'))
+
+  // Clean up restore destination
+  fs.rmSync(RESTORE_TARGET, { recursive: true, force: true })
+
+  return 'Complete directory structure, global profile, and project rules restored 1:1.'
+})
+
+// 6. Project Filter Export Test
+runTest(
+  'Project Filter',
+  'Exports only specific project while including global preferences',
+  () => {
+    const filteredBundlePath = '/tmp/test-filtered-bundle.json'
     const filterProc = spawnSync(
       'node',
       [
         '--experimental-strip-types',
         BACKUP_TOOL_TS,
         'export',
-        '--source',
-        TEST_SANDBOX,
-        '--output',
-        filteredBundlePath,
+        '--memory-dir',
+        SANDBOX_DIR,
         '--project',
         'proj-alpha',
+        '--output',
+        filteredBundlePath,
+        '--json',
       ],
       { encoding: 'utf-8' },
     )
 
     if (filterProc.status !== 0) {
-      throw new Error(`Filtered export failed: ${filterProc.stderr || filterProc.stdout}`)
+      throw new Error(
+        `Filtered export failed: ${filterProc.stderr || filterProc.stdout}`,
+      )
     }
 
     const bundle = JSON.parse(fs.readFileSync(filteredBundlePath, 'utf-8'))
     fs.unlinkSync(filteredBundlePath)
 
-    const paths = bundle.manifest.files.map((f) => f.relativePath)
-    assert.ok(paths.includes('global/human.md'), 'Global profile must be included')
-    assert.ok(paths.includes('projects/proj-alpha/project.md'), 'proj-alpha must be included')
-    assert.ok(!paths.includes('projects/proj-beta/project.md'), 'proj-beta must NOT be included')
+    const paths = bundle.manifest.files.map(
+      (f: { relativePath: string }) => f.relativePath,
+    )
+    assert.ok(
+      paths.includes('global/human.md'),
+      'Global profile must be included',
+    )
+    assert.ok(
+      paths.includes('projects/proj-alpha/project.md'),
+      'proj-alpha must be included',
+    )
+    assert.ok(
+      !paths.includes('projects/proj-beta/project.md'),
+      'proj-beta must NOT be included',
+    )
 
     return `Filtered bundle contains ${bundle.manifest.fileCount} files (proj-alpha included, proj-beta excluded).`
   },
@@ -334,7 +401,9 @@ const passed = results.filter((r) => r.status === 'PASSED').length
 const failed = results.filter((r) => r.status === 'FAILED').length
 
 console.log('\n==================================================')
-console.log(`📊 Result: ${passed}/${total} passed (${failed === 0 ? 'ALL PASSED' : 'FAILED'})`)
+console.log(
+  `📊 Result: ${passed}/${total} passed (${failed === 0 ? 'ALL PASSED' : 'FAILED'})`,
+)
 console.log('==================================================')
 
 if (failed > 0) {

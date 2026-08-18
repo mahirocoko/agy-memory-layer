@@ -4,9 +4,10 @@
   "type": "module",
   "description": "Stateful Git-backed MemFS, sleep-time reflection, codebase onboarding, and Memory Palace plugin for Antigravity CLI",
   "scripts": {
-    "test": "node --experimental-strip-types --test tests/run-test-suite.ts tests/unit-coverage.test.ts",
-    "test:coverage": "node --experimental-strip-types --experimental-test-coverage --test tests/run-test-suite.ts tests/unit-coverage.test.ts",
-    "check": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc --noEmit && node --experimental-strip-types --test tests/run-test-suite.ts tests/unit-coverage.test.ts",
+    "test:coverage": "tsc --noEmit && node --experimental-strip-types --experimental-test-coverage --test tests/run-test-suite.ts tests/unit-coverage.test.ts",
+    "check": "tsc --noEmit && biome check .",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "fix": "biome check --write ."
@@ -24,6 +25,7 @@
   "license": "MIT",
   "devDependencies": {
     "@biomejs/biome": "2.5.9",
-    "@types/node": "26.2.0"
+    "@types/node": "26.2.0",
+    "typescript": "7.0.2"
   }
 }

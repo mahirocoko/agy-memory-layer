@@ -1,6 +1,6 @@
 # 🧪 Comprehensive Test & Verification Report: `agy-memory-layer`
 
-**Date**: 2026-08-18 09:59:43 UTC  
+**Date**: 2026-08-18 14:35:55 UTC  
 **Environment**: macOS (Darwin) · Antigravity CLI 1.1.14 · Node v22.22.3  
 **Storage Target**: `~/.gemini/memory/` (Git-backed MemFS)  
 **Overall Result**: 🔴 **SOME TESTS FAILED**
@@ -12,9 +12,9 @@
 | Metric | Result |
 | :--- | :--- |
 | **Total Test Scenarios** | **11** |
-| **Passed** | **9** (82%) |
-| **Failed** | **2** |
-| **Total Execution Time** | **765 ms** |
+| **Passed** | **10** (91%) |
+| **Failed** | **1** |
+| **Total Execution Time** | **17916 ms** |
 
 ---
 
@@ -22,40 +22,46 @@
 
 | Test Suite | Scenario | Status | Time | Verification Evidence |
 | :--- | :--- | :---: | :---: | :--- |
-| **Hooks Contract** | PreInvocation Hook outputs valid AGY JSON schema | 🟢 PASSED | 73ms | Valid JSON schema with 1 injected steps. Execution speed: fast. |
-| **Hooks Contract** | Stop Hook triggers automated Git commit on memory mutation | 🟢 PASSED | 92ms | Verified automatic git add & commit on memory modifications. |
-| **Workspace Isolation** | Separates Project A and Project B while preserving Global User profile | 🟢 PASSED | 160ms | Project A and Project B contexts are strictly isolated; Global profile is shared 100%. |
-| **Memory Palace** | Palace generator builds interactive HTML with all live projects & git timeline | 🔴 FAILED | 45ms | palace-generator.ts failed: file:///Users/mahiro/Git/me/sandbox/learn-letta-code/plugins/agy-memory-layer/scripts/palace-generator.ts:8
-const fs = require('node:fs')
-           ^
+| **Hooks Contract** | PreInvocation Hook outputs valid AGY JSON schema | 🟢 PASSED | 75ms | Valid JSON schema with 1 injected steps. Execution speed: fast. |
+| **Hooks Contract** | Stop Hook triggers automated Git commit on memory mutation | 🟢 PASSED | 91ms | Verified automatic git add & commit on memory modifications. |
+| **Workspace Isolation** | Separates Project A and Project B while preserving Global User profile | 🟢 PASSED | 161ms | Project A and Project B contexts are strictly isolated; Global profile is shared 100%. |
+| **Memory Palace** | Palace generator builds interactive HTML with all live projects & git timeline | 🟢 PASSED | 16801ms | HTML dashboard verified (1332 KB) with complete memory palace nodes. |
+| **Git Versioning** | Memory changes can be audited with git log and rolled back cleanly | 🟢 PASSED | 108ms | Successfully proved Git revert and rollback capability. Base hash: 837ef15 |
+| **AGY Plugin Schema** | Plugin passes 'agy plugin validate' with zero errors | 🟢 PASSED | 50ms | Native AGY plugin validation: 7 skills, 2 hooks processed with 0 errors. |
+| **Autonomous Directives** | rules/AGENTS.md adheres to Letta-style proactive autonomous learning | 🟢 PASSED | 0ms | All 7 core autonomous directives verified in rules/AGENTS.md. |
+| **Codebase Scanner (/init)** | Scans repository architecture and seeds project.md on Day 1 | 🟢 PASSED | 92ms | Scanner accurately detected React, Vite, TypeScript, Vitest, and seeded Day 1 MemFS blocks. |
+| **Memory Search Engine** | Searches across global, project, and historical learnings with ranked snippets | 🟢 PASSED | 16ms | Search engine returned 15 ranked matches with line snippets in < 10ms. |
+| **Remote Git Sync** | Manages remote URL setup and sync status cleanly | 🟢 PASSED | 35ms | Remote setup and sync status verified. |
+| **Backup & Integrity** | Exports, verifies SHA-256 signatures, detects tampering, and restores bundle byte-for-byte | 🔴 FAILED | 487ms | test-memory-backup.ts failed:
+==================================================
+🧪 Running tools/memory-backup.ts Unit Tests
+==================================================
+▶ [Export] Generates valid JSON bundle with SHA-256 checksums...
+▶ [Verify] Validates untampered bundle successfully...
+▶ [Tamper Detection] Detects corrupted or modified payload...
+▶ [Import Dry-Run] Simulates restore without writing files to disk...
+▶ [Import Real] Restores entire MemFS tree to empty target...
+▶ [Project Filter] Exports only specific project while including global preferences...
 
-ReferenceError: require is not defined in ES module scope, you can use import instead
-    at file:///Users/mahiro/Git/me/sandbox/learn-letta-code/plugins/agy-memory-layer/scripts/palace-generator.ts:8:12
-    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
-    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+==================================================
+📊 Result: 0/6 passed (FAILED)
+==================================================
 
-Node.js v22.22.3
- |
-| **Git Versioning** | Memory changes can be audited with git log and rolled back cleanly | 🟢 PASSED | 123ms | Successfully proved Git revert and rollback capability. Base hash: eeaf2e3 |
-| **AGY Plugin Schema** | Plugin passes 'agy plugin validate' with zero errors | 🟢 PASSED | 51ms | Native AGY plugin validation: 7 skills, 2 hooks processed with 0 errors. |
-| **Autonomous Directives** | rules/AGENTS.md adheres to Letta-style proactive autonomous learning | 🟢 PASSED | 1ms | All 7 core autonomous directives verified in rules/AGENTS.md. |
-| **Codebase Scanner (/init)** | Scans repository architecture and seeds project.md on Day 1 | 🟢 PASSED | 108ms | Scanner accurately detected React, Vite, TypeScript, Vitest, and seeded Day 1 MemFS blocks. |
-| **Memory Search Engine** | Searches across global, project, and historical learnings with ranked snippets | 🟢 PASSED | 15ms | Search engine returned 14 ranked matches with line snippets in < 10ms. |
-| **Remote Git Sync** | Manages remote URL setup and sync status cleanly | 🟢 PASSED | 45ms | Remote setup and sync status verified. |
-| **Backup & Integrity** | Exports, verifies SHA-256 signatures, detects tampering, and restores bundle byte-for-byte | 🔴 FAILED | 52ms | test-memory-backup.ts failed:
+  ✖ FAILED (86ms): Expected values to be strictly equal:
 
-file:///Users/mahiro/Git/me/sandbox/learn-letta-code/tests/test-memory-backup.ts:8
-const fs = require('node:fs')
-           ^
+482 !== 6
 
-ReferenceError: require is not defined in ES module scope, you can use import instead
-    at file:///Users/mahiro/Git/me/sandbox/learn-letta-code/tests/test-memory-backup.ts:8:12
-    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
-    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
-    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+  ✖ FAILED (59ms): Expected values to be strictly equal:
 
-Node.js v22.22.3
+482 !== 6
+
+  ✖ FAILED (2ms): Cannot read properties of undefined (reading 'find')
+  ✖ FAILED (66ms): Expected values to be strictly equal:
+
+undefined !== 6
+
+  ✖ FAILED (156ms): ENOENT: no such file or directory, open '/tmp/agy-memory-test-restore-destination/global/human.md'
+  ✖ FAILED (67ms): proj-alpha must be included
  |
 
 ---

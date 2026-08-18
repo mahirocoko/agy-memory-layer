@@ -28,7 +28,7 @@ for arg in "$@"; do
   esac
 done
 
-node "${SCRIPT_DIR}/palace-generator.js" "$ACTIVE_WORKSPACE" "$OUTPUT_FILE" "$TARGET_CONV_ID"
+node --experimental-strip-types "${SCRIPT_DIR}/palace-generator.ts" "$ACTIVE_WORKSPACE" "$OUTPUT_FILE" "$TARGET_CONV_ID"
 
 if [ "$OPEN_BROWSER" = true ]; then
   open "$OUTPUT_FILE" 2>/dev/null || xdg-open "$OUTPUT_FILE" 2>/dev/null || true

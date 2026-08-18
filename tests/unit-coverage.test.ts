@@ -228,14 +228,14 @@ describe('Unit Coverage Extensions', () => {
     const diff = getWorktreeDiff(wt.worktreePath)
     assert.strictEqual(diff.hasChanges, true)
     assert.strictEqual(
-      diff.files.some((f) => f.includes('WORKTREE_TEST_TEMP.md')),
+      diff.files.some((f: string) => f.includes('WORKTREE_TEST_TEMP.md')),
       true,
     )
 
     // Check listActiveWorktrees
     const activeList = listActiveWorktrees(ROOT_DIR)
     assert.strictEqual(
-      activeList.some((p) => p.includes(testId)),
+      activeList.some((p: string) => p.includes(testId)),
       true,
     )
 
@@ -270,7 +270,7 @@ describe('Unit Coverage Extensions', () => {
 
     const pending = listPendingProposals()
     assert.strictEqual(
-      pending.some((p) => p.id === propRes.proposalId),
+      pending.some((p: { id: string }) => p.id === propRes.proposalId),
       true,
     )
 
