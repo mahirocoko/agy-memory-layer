@@ -53,6 +53,9 @@ const { scanAndSynthesizeSkills, generateDraftSkill, scanMemfsLearnings } = awai
 const { findCrossProjectSynapses, formatSynapseNotice } = await import(
   path.join(SCRIPTS_DIR, 'cross-project-synapse.ts')
 )
+const { syncLettaMemory, normalizeLettaProjectSlug, findPrimaryLettaAgent } = await import(
+  path.join(SCRIPTS_DIR, 'letta-sync.ts')
+)
 
 describe('Unit Coverage Extensions', () => {
   it('tests init-project-memory with Rust, Go, Python, and Docker manifests', () => {
@@ -483,6 +486,74 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(notice.includes('project-a'), true)
 
     // Clean up
+    fs.rmSync(tempMemfs, { recursive: true, force: true })
+  })
+
+  it('tests letta-sync normalization, primary agent discovery, and dry-run sync', () => {
+    // 1. Slug normalization test
+    const slugA = normalizeLettaProjectSlug('Users_mahiro_ghq_github.com_haabiz_haabiz-ui')
+    assert.strictEqual(slugA, 'haabiz-haabiz-ui')
+
+    const slugB = normalizeLettaProjectSlug('Users_mahiro_ghq_github.com_mahirocoko_agent-halo')
+    assert.strictEqual(slugB, 'mahirocoko-agent-halo')
+
+    const slugC = normalizeLettaProjectSlug('Users_mahiro_Documents_my-project')
+    assert.strictEqual(slugC, 'my-project')
+
+    // 2. Mock Letta sandbox sync test
+    const tempLetta = '/tmp/test-letta-sync-root'
+    const tempMemfs = '/tmp/test-letta-sync-memfs'
+    const agentDir = path.join(tempLetta, 'agents', 'agent-test-1234', 'memory')
+
+    fs.mkdirSync(path.join(agentDir, 'system'), { recursive: true })
+    fs.mkdirSync(path.join(agentDir, 'reference'), { recursive: true })
+    fs.mkdirSync(path.join(tempLetta, 'projects', 'Users_mahiro_ghq_github.com_org_repo-a'), {
+      recursive: true,
+    })
+
+    fs.writeFileSync(
+      path.join(agentDir, 'system', 'human.md'),
+      '# Letta Human Profile\n- User prefers Thai language\n- User prefers Bun for Bun projects\n',
+    )
+    fs.writeFileSync(
+      path.join(agentDir, 'reference', 'thai-grammar.md'),
+      '# Thai Grammar Reference\n- Writing tone guidelines.',
+    )
+    fs.writeFileSync(
+      path.join(tempLetta, 'projects', 'Users_mahiro_ghq_github.com_org_repo-a', 'rules.md'),
+      '# Repo A Rules\n- Always run linter before push.',
+    )
+
+    // Discover primary agent
+    const discoveredAgent = findPrimaryLettaAgent(tempLetta)
+    assert.strictEqual(discoveredAgent, 'agent-test-1234')
+
+    // Test live sync into sandbox MemFS
+    const syncRes = syncLettaMemory({
+      lettaRoot: tempLetta,
+      memoryRoot: tempMemfs,
+      dryRun: false,
+      autoCommit: false,
+    })
+
+    assert.strictEqual(syncRes.status, 'SYNCED_SUCCESSFULLY')
+    assert.strictEqual(syncRes.globalHumanUpdated, true)
+    assert.strictEqual(syncRes.importedReferencesCount, 1)
+    assert.strictEqual(syncRes.syncedProjectsCount, 1)
+
+    // Verify imported files in sandbox MemFS
+    assert.strictEqual(fs.existsSync(path.join(tempMemfs, 'global', 'human.md')), true)
+    assert.strictEqual(
+      fs.existsSync(path.join(tempMemfs, 'global', 'reference', 'thai-grammar.md')),
+      true,
+    )
+    assert.strictEqual(
+      fs.existsSync(path.join(tempMemfs, 'projects', 'org-repo-a', 'rules.md')),
+      true,
+    )
+
+    // Clean up
+    fs.rmSync(tempLetta, { recursive: true, force: true })
     fs.rmSync(tempMemfs, { recursive: true, force: true })
   })
 })
