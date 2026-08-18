@@ -35,6 +35,10 @@ You MUST autonomously update, consult, and maintain your memory without waiting 
 - If you suspect codebase drift or contradiction with existing rules:
   - **Action**: Invoke `/doctor` to audit consistency between Git MemFS and actual workspace state.
 
+### G. Autonomous Episodic Recall (`recall`)
+- Whenever the user asks "What did we talk about previously regarding X?", "How did we solve bug Y in the earlier session?", or when you detect missing context from prior sessions:
+  - **Action**: **Do NOT ask the user to type `/recall`**. Autonomously run `recall-engine.js search "<query>"` or invoke a recall research subagent behind the scenes, extract the historical facts, and seamlessly answer the user with full past-session continuity!
+
 ---
 
 ## 2. Memory Organization & Hierarchy
