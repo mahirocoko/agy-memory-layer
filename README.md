@@ -9,7 +9,9 @@
 > **Stateful Git-Backed Memory Layer, Sleep-Time Reflection, Codebase Onboarding, and Memory Palace Plugin for Antigravity CLI (`agy`)**  
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
 
-![agy-memory-layer Architecture & Lifecycle Flow](./assets/architecture-flow.jpg)
+<p align="center">
+  <img src="./assets/architecture-flow.jpg" width="100%" alt="agy-memory-layer Architecture & Lifecycle Flow" />
+</p>
 
 ---
 
@@ -17,22 +19,26 @@
 
 `agy-memory-layer` ships with 6 declarative First-Class Subagents designed for Antigravity CLI:
 
-![First-Class Subagents Suite](./assets/subagents-architecture.jpg)
+<p align="center">
+  <img src="./assets/subagents-architecture.jpg" width="100%" alt="First-Class Subagents Suite" />
+</p>
 
-| Subagent (`agents/*.json`) | Role / Responsibility | Model Tier | Tools Allowed | System Prompt |
-| :--- | :--- | :---: | :---: | :--- |
-| **`dream_agent`** | **Dream Reflection Subagent**: Analyzes transcripts, captures user rules (The Annoyance Rule), and updates MemFS. | `inherit` | `Write` (MemFS) | `prompts/subagents/dream_subagent.md` |
-| **`recall_agent`** | **Episodic Recall Specialist**: Searches past 500+ transcripts via Hybrid Cosine Similarity. | `flash` | `Read-only` | `prompts/subagents/recall_subagent.md` |
-| **`onboarding_agent`** | **Codebase Onboarding Specialist**: Explores repos on Day 1 to seed `project.md` and `rules.md`. | `flash` | `Write` (MemFS) | `prompts/subagents/onboarding.md` |
-| **`memory_agent`** | **MemFS Memory Specialist**: Proactively updates and organizes core memory blocks. | `inherit` | `Write` (MemFS) | `prompts/subagents/remember.md` |
-| **`history_analyzer_agent`** | **Deep History Analyzer**: Investigates multi-step debugging traces across local transcripts. | `flash` | `Read-only` | `prompts/subagents/recall_subagent_local.md` |
-| **`skill_creator_agent`** | **Skill Creator Specialist**: Authors, tests, and validates new Antigravity skills. | `pro` | `Write` | `prompts/subagents/skill_creator.md` |
+| Subagent & Manifest | Role & Responsibilities | Model | Tools Allowed |
+| :--- | :--- | :---: | :---: |
+| **`dream_agent`**<br/>↳ [`dream_subagent.md`](./plugins/agy-memory-layer/prompts/subagents/dream_subagent.md) | **Dream Reflection Subagent**<br/>Analyzes transcripts, captures user preferences (*The Annoyance Rule*), and updates MemFS. | `inherit` | `Write` (MemFS) |
+| **`recall_agent`**<br/>↳ [`recall_subagent.md`](./plugins/agy-memory-layer/prompts/subagents/recall_subagent.md) | **Episodic Recall Specialist**<br/>Searches past 500+ transcripts via Hybrid Vector Cosine Similarity. | `flash` | `Read-only` |
+| **`onboarding_agent`**<br/>↳ [`onboarding.md`](./plugins/agy-memory-layer/prompts/subagents/onboarding.md) | **Codebase Onboarding Specialist**<br/>Explores repositories on Day 1 to bootstrap `project.md` and `rules.md`. | `flash` | `Write` (MemFS) |
+| **`memory_agent`**<br/>↳ [`remember.md`](./plugins/agy-memory-layer/prompts/subagents/remember.md) | **MemFS Memory Specialist**<br/>Proactively updates, organizes, and prunes core memory blocks. | `inherit` | `Write` (MemFS) |
+| **`history_analyzer_agent`**<br/>↳ [`recall_subagent_local.md`](./plugins/agy-memory-layer/prompts/subagents/recall_subagent_local.md) | **Deep History Analyzer**<br/>Investigates multi-step debugging traces across local conversation transcripts. | `flash` | `Read-only` |
+| **`skill_creator_agent`**<br/>↳ [`skill_creator.md`](./plugins/agy-memory-layer/prompts/subagents/skill_creator.md) | **Skill Creator Specialist**<br/>Designs, authors, tests, and validates new Antigravity skills. | `pro` | `Write` |
 
 ---
 
 ## 🧠 Hybrid Semantic Recall & Auto-Dream Lifecycle
 
-![Hybrid Semantic Recall & Sleep-Time Reflection Lifecycle](./assets/semantic-recall-lifecycle.jpg)
+<p align="center">
+  <img src="./assets/semantic-recall-lifecycle.jpg" width="100%" alt="Hybrid Semantic Recall & Sleep-Time Reflection Lifecycle" />
+</p>
 
 - **Vector Semantic Search**: Subword n-gram vector embeddings + BM25 keyword matching with cosine similarity scoring.
 - **Autonomous Sleep-Time Reflection**: Background daemon (`dream-daemon.js`) discovers undreamed sessions across `brain/` and distills permanent learnings automatically.
