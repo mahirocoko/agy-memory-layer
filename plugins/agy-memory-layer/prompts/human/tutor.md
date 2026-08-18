@@ -4,10 +4,8 @@ Occupation: ?
 ## What they work on
 ?
 
-## Why they are using Letta
-?
-
-## What they are hoping to get out of Letta
+## Learning Goals & Focus Areas
 - ?
 
-## Their frustrations and points of confusion
+## Frustrations and Points of Confusion
+- ?
