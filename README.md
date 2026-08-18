@@ -145,6 +145,26 @@ agy plugin enable agy-memory-layer
 
 ---
 
+## 🧪 Testing & Code Coverage
+
+Run the comprehensive test suite and V8 coverage reporter:
+
+```bash
+# Run all 11 automated test suites
+npm test
+
+# Run test suite with V8 code coverage report
+npm run test:coverage
+```
+
+### Coverage Scorecard:
+- **Total Line Coverage**: `85.51%`
+- **Total Function Coverage**: `92.86%`
+- **Total Test Suites**: `11/11 Passed (100%)` in `< 1.0s`
+- See full test verification breakdown in [TEST_REPORT.md](./TEST_REPORT.md).
+
+---
+
 ## 📄 License & Acknowledgements
 
 - **License**: MIT

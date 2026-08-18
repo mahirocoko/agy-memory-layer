@@ -1,0 +1,20 @@
+{
+  "name": "agy-memory-layer",
+  "version": "1.1.0",
+  "description": "Stateful Git-backed MemFS, sleep-time reflection, codebase onboarding, and Memory Palace plugin for Antigravity CLI",
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/run-test-suite.js tests/unit-coverage.test.js",
+    "test:coverage": "node --experimental-strip-types --experimental-test-coverage --test tests/run-test-suite.js tests/unit-coverage.test.js"
+  },
+  "keywords": [
+    "antigravity",
+    "agy",
+    "letta-code",
+    "memory",
+    "memfs",
+    "ai-agent",
+    "plugin"
+  ],
+  "author": "Mahiro",
+  "license": "MIT"
+}
