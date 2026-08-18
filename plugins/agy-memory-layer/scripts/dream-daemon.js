@@ -4,15 +4,17 @@
  * Auto-Dream Background Daemon for agy-memory-layer
  * Scans historical and recent conversations in ~/.gemini/antigravity-cli/brain/
  * Automatically synthesizes undreamed sessions into ~/.gemini/memory/projects/<slug>/learnings/
- * Inspired by Letta Code sleep-time reflection architecture
+ * Inspired by Letta Code sleep-time reflection architecture & Step-Count triggers (DEFAULT_STEP_COUNT = 20)
  */
 
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 
+const DEFAULT_STEP_COUNT = 20;
 const memoryRoot = process.env.AGY_MEMORY_DIR || path.join(process.env.HOME, ".gemini", "memory");
 const brainDir = path.join(process.env.HOME, ".gemini", "antigravity-cli", "brain");
+const stateFile = path.join(memoryRoot, ".dream_state.json");
 
 function getProjectSlug(workspaceDir = process.cwd()) {
   try {
@@ -20,6 +22,33 @@ function getProjectSlug(workspaceDir = process.cwd()) {
     if (gitRoot) return path.basename(gitRoot);
   } catch {}
   return path.basename(workspaceDir);
+}
+
+function getDreamState() {
+  if (fs.existsSync(stateFile)) {
+    try {
+      return JSON.parse(fs.readFileSync(stateFile, "utf-8"));
+    } catch {}
+  }
+  return {
+    lastRun: null,
+    stepCountThreshold: DEFAULT_STEP_COUNT,
+    lastDreamedSteps: {} // { [convId]: stepIndex }
+  };
+}
+
+function saveDreamState(state) {
+  try {
+    fs.writeFileSync(stateFile, JSON.stringify(state, null, 2), "utf-8");
+  } catch {}
+}
+
+function shouldFireStepCountTrigger(convId, currentSteps, options = {}) {
+  const threshold = options.stepCount || DEFAULT_STEP_COUNT;
+  const state = getDreamState();
+  const lastStep = state.lastDreamedSteps[convId] || 0;
+  const delta = currentSteps - lastStep;
+  return delta >= threshold;
 }
 
 function getDreamedConversationIds(slug) {
@@ -149,7 +178,7 @@ function synthesizeConversationLearning(conv, slug) {
 **Conversation ID**: \`[conv-${conv.id}](conversation://${conv.id})\`  
 **Workspace**: \`${slug}\`  
 **Total Steps**: ${conv.steps}  
-**Source**: Auto-Dream Background Daemon  
+**Source**: Auto-Dream Background Daemon (Step-Count Trigger)  
 
 ---
 
@@ -190,6 +219,7 @@ function runAutoDream(slug = getProjectSlug(), options = {}) {
 
   const processed = [];
   const today = new Date().toISOString().split("T")[0];
+  const state = getDreamState();
 
   for (const conv of pending) {
     console.log(`  ⏳ Synthesizing conv-${conv.shortId} (${conv.steps} steps, ${conv.ageMinutes}m ago)...`);
@@ -197,6 +227,7 @@ function runAutoDream(slug = getProjectSlug(), options = {}) {
     const targetFile = path.join(learningsDir, `${today}_auto_dream_${conv.shortId}.md`);
 
     fs.writeFileSync(targetFile, doc, "utf-8");
+    state.lastDreamedSteps[conv.id] = conv.steps;
     processed.push({
       convId: conv.id,
       shortId: conv.shortId,
@@ -204,6 +235,9 @@ function runAutoDream(slug = getProjectSlug(), options = {}) {
     });
     console.log(`     ↳ Saved to ${path.relative(memoryRoot, targetFile)}`);
   }
+
+  state.lastRun = new Date().toISOString();
+  saveDreamState(state);
 
   // Auto-commit snapshots to MemFS Git repository
   try {
@@ -225,19 +259,36 @@ function runAutoDream(slug = getProjectSlug(), options = {}) {
   return processed;
 }
 
+function checkAndAutoDreamOnStepCount(slug = getProjectSlug(), options = {}) {
+  const threshold = options.stepCount || DEFAULT_STEP_COUNT;
+  const pending = scanPendingConversations(slug, { force: true, minSteps: threshold, idleMinutes: 0 });
+  const toProcess = pending.filter(p => shouldFireStepCountTrigger(p.id, p.steps, { stepCount: threshold }));
+
+  if (toProcess.length > 0) {
+    console.log(`🌙 Step-Count Trigger Fired: ${toProcess.length} conversations reached >= ${threshold} steps since last reflection.`);
+    return runAutoDream(slug, { force: true, idleMinutes: 0 });
+  }
+  return [];
+}
+
 function printStatus(slug = getProjectSlug()) {
   const pending = scanPendingConversations(slug, { force: true, idleMinutes: 0 });
   const dreamed = getDreamedConversationIds(slug);
+  const state = getDreamState();
 
   console.log(`\n🌙 Auto-Dream Status for Workspace: "${slug}"`);
   console.log(`   MemFS Directory: ${path.join(memoryRoot, "projects", slug)}`);
+  console.log(`   Step-Count Trigger Threshold: ${state.stepCountThreshold} steps`);
+  console.log(`   Last Auto-Dream Run: ${state.lastRun || "Never"}`);
   console.log(`   Total Dreamed Sessions: ${dreamed.size}`);
   console.log(`   Pending Undreamed Sessions: ${pending.length}\n`);
 
   if (pending.length > 0) {
     console.log("📋 Pending Sessions Queue:");
     pending.slice(0, 10).forEach((p, i) => {
-      console.log(`   [${i + 1}] conv-${p.shortId} (${p.steps} steps, ${p.ageMinutes}m ago)`);
+      const willTrigger = shouldFireStepCountTrigger(p.id, p.steps);
+      const triggerIcon = willTrigger ? "⚡ [Step Trigger]" : "⏳";
+      console.log(`   [${i + 1}] conv-${p.shortId} (${p.steps} steps, ${p.ageMinutes}m ago) ${triggerIcon}`);
       console.log(`       "${p.firstPrompt}"`);
     });
     console.log("\nRun `node dream-daemon.js --run-now` to process them immediately.\n");
@@ -252,6 +303,8 @@ if (require.main === module) {
 
   if (cmd === "--status" || cmd === "status") {
     printStatus();
+  } else if (cmd === "--auto-check" || cmd === "auto-check") {
+    checkAndAutoDreamOnStepCount();
   } else if (cmd === "--run-now" || cmd === "run" || cmd === "--run") {
     const force = args.includes("--force");
     runAutoDream(getProjectSlug(), { force, idleMinutes: 0 });
@@ -287,6 +340,11 @@ if (require.main === module) {
 }
 
 module.exports = {
+  DEFAULT_STEP_COUNT,
+  getDreamState,
+  saveDreamState,
+  shouldFireStepCountTrigger,
+  checkAndAutoDreamOnStepCount,
   scanPendingConversations,
   synthesizeConversationLearning,
   runAutoDream,

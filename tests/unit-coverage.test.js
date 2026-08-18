@@ -167,6 +167,12 @@ describe("Unit Coverage Extensions", () => {
       assert.strictEqual(doc.includes(sample.id), true);
     }
 
+    // Test step count triggers
+    const { shouldFireStepCountTrigger, DEFAULT_STEP_COUNT } = require(path.join(SCRIPTS_DIR, "dream-daemon.js"));
+    assert.strictEqual(DEFAULT_STEP_COUNT, 20);
+    assert.strictEqual(shouldFireStepCountTrigger("mock-conv", 25, { stepCount: 20 }), true);
+    assert.strictEqual(shouldFireStepCountTrigger("mock-conv", 5, { stepCount: 20 }), false);
+
     // Test print status function
     assert.doesNotThrow(() => {
       printStatus("learn-letta-code");
