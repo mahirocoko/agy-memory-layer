@@ -40,6 +40,13 @@ const {
   reviewProposal,
 } = await import(path.join(SCRIPTS_DIR, 'memory-approval.ts'))
 const { createTsInspector } = await import(path.join(SCRIPTS_DIR, 'ts-inspector.ts'))
+const {
+  estimateTokens,
+  compactMarkdownContent,
+  compactFile,
+  compactProjectMemory,
+  runAutoCompaction,
+} = await import(path.join(SCRIPTS_DIR, 'memory-compactor.ts'))
 
 describe('Unit Coverage Extensions', () => {
   it('tests init-project-memory with Rust, Go, Python, and Docker manifests', () => {
@@ -319,5 +326,50 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(Array.isArray(defs), true)
     assert.strictEqual(defs.length > 0, true)
     assert.strictEqual(defs[0].file.includes('worktree-manager.ts'), true)
+  })
+
+  it('tests memory-compactor token estimation, deduplication, and project compaction', () => {
+    // 1. Token estimator
+    const est = estimateTokens('Hello world! This is a test markdown content.')
+    assert.strictEqual(est > 5, true)
+    assert.strictEqual(estimateTokens(''), 0)
+
+    // 2. Markdown deduplication
+    const sampleMd = `
+# Project Rules
+- Always use exact versions with -E.
+- Strict typing, no interface.
+- Always use exact versions with -E.
+- Strict typing, no interface.
+
+## Empty Section
+
+## Valid Section
+- Keep memory blocks compact.
+`
+    const { compacted, deduplicatedCount, prunedSectionsCount } = compactMarkdownContent(sampleMd)
+    assert.strictEqual(deduplicatedCount, 2)
+    assert.strictEqual(prunedSectionsCount, 1)
+    assert.strictEqual(compacted.includes('## Empty Section'), false)
+    assert.strictEqual(compacted.includes('## Valid Section'), true)
+
+    // 3. Mock MemFS sandbox compaction test
+    const tempMemfs = '/tmp/test-compactor-memfs'
+    const tempProjDir = path.join(tempMemfs, 'projects', 'compactor-test-proj')
+    fs.mkdirSync(tempProjDir, { recursive: true })
+    fs.writeFileSync(
+      path.join(tempProjDir, 'rules.md'),
+      '# Rules\n- Rule 1\n- Rule 2\n- Rule 1\n- Rule 2\n',
+    )
+
+    const projRes = compactProjectMemory('compactor-test-proj', { dryRun: false }, tempMemfs)
+    assert.strictEqual(projRes.totalTokensSaved > 0, true)
+
+    const autoRes = runAutoCompaction(tempMemfs, { dryRun: true })
+    assert.strictEqual(typeof autoRes.timestamp, 'string')
+    assert.strictEqual(Array.isArray(autoRes.projects), true)
+
+    // Clean up
+    fs.rmSync(tempMemfs, { recursive: true, force: true })
   })
 })

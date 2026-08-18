@@ -1,6 +1,6 @@
 # Architecture & Design Contract: `agy-memory-layer` Plugin
 
-**Version**: 1.8.0  
+**Version**: 1.9.0  
 **Target Platform**: Antigravity CLI (`agy`)  
 **Status**: Active Production Standard  
 **Inspired by**: Letta Code (`letta-ai/letta-code`) Dual-Memory & MemFS Architecture  
@@ -24,10 +24,11 @@ It provides:
 10. **Tamper-Proof Backups (`tools/memory-backup.ts`)**: Standalone export/import with SHA-256 integrity verification.
 11. **Persona Preset Switcher (`/persona`)**: Instantly switches agent personality (`memo`, `linus`, `tutor`, `architect`, `kawaii`, `blank`).
 12. **In-Memory TypeScript Language Inspector (`ts-inspector.ts`)**: Sub-50ms AST diagnostics, hover type signatures, definition resolution, and cross-file references without spawning slow external compiler processes.
-12. **Comprehensive Prompt Assets Warehouse (`prompts/`)**: Categorized prompt library covering `system/`, `persona/`, `human/`, `subagents/`, and `alerts/`.
-13. **Hybrid Semantic Recall Engine (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across 500+ past Antigravity conversation transcripts with cosine similarity scoring.
-14. **Synapse Linking (`[[link]]`)**: Wikilink-style connections across memory blocks with interactive graph navigation.
-15. **Proactive Memory Budget Guard**: Real-time token monitoring and gentle pruning reminders.
+13. **Memory Auto-Eviction & Token Compactor Engine (`memory-compactor.ts`)**: Deterministic token budget enforcement, section-scoped rule deduplication, empty section pruning, and historical archival compaction.
+14. **Comprehensive Prompt Assets Warehouse (`prompts/`)**: Categorized prompt library covering `system/`, `persona/`, `human/`, `subagents/`, and `alerts/`.
+15. **Hybrid Semantic Recall Engine (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across 500+ past Antigravity conversation transcripts with cosine similarity scoring.
+16. **Synapse Linking (`[[link]]`)**: Wikilink-style connections across memory blocks with interactive graph navigation.
+17. **Proactive Memory Budget Guard**: Real-time token monitoring and gentle pruning reminders.
 
 ---
 
