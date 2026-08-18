@@ -1564,16 +1564,25 @@ const html = `<!DOCTYPE html>
 
     function renderMarkdown(content) {
       if (!content) return '';
-      // Parse [[target]] into clickable synapse tags
+      // Parse [[target]] into clickable synapse tags with safe data attributes
       let processed = String(content).replace(/\[\[(.*?)\]\]/g, function(match, p1) {
         const target = p1.trim();
-        return '<span class="synapse-tag" onclick="navigateToSynapse(\'' + target.replace(/'/g, "\\'") + '\')" title="Synapse link to ' + target.replace(/'/g, "\\'") + '">🔗 ' + target + '</span>';
+        const safeTarget = target.replace(/"/g, '&quot;');
+        return '<span class="synapse-tag" data-synapse="' + encodeURIComponent(target) + '" title="Synapse link to ' + safeTarget + '">🔗 ' + target + '</span>';
       });
       if (window.marked && typeof window.marked.parse === 'function') {
         return window.marked.parse(processed);
       }
       return '<pre>' + processed + '</pre>';
     }
+
+    // Global listener for synapse link clicks
+    document.addEventListener('click', function(e) {
+      const tag = e.target.closest('.synapse-tag');
+      if (tag && tag.dataset && tag.dataset.synapse) {
+        navigateToSynapse(decodeURIComponent(tag.dataset.synapse));
+      }
+    });
 
     function navigateToSynapse(target) {
       const cleanTarget = target.toLowerCase().trim();
