@@ -131,6 +131,12 @@ node --experimental-strip-types tools/memory-backup.ts import -i ./memory-backup
 
 ## ⚙️ Plugin Management
 
+### Updating to Latest Version
+```bash
+# Update plugin files and refresh hooks in one command (keeps your memory safe)
+./plugins/agy-memory-layer/scripts/update.sh
+```
+
 ### Temporarily Enable / Disable
 ```bash
 # Disable plugin (hooks & skills stay inactive, data is preserved)

@@ -100,7 +100,23 @@ sequenceDiagram
 
 ---
 
-## 🗑️ รายละเอียดการถอนการติดตั้ง (`uninstall.sh`)
+## 🔄 รายละเอียดการอัปเดตเวอร์ชันใหม่ (`update.sh`)
+
+เมื่อมีการอัปเดตโค้ดหรือฟีเจอร์ใหม่ของปลั๊กอิน (เช่น UI ใหม่, ฟีเจอร์ Memory Palace ใหม่):
+
+```bash
+# อัปเดตด้วยสคริปต์อัตโนมัติ (1 คำสั่งจบ)
+./plugins/agy-memory-layer/scripts/update.sh
+```
+
+**สิ่งที่สคริปต์อัปเดตจัดการให้:**
+1. **Pull Code**: ดึงโค้ดเวอร์ชันล่าสุดจาก Git
+2. **Permissions**: ตั้งค่าสิทธิ์ execute (`chmod +x`) ให้กับสคริปต์และ hooks ทั้งหมด
+3. **Symlink Refresh**: อัปเดต symlink เชื่อมต่อไปยัง Antigravity CLI อัตโนมัติ
+4. **Hook Validation**: ตรวจสอบความถูกต้องของ lifecycle hooks
+5. **Memory Safety**: ข้อมูลความทรงจำทั้งหมดใน `~/.gemini/memory/` (`human.md`, `persona.md`, `project.md`, `learnings/`) **จะไม่ถูกแตะต้องหรือลบ ปลอดภัย 100%**
+
+---
 
 เมื่อคุณต้องการลบหรือถอนการติดตั้ง:
 
