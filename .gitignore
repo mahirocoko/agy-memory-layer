@@ -1,8 +1,8 @@
 # Agent & Temporary State
 .agent-state/
+.letta/
 node_modules/
 .DS_Store
 *.log
 /tmp/
 .cocoindex_code/
-
