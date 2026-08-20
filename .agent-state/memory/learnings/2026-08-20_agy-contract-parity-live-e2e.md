@@ -20,7 +20,7 @@ Scope label ไม่ใช่ boundary จนกว่าจะพิสูจ�
 
 ## Evidence from this session
 
-- Automated: 11/11 integration, 18/18 Node tests, 77.35% line coverage
+- Automated: 11/11 integration, 18/18 Node tests, 77.55% line coverage
 - Live AGY: committed injection, `/memory`, `/remember`, `/init`, restart persistence และ non-mutating Stop
 - Cleanup: exact global restore, targeted project deletion, clean MemFS, zero pending proposals, no owned tmux/temp fixtures
 - Canonical host report: `docs/agy-host-e2e-2026-08-20.md`

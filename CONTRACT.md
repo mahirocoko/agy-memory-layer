@@ -186,8 +186,8 @@ install/refresh/uninstall/purge lifecycle. Remote sync is exercised against a
 disposable local bare repository. Neither report proves cron, external network,
 or AGY host-enforcement behavior.
 
-Final measured coverage for the `v1.12.1` release candidate is **77.35%
-lines**, **58.24% branches**, and **78.14% functions**. Coverage is evidence, not
+Final measured coverage for the `v1.12.1` release candidate is **77.55%
+lines**, **58.46% branches**, and **78.14% functions**. Coverage is evidence, not
 a substitute for the behavioral negative controls above.
 
 The real AGY `1.1.16` host E2E also passed committed injection, `/memory`,
