@@ -15,14 +15,16 @@ learn-letta-code/
 ├── TEST_REPORT.md                           # Automated test execution report
 ├── package.json                             # Root Node.js manifest
 │
-├── assets/                                  # High-resolution visual architecture diagrams
-│   ├── architecture-flow.jpg                # Full lifecycle and MemFS topology
-│   ├── subagents-architecture.jpg           # 6-Subagent suite and launcher topology
-│   └── semantic-recall-lifecycle.jpg        # Hybrid semantic recall & auto-dream flowchart
+├── assets/                                  # Legacy pre-parity architecture illustrations (not current owners)
+│   ├── architecture-flow.jpg
+│   ├── subagents-architecture.jpg
+│   └── semantic-recall-lifecycle.jpg
 │
 ├── docs/                                    # Modular developer documentation family
+│   ├── agy-host-e2e-2026-08-20.md           # Real interactive AGY host evidence and cleanup
 │   ├── onboarding.md                        # Day 1 setup and verification
 │   ├── project-overview.md                  # Architecture and subsystem overview
+│   ├── letta-parity.md                      # Canonical Letta behavior/adaptation/status matrix
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene
@@ -37,7 +39,7 @@ learn-letta-code/
 ├── plugins/agy-memory-layer/                # Core Antigravity Plugin bundle
 │   ├── plugin.json                          # Plugin manifest and metadata
 │   ├── hooks.json                           # Lifecycle hook registration (PreInvocation, Stop)
-│   ├── agents/                              # First-Class Subagent Manifests (6 JSON specs)
+│   ├── agents/                              # Declarative Subagent Role Manifests (6 JSON specs)
 │   │   ├── dream_agent.json
 │   │   ├── recall_agent.json
 │   │   ├── onboarding_agent.json
@@ -68,11 +70,12 @@ learn-letta-code/
 │   │   └── update/SKILL.md
 │   │
 │   └── scripts/                             # Runtime scripts and executables
-│       ├── hook-inject-memory.sh            # PreInvocation hook (injects MemFS)
-│       ├── hook-inject-memory.ts            # Preferred native ESM hook implementation
-│       ├── hook-auto-commit.sh              # Stop hook (auto-commits & async daemon trigger)
-│       ├── hook-auto-commit.ts              # Preferred native ESM hook implementation
-│       ├── dream-daemon.ts                  # 20-step auto-dream daemon & cron scheduler
+│       ├── hook-inject-memory.sh            # Strict PreInvocation wrapper
+│       ├── hook-inject-memory.ts            # Committed-HEAD projection owner
+│       ├── hook-memory-status.sh             # Strict Stop wrapper
+│       ├── hook-memory-status.ts             # Non-mutating Stop status owner
+│       ├── memory-repository.ts              # Containment, Git state, atomic write, targeted commit
+│       ├── dream-daemon.ts                  # Manual/optional-cron deterministic Dream notes
 │       ├── recall-engine.ts                 # Subword N-Gram Vector & BM25 hybrid recall
 │       ├── memory-search.ts                 # MemFS status and ranked text search
 │       ├── init-project-memory.ts           # Codebase onboarding and memory seeding
@@ -81,7 +84,7 @@ learn-letta-code/
 │       ├── switch-persona.ts                # Persona preset switcher
 │       ├── letta-sync.ts                    # Letta payload extraction and MemFS import
 │       ├── memory-approval.ts               # Optional proposal/approval workflow
-│       ├── memory-compactor.ts              # Token compaction and learning archival
+│       ├── memory-compactor.ts              # Read-only Markdown maintenance analysis
 │       ├── skill-synthesizer.ts             # Repeated-pattern skill drafts
 │       ├── cross-project-synapse.ts         # Cross-project learning retrieval
 │       ├── ts-inspector.ts                  # In-memory TypeScript language service

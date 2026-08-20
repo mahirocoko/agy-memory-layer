@@ -5,9 +5,13 @@
  * Manages switching, inspecting, and customizing agent personality presets in ~/.gemini/memory/global/persona.md
  */
 
-import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import {
+  assertMemoryRepositoryCleanForWrite,
+  commitMemoryPaths,
+  writeMemoryFile,
+} from './memory-repository.ts'
 
 export type PersonaPreset = {
   name: string
@@ -118,29 +122,13 @@ export function switchPersona(presetKey: string): {
     }
   }
 
-  const globalDir = path.join(memoryRoot, 'global')
-  if (!fs.existsSync(globalDir)) {
-    fs.mkdirSync(globalDir, { recursive: true })
-  }
-
-  fs.writeFileSync(personaMdPath, preset.content, 'utf-8')
-
-  // Auto-commit to MemFS Git
-  try {
-    if (fs.existsSync(path.join(memoryRoot, '.git'))) {
-      execSync('git add global/persona.md', { cwd: memoryRoot, stdio: 'ignore' })
-      const status = execSync('git status --porcelain', {
-        cwd: memoryRoot,
-        encoding: 'utf-8',
-      }).trim()
-      if (status) {
-        execSync(
-          `git commit -m "chore(persona): switch agent persona to '${key}' (${preset.name})"`,
-          { cwd: memoryRoot, stdio: 'ignore' },
-        )
-      }
-    }
-  } catch {}
+  assertMemoryRepositoryCleanForWrite(memoryRoot)
+  writeMemoryFile(memoryRoot, 'global/persona.md', preset.content)
+  commitMemoryPaths({
+    memoryRoot,
+    relativePaths: ['global/persona.md'],
+    reason: `chore(persona): switch agent persona to '${key}' (${preset.name})`,
+  })
 
   return { success: true, preset }
 }

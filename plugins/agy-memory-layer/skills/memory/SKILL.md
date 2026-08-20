@@ -31,8 +31,8 @@ Inspect active memory blocks, Git snapshot commit history, or search across hist
 
 ```bash
 # Inspection
-node plugins/agy-memory-layer/scripts/memory-search.ts --status
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-search.ts --status
 
 # Search
-node plugins/agy-memory-layer/scripts/memory-search.ts "query"
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-search.ts "query"
 ```

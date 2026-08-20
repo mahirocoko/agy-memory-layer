@@ -1,10 +1,6 @@
 # Services & Execution Patterns — `agy-memory-layer`
 
-This guide explains the architectural patterns used across hooks, background daemons, and subagent launcher services in `agy-memory-layer`.
-
----
-
-## 1. The PreInvocation Injection Service Pattern
+## 1. Committed PreInvocation Projection
 
 ```text
 [Antigravity CLI Invocation]
@@ -12,44 +8,61 @@ This guide explains the architectural patterns used across hooks, background dae
             ▼
 [scripts/hook-inject-memory.sh]
             │
-            ├── 1. Read ~/.gemini/memory/global/human.md
-            ├── 2. Read ~/.gemini/memory/projects/<slug>/project.md
-            ├── 3. Read ~/.gemini/memory/projects/<slug>/rules.md
-            ├── 4. Calculate Character-to-Token Budget Estimate
+            ├── Resolve and validate project identity
+            ├── Read global/project files from Git HEAD
+            ├── Read at most two committed learning excerpts
+            ├── Report dirty/conflict state without injecting it
+            └── Estimate prompt budget
             │
             ▼
-[Output JSON Envelope]
 {
   "injectSteps": [
-    { "ephemeralMessage": "🧠 **[MemFS Active Memory]** ... " }
+    { "ephemeralMessage": "🧠 **[MemFS Active Memory]** ..." }
   ]
 }
 ```
 
----
+The shell wrapper has one TypeScript implementation path and fails clearly when
+Node 22+ or the source file is unavailable. It does not contain a weaker fallback
+that reads the working tree.
 
-## 2. The Stop Hook & Non-Blocking Async Daemon Pattern
+## 2. Non-Mutating Stop
 
 ```text
 [Agent Finishes Turn]
             │
             ▼
-[scripts/hook-auto-commit.sh]
+[scripts/hook-memory-status.sh]
             │
-            ├── 1. Synchronous: Check Git Status in ~/.gemini/memory/
-            │      └── If dirty: git add -A && git commit -m "memfs auto-snapshot: ..."
-            │
-            ├── 2. Asynchronous (Detached Node Process):
-            │      └── node --experimental-strip-types scripts/dream-daemon.ts --auto-check
-            │          └── Checks if active session >= 20 steps ➜ synthesizes learning
+            └── Inspect clean / dirty / conflict / uninitialized state
             │
             ▼
-[Output JSON] ──► {"decision": "stop"}
+{"decision": "stop"}
 ```
 
----
+Stop never stages, commits, deletes locks, or launches Dream. Explicit writers
+own persistence. Dream is a separate manual or explicitly installed cron
+surface.
 
-## 3. Dynamic Subagent Resolver Pattern (`agent-launcher.ts`)
+## 3. Targeted Memory Writer
+
+```text
+[Explicit writer or approved proposal]
+            │
+            ▼
+[scripts/memory-repository.ts]
+            │
+            ├── Validate relative path and project slug
+            ├── Reject symlink escape and non-clean repository
+            ├── Write atomically
+            ├── Reject unrelated dirty paths
+            └── Commit declared pathspecs only
+```
+
+Pending proposal and Dream cursor state is stored in `memory.state/` beside the
+repository, not inside it.
+
+## 4. Declarative Subagent Resolver
 
 ```text
 [Subagent Request: "dream_agent"]
@@ -57,17 +70,10 @@ This guide explains the architectural patterns used across hooks, background dae
             ▼
 [scripts/agent-launcher.ts]
             │
-            ├── 1. Read plugins/agy-memory-layer/agents/dream_agent.json
-            ├── 2. Resolve System Prompt from prompts/subagents/dream_subagent.md
-            ├── 3. Combine Tool Permissions & Model Tiers ("inherit" | "flash" | "pro")
-            │
-            ▼
-[Return Resolved Specification Object]
-{
-  name: "dream_agent",
-  role: "Dream Reflection Subagent",
-  modelTier: "inherit",
-  enableWriteTools: true,
-  systemPrompt: "<Markdown content>"
-}
+            ├── Read agents/dream_agent.json
+            ├── Resolve prompts/subagents/dream_subagent.md
+            └── Return role, model tier, and declared capability intent
 ```
+
+The returned object is a specification. The resolver does not establish an OS
+sandbox or prove that the Agy host denies undeclared tools.

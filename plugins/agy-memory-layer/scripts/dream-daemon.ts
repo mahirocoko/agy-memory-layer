@@ -10,6 +10,12 @@
 import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import {
+  assertMemoryRepositoryCleanForWrite,
+  commitMemoryPaths,
+  validateProjectSlug,
+  writeMemoryFile,
+} from './memory-repository.ts'
 
 export type DreamState = {
   lastRun: string | null
@@ -44,24 +50,30 @@ export const DEFAULT_STEP_COUNT = 20
 const memoryRoot =
   process.env.AGY_MEMORY_DIR || path.join(process.env.HOME || '', '.gemini', 'memory')
 const brainDir = path.join(process.env.HOME || '', '.gemini', 'antigravity-cli', 'brain')
-const stateFile = path.join(memoryRoot, '.dream_state.json')
+const memoryStateRoot = process.env.AGY_MEMORY_STATE_DIR || `${memoryRoot}.state`
+const stateFile = path.join(memoryStateRoot, 'dream-state.json')
 
 export function getProjectSlug(workspaceDir: string = process.cwd()): string {
+  let source = path.basename(workspaceDir)
   try {
     const gitRoot = execSync('git rev-parse --show-toplevel 2>/dev/null', {
       cwd: workspaceDir,
       encoding: 'utf-8',
     }).trim()
-    if (gitRoot) return path.basename(gitRoot)
+    if (gitRoot) source = path.basename(gitRoot)
   } catch {}
-  return path.basename(workspaceDir)
+
+  const normalized = source
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100)
+  return validateProjectSlug(normalized || 'workspace')
 }
 
 export function getDreamState(): DreamState {
   if (fs.existsSync(stateFile)) {
-    try {
-      return JSON.parse(fs.readFileSync(stateFile, 'utf-8'))
-    } catch {}
+    return JSON.parse(fs.readFileSync(stateFile, 'utf-8'))
   }
   return {
     lastRun: null,
@@ -71,9 +83,8 @@ export function getDreamState(): DreamState {
 }
 
 export function saveDreamState(state: DreamState): void {
-  try {
-    fs.writeFileSync(stateFile, JSON.stringify(state, null, 2), 'utf-8')
-  } catch {}
+  fs.mkdirSync(path.dirname(stateFile), { recursive: true })
+  fs.writeFileSync(stateFile, JSON.stringify(state, null, 2), 'utf-8')
 }
 
 export function shouldFireStepCountTrigger(
@@ -248,6 +259,7 @@ export function runAutoDream(
   slug: string = getProjectSlug(),
   options: ScanOptions = {},
 ): ProcessedDreamResult[] {
+  slug = validateProjectSlug(slug)
   const pending = scanPendingConversations(slug, options)
   console.log(`\n🌙 Auto-Dream Scheduler for Workspace: "${slug}"`)
   console.log(`   Found ${pending.length} pending conversations to process.\n`)
@@ -257,12 +269,10 @@ export function runAutoDream(
     return []
   }
 
-  const learningsDir = path.join(memoryRoot, 'projects', slug, 'learnings')
-  if (!fs.existsSync(learningsDir)) {
-    fs.mkdirSync(learningsDir, { recursive: true })
-  }
+  assertMemoryRepositoryCleanForWrite(memoryRoot)
 
   const processed: ProcessedDreamResult[] = []
+  const changedPaths: string[] = []
   const today = new Date().toISOString().split('T')[0]
   const state = getDreamState()
 
@@ -271,10 +281,11 @@ export function runAutoDream(
       `  ⏳ Synthesizing conv-${conv.shortId} (${conv.steps} steps, ${conv.ageMinutes}m ago)...`,
     )
     const doc = synthesizeConversationLearning(conv, slug)
-    const targetFile = path.join(learningsDir, `${today}_auto_dream_${conv.shortId}.md`)
+    const relativePath = `projects/${slug}/learnings/${today}_auto_dream_${conv.shortId}.md`
+    const targetFile = writeMemoryFile(memoryRoot, relativePath, doc).absolutePath
 
-    fs.writeFileSync(targetFile, doc, 'utf-8')
     state.lastDreamedSteps[conv.id] = conv.steps
+    changedPaths.push(relativePath)
     processed.push({
       convId: conv.id,
       shortId: conv.shortId,
@@ -283,33 +294,14 @@ export function runAutoDream(
     console.log(`     ↳ Saved to ${path.relative(memoryRoot, targetFile)}`)
   }
 
+  commitMemoryPaths({
+    memoryRoot,
+    relativePaths: changedPaths,
+    reason: `chore(dream): consolidate ${processed.length} conversation sessions`,
+  })
   state.lastRun = new Date().toISOString()
   saveDreamState(state)
-
-  try {
-    if (fs.existsSync(path.join(memoryRoot, '.git'))) {
-      execSync('git add .', { cwd: memoryRoot, stdio: 'ignore' })
-      const status = execSync('git status --porcelain', {
-        cwd: memoryRoot,
-        encoding: 'utf-8',
-      }).trim()
-      if (status) {
-        execSync(
-          `git commit -m "chore(dream): auto-dream consolidated ${processed.length} conversation sessions"`,
-          {
-            cwd: memoryRoot,
-            stdio: 'ignore',
-          },
-        )
-        console.log(
-          `\n✓ Successfully auto-committed ${processed.length} dream logs into MemFS Git repository!`,
-        )
-      }
-    }
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('⚠️ Git commit warning:', message)
-  }
+  console.log(`\n✓ Committed ${processed.length} dream logs into the MemFS repository.`)
 
   return processed
 }

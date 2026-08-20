@@ -6,10 +6,16 @@
  * Protects core project architecture (project.md) and rules (rules.md) from unapproved agent mutation.
  */
 
-import { execSync } from 'node:child_process'
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import {
+  assertMemoryRepositoryCleanForWrite,
+  commitMemoryPaths,
+  normalizeMemoryRelativePath,
+  resolveMemoryPath,
+  writeMemoryFile,
+} from './memory-repository.ts'
 
 export type ApprovalMode = 'auto' | 'explicit'
 
@@ -21,7 +27,6 @@ export type ApprovalPolicy = {
 export type ApprovalProposal = {
   id: string
   targetRelPath: string
-  fullPath: string
   oldContent: string
   newContent: string
   reason: string
@@ -46,8 +51,9 @@ export type ReviewResult = {
 
 const memoryRoot =
   process.env.AGY_MEMORY_DIR || path.join(process.env.HOME || '', '.gemini', 'memory')
-const policyFile = path.join(memoryRoot, '.approval_policy.json')
-const pendingDir = path.join(memoryRoot, '.pending_approvals')
+const memoryStateRoot = process.env.AGY_MEMORY_STATE_DIR || `${memoryRoot}.state`
+const policyFile = path.join(memoryStateRoot, 'approval-policy.json')
+const pendingDir = path.join(memoryStateRoot, 'pending-approvals')
 
 export const DEFAULT_APPROVAL_POLICY: ApprovalPolicy = {
   defaultMode: 'auto',
@@ -70,9 +76,8 @@ export function getApprovalPolicy(): ApprovalPolicy {
 }
 
 export function saveApprovalPolicy(policy: ApprovalPolicy): void {
-  try {
-    fs.writeFileSync(policyFile, JSON.stringify(policy, null, 2), 'utf-8')
-  } catch {}
+  fs.mkdirSync(path.dirname(policyFile), { recursive: true })
+  fs.writeFileSync(policyFile, JSON.stringify(policy, null, 2), 'utf-8')
 }
 
 export function matchPattern(relPath: string, pattern: string): boolean {
@@ -82,7 +87,7 @@ export function matchPattern(relPath: string, pattern: string): boolean {
 
 export function getApprovalModeForFile(relPath: string): ApprovalMode {
   const policy = getApprovalPolicy()
-  const normalized = relPath.replace(/\\/g, '/')
+  const normalized = normalizeMemoryRelativePath(relPath)
 
   for (const [pattern, mode] of Object.entries(policy.patterns)) {
     if (matchPattern(normalized, pattern)) {
@@ -121,8 +126,10 @@ export function proposeMemoryUpdate(
   newContent: string,
   options: { reason?: string; author?: string } = {},
 ): ProposeResult {
-  const normalizedRel = targetRelPath.replace(/\\/g, '/')
-  const fullPath = path.join(memoryRoot, normalizedRel)
+  const { relativePath: normalizedRel, absolutePath: fullPath } = resolveMemoryPath(
+    memoryRoot,
+    targetRelPath,
+  )
   const mode = getApprovalModeForFile(normalizedRel)
   const oldContent = fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf-8') : ''
 
@@ -138,24 +145,21 @@ export function proposeMemoryUpdate(
   const author = options.author || 'Antigravity Agent'
 
   if (mode === 'auto') {
-    // Mode: Auto - direct silent write and Git commit
-    fs.mkdirSync(path.dirname(fullPath), { recursive: true })
-    fs.writeFileSync(fullPath, newContent, 'utf-8')
-
-    try {
-      if (fs.existsSync(path.join(memoryRoot, '.git'))) {
-        execSync(`git add "${normalizedRel}"`, { cwd: memoryRoot, stdio: 'ignore' })
-        execSync(`git commit -m "chore(memory): auto-merged update to ${normalizedRel}"`, {
-          cwd: memoryRoot,
-          stdio: 'ignore',
-        })
-      }
-    } catch {}
+    assertMemoryRepositoryCleanForWrite(memoryRoot)
+    writeMemoryFile(memoryRoot, normalizedRel, newContent)
+    const commit = commitMemoryPaths({
+      memoryRoot,
+      relativePaths: [normalizedRel],
+      reason: `chore(memory): auto-merged update to ${normalizedRel}`,
+      authorName: author,
+    })
 
     return {
       status: 'COMMITTED',
       diff,
-      message: `Directly merged and committed changes to ${normalizedRel}`,
+      message: commit.committed
+        ? `Directly merged and committed changes to ${normalizedRel}`
+        : `No effective Git change remained for ${normalizedRel}`,
     }
   }
 
@@ -168,7 +172,6 @@ export function proposeMemoryUpdate(
   const proposal: ApprovalProposal = {
     id: proposalId,
     targetRelPath: normalizedRel,
-    fullPath,
     oldContent,
     newContent,
     reason,
@@ -208,6 +211,7 @@ export function listPendingProposals(): ApprovalProposal[] {
 }
 
 export function getPendingProposal(proposalId: string): ApprovalProposal | null {
+  if (!/^prop-[a-z0-9-]+$/.test(proposalId)) return null
   const proposalPath = path.join(pendingDir, `${proposalId}.json`)
   if (!fs.existsSync(proposalPath)) return null
   try {
@@ -238,25 +242,26 @@ export function reviewProposal(proposalId: string, decision: 'approve' | 'reject
   }
 
   // Decision: Approve
-  fs.mkdirSync(path.dirname(proposal.fullPath), { recursive: true })
-  fs.writeFileSync(proposal.fullPath, proposal.newContent, 'utf-8')
-
-  if (fs.existsSync(proposalFile)) {
-    fs.unlinkSync(proposalFile)
+  const resolved = resolveMemoryPath(memoryRoot, proposal.targetRelPath)
+  const currentContent = fs.existsSync(resolved.absolutePath)
+    ? fs.readFileSync(resolved.absolutePath, 'utf-8')
+    : ''
+  if (currentContent !== proposal.oldContent) {
+    throw new Error(
+      `Proposal ${proposalId} is stale because ${proposal.targetRelPath} changed after review began.`,
+    )
   }
 
-  try {
-    if (fs.existsSync(path.join(memoryRoot, '.git'))) {
-      execSync(`git add "${proposal.targetRelPath}"`, {
-        cwd: memoryRoot,
-        stdio: 'ignore',
-      })
-      execSync(
-        `git commit -m "chore(memory): approved update to ${proposal.targetRelPath} (${proposal.reason})"`,
-        { cwd: memoryRoot, stdio: 'ignore' },
-      )
-    }
-  } catch {}
+  assertMemoryRepositoryCleanForWrite(memoryRoot)
+  writeMemoryFile(memoryRoot, proposal.targetRelPath, proposal.newContent)
+  commitMemoryPaths({
+    memoryRoot,
+    relativePaths: [proposal.targetRelPath],
+    reason: `chore(memory): approved update to ${proposal.targetRelPath} (${proposal.reason})`,
+    authorName: proposal.author,
+  })
+
+  if (fs.existsSync(proposalFile)) fs.unlinkSync(proposalFile)
 
   return {
     success: true,
@@ -283,6 +288,23 @@ if (process.argv[1]?.endsWith('memory-approval.ts')) {
       })
     }
     console.log('')
+  } else if (cmd === 'propose') {
+    const targetRelPath = args[1]
+    if (!targetRelPath) {
+      console.error(
+        'Usage: memory-approval.ts propose <relative-path> [--reason <reason>] < content.md',
+      )
+      process.exit(1)
+    }
+    const reasonIndex = args.indexOf('--reason')
+    const reason = reasonIndex >= 0 ? args[reasonIndex + 1] : undefined
+    const newContent = fs.readFileSync(0, 'utf-8')
+    if (!newContent.trim()) {
+      console.error('Proposal content must be provided on stdin.')
+      process.exit(1)
+    }
+    const result = proposeMemoryUpdate(targetRelPath, newContent, { reason })
+    console.log(JSON.stringify(result, null, 2))
   } else if (cmd === 'approve') {
     const id = args[1]
     if (!id) {

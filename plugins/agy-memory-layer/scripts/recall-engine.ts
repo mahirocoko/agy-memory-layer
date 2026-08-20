@@ -295,10 +295,25 @@ if (process.argv[1]?.endsWith('recall-engine.ts')) {
   const args = process.argv.slice(2)
   const cmd = args[0]
 
-  if (cmd === 'search' || cmd === 'find') {
-    const query = args[1]
+  if (cmd === 'list') {
+    const conversations = scanAllConversations()
+      .sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
+      .slice(0, 20)
+    console.log(`\n🕘 Recent Antigravity Conversations (${conversations.length}):\n`)
+    for (const conversation of conversations) {
+      console.log(
+        `- conv-${conversation.shortId} · ${conversation.mtime.toISOString()} · ${conversation.stepCount} steps`,
+      )
+      console.log(`  ${conversation.firstPrompt}`)
+    }
+  } else if (cmd) {
+    const queryStart = cmd === 'search' || cmd === 'find' ? 1 : 0
+    const query = args
+      .slice(queryStart)
+      .filter((arg) => arg !== '--semantic' && arg !== '--keyword')
+      .join(' ')
     if (!query) {
-      console.error('❌ Usage: node recall-engine.ts search "<query>" [--semantic | --keyword]')
+      console.error('❌ Usage: node recall-engine.ts [search] "<query>" [--semantic | --keyword]')
       process.exit(1)
     }
 
@@ -322,6 +337,8 @@ if (process.argv[1]?.endsWith('recall-engine.ts')) {
       }
     })
   } else {
-    console.log('Hybrid Semantic Recall Engine. Use `node recall-engine.ts search "<query>"`')
+    console.log(
+      'Hybrid Semantic Recall Engine. Use `node recall-engine.ts "<query>"` or `node recall-engine.ts list`',
+    )
   }
 }

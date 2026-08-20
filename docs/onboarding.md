@@ -33,6 +33,7 @@ pnpm install --frozen-lockfile
 2. Seeds initial `human.md` and `persona.md` templates if they do not exist.
 3. Creates a symlink from `plugins/agy-memory-layer/` to `~/.gemini/antigravity-cli/plugins/agy-memory-layer`.
 4. Sets executable permissions (`chmod +x`) on all hook and utility scripts.
+5. Validates committed-memory PreInvocation and non-mutating Stop behavior.
 
 ---
 
@@ -44,7 +45,7 @@ Run the complete test suite:
 pnpm test
 ```
 
-You should see all 11 integration scenarios and 16 Node test-runner tests pass.
+You should see all 11 integration scenarios and 18 Node test-runner tests pass.
 
 ---
 
@@ -54,6 +55,7 @@ You should see all 11 integration scenarios and 16 Node test-runner tests pass.
 | :--- | :--- |
 | `plugins/agy-memory-layer/` | Core plugin bundle source code (hooks, manifests, scripts, prompts) |
 | `~/.gemini/memory/` | External Git-versioned MemFS repository |
+| `~/.gemini/memory.state/` | Pending proposal and Dream cursor state, outside prompt memory |
 | `~/.gemini/antigravity-cli/plugins/agy-memory-layer` | Global symlink target read by Antigravity CLI |
 | `assets/` | Architecture and lifecycle diagrams |
 | `tests/` | Automated test harness and unit coverage suites |

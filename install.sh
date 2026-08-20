@@ -5,7 +5,40 @@ PLUGIN_NAME="agy-memory-layer"
 REPO_URL="https://github.com/mahirocoko/agy-memory-layer.git"
 INSTALL_DIR="${HOME}/.gemini/antigravity-cli/plugins/${PLUGIN_NAME}"
 CONFIG_DIR="${HOME}/.gemini/config/plugins/${PLUGIN_NAME}"
+LEGACY_LINK="${HOME}/.gemini/antigravity-cli/plugins/memfs"
 MEMORY_ROOT="${HOME}/.gemini/memory"
+
+if [ -z "${HOME:-}" ] || [ "$HOME" = "/" ]; then
+  echo "Refusing lifecycle operation with an unsafe HOME value." >&2
+  exit 1
+fi
+
+assert_owned_or_absent() {
+  local link_path="$1"
+  if [ -L "$link_path" ]; then
+    local existing_target
+    existing_target="$(cd "$link_path" 2>/dev/null && pwd -P || true)"
+    if [ -z "$existing_target" ] || [ ! -f "$existing_target/plugin.json" ] || ! grep -q '"name"[[:space:]]*:[[:space:]]*"agy-memory-layer"' "$existing_target/plugin.json"; then
+      echo "Refusing to replace unowned symlink: $link_path" >&2
+      exit 1
+    fi
+  elif [ -e "$link_path" ]; then
+    echo "Refusing to replace non-symlink path: $link_path" >&2
+    exit 1
+  fi
+}
+
+replace_owned_symlink() {
+  local link_path="$1"
+  local target_path="$2"
+  assert_owned_or_absent "$link_path"
+  if [ -L "$link_path" ]; then rm -f "$link_path"; fi
+  ln -s "$target_path" "$link_path"
+}
+
+assert_owned_or_absent "$INSTALL_DIR"
+assert_owned_or_absent "$CONFIG_DIR"
+assert_owned_or_absent "$LEGACY_LINK"
 
 echo "🧠 Installing Antigravity CLI Plugin: ${PLUGIN_NAME}"
 echo "=================================================="
@@ -29,9 +62,12 @@ else
   CLONE_TARGET="${HOME}/.gemini/antigravity-cli/plugins/.source-${PLUGIN_NAME}"
   if [ -d "$CLONE_TARGET/.git" ]; then
     echo "📥 Updating existing cached repository..."
-    git -C "$CLONE_TARGET" pull --quiet || true
+    git -C "$CLONE_TARGET" pull --ff-only --quiet
   else
-    rm -rf "$CLONE_TARGET"
+    if [ -e "$CLONE_TARGET" ] || [ -L "$CLONE_TARGET" ]; then
+      echo "Refusing to replace non-repository cache path: $CLONE_TARGET" >&2
+      exit 1
+    fi
     git clone --depth 1 "$REPO_URL" "$CLONE_TARGET" --quiet
   fi
   SOURCE_DIR="$CLONE_TARGET/plugins/${PLUGIN_NAME}"
@@ -72,8 +108,11 @@ You retain context across sessions, continuously learn from user feedback, and r
 EOF
   fi
 
-  git -C "$MEMORY_ROOT" add -A
-  git -C "$MEMORY_ROOT" commit -m "memory-layer: initial memory repository bootstrap" >/dev/null 2>&1 || true
+  git -C "$MEMORY_ROOT" add -- global/human.md global/persona.md
+  git -C "$MEMORY_ROOT" \
+    -c user.name=agy-memory-layer \
+    -c user.email=agy-memory-layer@local.invalid \
+    commit -m "memory-layer: initial memory repository bootstrap" >/dev/null
   echo "✓ MemFS Git repository initialized."
 else
   echo "✓ MemFS Git repository already exists at ${MEMORY_ROOT}."
@@ -81,16 +120,21 @@ fi
 
 # 3. Register Plugin via Symlinks
 mkdir -p "$(dirname "$INSTALL_DIR")"
+if [ -L "$LEGACY_LINK" ]; then
+  replace_owned_symlink "$LEGACY_LINK" "$SOURCE_DIR"
+  rm -f "$LEGACY_LINK"
+elif [ -e "$LEGACY_LINK" ]; then
+  echo "Refusing to replace non-symlink legacy path: $LEGACY_LINK" >&2
+  exit 1
+fi
 if [ "$SOURCE_DIR" != "$INSTALL_DIR" ]; then
-  rm -rf "$INSTALL_DIR"
-  ln -sf "$SOURCE_DIR" "$INSTALL_DIR"
+  replace_owned_symlink "$INSTALL_DIR" "$SOURCE_DIR"
 fi
 echo "✓ Plugin linked to ${INSTALL_DIR}"
 
 mkdir -p "$(dirname "$CONFIG_DIR")"
 if [ "$SOURCE_DIR" != "$CONFIG_DIR" ]; then
-  rm -rf "$CONFIG_DIR"
-  ln -sf "$SOURCE_DIR" "$CONFIG_DIR"
+  replace_owned_symlink "$CONFIG_DIR" "$SOURCE_DIR"
 fi
 echo "✓ Plugin config linked to ${CONFIG_DIR}"
 
@@ -103,7 +147,7 @@ fi
 # 5. Verify hooks
 echo "🔍 Validating hook scripts..."
 echo '{"workspacePaths":["'$(pwd)'"]}' | "$SOURCE_DIR/scripts/hook-inject-memory.sh" >/dev/null
-echo '{"decision":"stop"}' | "$SOURCE_DIR/scripts/hook-auto-commit.sh" >/dev/null
+echo '{"decision":"stop"}' | "$SOURCE_DIR/scripts/hook-memory-status.sh" >/dev/null
 echo "✓ Hook validation passed."
 
 echo "=================================================="
@@ -111,9 +155,9 @@ echo "🎉 ${PLUGIN_NAME} installed successfully!"
 echo "Available skills in Antigravity CLI:"
 echo "  /memory   - Inspect active memory blocks & git history"
 echo "  /remember - Record a preference or rule"
-echo "  /dream    - Sleep-time reflection subagent"
+echo "  /dream    - Explicit reflection and deterministic Dream notes"
 echo "  /doctor   - Memory consistency & health auditor"
 echo "  /palace   - Visual Memory Palace dashboard"
-echo "  /update   - Update plugin to latest version"
+echo "  /update   - Refresh the active plugin link from the current source"
 echo ""
 echo "Start pair programming in any workspace — your agent is now stateful! 🚀"

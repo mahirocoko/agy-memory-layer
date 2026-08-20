@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "type": "module",
-  "description": "Stateful Git-backed MemFS, sleep-time reflection, codebase onboarding, and Memory Palace plugin for Antigravity CLI",
+  "description": "Committed Git-backed MemFS, explicit Dream notes, codebase onboarding, and Memory Palace for Antigravity CLI",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "tsc --noEmit && node --experimental-strip-types --test --test-concurrency=1 tests/run-test-suite.ts tests/unit-coverage.test.ts",

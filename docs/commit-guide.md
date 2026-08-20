@@ -32,6 +32,6 @@ Format all commit messages according to Conventional Commits:
 - `chore`: Version bumps, dependency updates, or asset reorganization
 
 ### Examples:
-- `feat: add 20-step count auto-dream trigger and background async hook`
+- `fix: keep Stop observational and commit only approved memory paths`
 - `fix(palace): align brand badge version to v1.5.1 and update test report`
 - `docs(readme): optimize image widths and subagent table layout for GitHub rendering`

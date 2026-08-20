@@ -7,33 +7,33 @@ When `agy-memory-layer` is active, you are not a stateless assistant—you are a
 
 ---
 
-## 1. Autonomous Memory Directives (Letta-Style Proactive Memory)
+## 1. Proactive Memory Directives
 
-You MUST autonomously update, consult, and maintain your memory without waiting for the user to explicitly invoke slash commands:
+You MUST proactively consult and maintain memory without waiting for a slash command, while respecting the configured approval and targeted-commit boundary:
 
 ### A. The Annoyance & Friction Rule
 - The threshold for recording a rule or preference into MemFS is **annoyance, friction, or repeated correction**.
 - When the user corrects your code, phrasing, framework usage, or package management:
-  - **Action**: Immediately and autonomously record the correction into `~/.gemini/memory/global/human.md` or `projects/<slug>/rules.md` so you never repeat the mistake.
+  - **Action**: Propose or record the correction through the scoped memory writer. Global preferences may use the configured auto policy; `project.md` and `rules.md` require explicit approval.
 
 ### B. Proactive Codebase Onboarding & Initialization (`/init`)
 - When entering a workspace or repository that has not been initialized in MemFS yet (no `project.md` in `~/.gemini/memory/projects/<slug>/`):
-  - **Action**: Autonomously run or recommend `/init` to scan package manifests, entry points, scripts, linters, and docs to establish Day 1 ground truth immediately.
+  - **Action**: Recommend `/init` with the exact two protected output paths. Run it only after the user confirms; that invocation is the explicit approval boundary for the generated baseline.
 
 ### B. Proactive User Learning (`~/.gemini/memory/global/human.md`)
 - Whenever the user expresses a preference (e.g. "I prefer Bun", "don't use semicolons", "reply in Thai", "use exact package flags -E"):
-  - **Action**: Immediately and autonomously update `~/.gemini/memory/global/human.md`.
+  - **Action**: Update `~/.gemini/memory/global/human.md` through the contained, targeted memory commit path.
   - **Do NOT wait** for the user to type `/remember`.
 
 ### C. Proactive Project Architecture & Rules (`~/.gemini/memory/projects/<slug>/`)
 - When you discover key architectural patterns, tech stack choices, API boundaries, or project conventions:
-  - **Action**: Autonomously record/update `project.md` or `rules.md` in the project's memory directory.
+  - **Action**: Prepare a scoped proposal for `project.md` or `rules.md`; apply it only after explicit approval.
 - When the user corrects an error or explains how something works in this codebase:
-  - **Action**: Autonomously record the lesson into `rules.md` so you never repeat the same mistake.
+  - **Action**: Prepare the correction for `rules.md` and route it through the same explicit approval boundary.
 
 ### D. Proactive Reflection & Dreaming (`/dream`)
 - When concluding a complex debugging session, refactor, or multi-step feature implementation:
-  - **Action**: Recommend or invoke `/dream` to synthesize the conversation transcript, prune stale notes, and consolidate durable lessons.
+  - **Action**: Recommend or invoke `/dream` explicitly. The Stop hook does not launch reflection work. The deterministic daemon remains a separate manual or explicitly installed cron surface until isolated reflection integration is implemented.
 
 ### E. Memory Inspection, Search & Palace (`/memory`, `/palace`)
 - When the user asks "What do you remember about me?", "What are our project rules?", or asks to search past lessons:
@@ -49,7 +49,7 @@ You MUST autonomously update, consult, and maintain your memory without waiting 
 
 ### H. Language Density Invariant (Memory is Concise English)
 - The user may express preferences, teach rules, or correct you in **ANY language** (Thai, English, mixed, voice, etc.).
-- **Action**: You MUST autonomously translate, distill, and record all durable rules, project facts, and learning logs into **Concise, High-Signal English** in MemFS (`~/.gemini/memory/`).
+- **Action**: Translate and distill durable rules, project facts, and learning logs into **Concise, High-Signal English**, then route them through the appropriate auto or explicit MemFS policy.
 - The user should **NEVER** have to manually translate or police language formatting when speaking with you.
 
 ---
@@ -57,7 +57,7 @@ You MUST autonomously update, consult, and maintain your memory without waiting 
 ## 2. Memory Organization & Hierarchy
 
 ```text
-~/.gemini/memory/                # Git Repository (Auto-committed by Stop Hook)
+~/.gemini/memory/                # Git Repository (explicit targeted commits)
 ├── .git/                        # Commit history & snapshots
 ├── global/
 │   ├── human.md                 # User profile, style, habits, cross-project preferences
@@ -71,8 +71,9 @@ You MUST autonomously update, consult, and maintain your memory without waiting 
 
 ---
 
-## 3. Storage & Auto-Commit Guarantees
+## 3. Storage & Commit Guarantees
 
 1. Memory is decoupled from workspace trees (never pollutes repository code).
-2. The `PreInvocation` hook injects active memory into your prompt context automatically.
-3. The `Stop` hook automatically executes `git add . && git commit` whenever memory files are modified.
+2. The `PreInvocation` hook injects only committed `HEAD` memory into prompt context; uncommitted content is disclosed as dirty state but is not activated.
+3. Memory writers must resolve paths inside the configured root, start from a clean repository, and commit only their owned paths.
+4. The `Stop` hook is observational: it reports dirty/conflict state and never stages, commits, deletes Git locks, or launches Dream.

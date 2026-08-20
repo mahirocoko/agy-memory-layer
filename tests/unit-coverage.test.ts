@@ -47,6 +47,14 @@ const { findCrossProjectSynapses, formatSynapseNotice } = await import(
 const { syncLettaMemory, normalizeLettaProjectSlug, findPrimaryLettaAgent } = await import(
   path.join(SCRIPTS_DIR, 'letta-sync.ts')
 )
+const {
+  commitMemoryPaths,
+  getMemoryRepositoryStatus,
+  readCommittedMemoryFile,
+  resolveMemoryPath,
+  validateProjectSlug,
+  writeMemoryFile,
+} = await import(path.join(SCRIPTS_DIR, 'memory-repository.ts'))
 
 describe('Unit Coverage Extensions', () => {
   it('tests init-project-memory with Rust, Go, Python, and Docker manifests', () => {
@@ -68,11 +76,12 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(scanned.frameworks.has('Cloudflare Workers'), true)
     assert.strictEqual(scanned.frameworks.has('Docker'), true)
 
-    const res1 = initProjectMemory(tempDir, { force: true })
+    assert.throws(() => initProjectMemory(tempDir, { force: true }), /requires --confirm-init/)
+    const res1 = initProjectMemory(tempDir, { force: true, confirmed: true })
     assert.strictEqual(res1.status, 'INITIALIZED')
 
     // Test ALREADY_INITIALIZED branch
-    const res2 = initProjectMemory(tempDir, { force: false })
+    const res2 = initProjectMemory(tempDir, { force: false, confirmed: true })
     assert.strictEqual(res2.status, 'ALREADY_INITIALIZED')
 
     // Clean up
@@ -80,6 +89,14 @@ describe('Unit Coverage Extensions', () => {
     fs.rmSync(path.join(MEMORY_ROOT, 'projects', 'test-multi-stack-project'), {
       recursive: true,
       force: true,
+    })
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [
+        'projects/test-multi-stack-project/project.md',
+        'projects/test-multi-stack-project/rules.md',
+      ],
+      reason: 'test: remove initialized project memory',
     })
   })
 
@@ -146,6 +163,72 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(parsed.injectSteps[0].ephemeralMessage.includes('MemFS Active Memory'), true)
   })
 
+  it('tests committed projection, contained paths, and targeted commits', () => {
+    const relativePath = 'global/projection-contract.md'
+    writeMemoryFile(MEMORY_ROOT, relativePath, '# Projection\nCommitted v1\n')
+    const initialCommit = commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [relativePath],
+      reason: 'test: seed committed projection',
+    })
+    assert.strictEqual(initialCommit.committed, true)
+
+    writeMemoryFile(MEMORY_ROOT, relativePath, '# Projection\nUncommitted v2\n')
+    assert.strictEqual(
+      readCommittedMemoryFile(MEMORY_ROOT, relativePath)?.includes('Committed v1'),
+      true,
+    )
+    assert.strictEqual(getMemoryRepositoryStatus(MEMORY_ROOT).state, 'dirty')
+
+    const unrelatedPath = path.join(MEMORY_ROOT, 'global', 'unrelated.tmp')
+    fs.writeFileSync(unrelatedPath, 'unrelated')
+    assert.throws(
+      () =>
+        commitMemoryPaths({
+          memoryRoot: MEMORY_ROOT,
+          relativePaths: [relativePath],
+          reason: 'test: must reject unrelated dirty paths',
+        }),
+      /unrelated dirty paths/,
+    )
+    fs.unlinkSync(unrelatedPath)
+
+    const secondCommit = commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [relativePath],
+      reason: 'test: accept targeted projection update',
+    })
+    assert.strictEqual(secondCommit.committed, true)
+    assert.strictEqual(
+      readCommittedMemoryFile(MEMORY_ROOT, relativePath)?.includes('Uncommitted v2'),
+      true,
+    )
+
+    for (const unsafePath of ['../escape.md', '/tmp/escape.md', 'C:\\escape.md', 'a/../b.md']) {
+      assert.throws(() => resolveMemoryPath(MEMORY_ROOT, unsafePath))
+    }
+    assert.throws(() => validateProjectSlug('../escape'))
+
+    const outsideRoot = path.join(TEST_TEMP_ROOT, 'outside-memory-root')
+    const escapeLink = path.join(MEMORY_ROOT, 'projects', 'escape-link')
+    fs.mkdirSync(outsideRoot, { recursive: true })
+    fs.symlinkSync(outsideRoot, escapeLink)
+    assert.throws(
+      () => resolveMemoryPath(MEMORY_ROOT, 'projects/escape-link/outside.md'),
+      /outside configured root/,
+    )
+    fs.unlinkSync(escapeLink)
+    fs.rmSync(outsideRoot, { recursive: true, force: true })
+
+    fs.unlinkSync(path.join(MEMORY_ROOT, relativePath))
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [relativePath],
+      reason: 'test: remove projection fixture',
+    })
+    assert.strictEqual(getMemoryRepositoryStatus(MEMORY_ROOT).state, 'clean')
+  })
+
   it('tests recall-engine search, vector math, and hybrid modes', async () => {
     // Test vectorization & cosine similarity
     const vecA = buildVectorProfile('database migrations schema sqlite')
@@ -174,6 +257,21 @@ describe('Unit Coverage Extensions', () => {
     await assert.rejects(async () => {
       await searchRecall('')
     }, /Search query must not be empty/)
+
+    const recallScript = path.join(SCRIPTS_DIR, 'recall-engine.ts')
+    const directQuery = spawnSync(
+      process.execPath,
+      ['--experimental-strip-types', recallScript, 'palace', 'token'],
+      { encoding: 'utf-8' },
+    )
+    assert.strictEqual(directQuery.status, 0)
+    assert.strictEqual(directQuery.stdout.includes('Recall Results'), true)
+
+    const list = spawnSync(process.execPath, ['--experimental-strip-types', recallScript, 'list'], {
+      encoding: 'utf-8',
+    })
+    assert.strictEqual(list.status, 0)
+    assert.strictEqual(list.stdout.includes('Recent Antigravity Conversations'), true)
   })
 
   it('tests dream-daemon scanner, synthesis, and status reporter', () => {
@@ -268,6 +366,176 @@ describe('Unit Coverage Extensions', () => {
     fs.rmSync(fixtureRepo, { recursive: true, force: true })
   })
 
+  it('tests installer, refresh, uninstall, and confirmed purge in disposable HOME', () => {
+    const lifecycleHome = path.join(TEST_TEMP_ROOT, 'lifecycle-home')
+    const pluginsDir = path.join(lifecycleHome, '.gemini', 'antigravity-cli', 'plugins')
+    const targetLink = path.join(pluginsDir, 'agy-memory-layer')
+    const memoryRoot = path.join(lifecycleHome, '.gemini', 'memory')
+    const env = {
+      ...process.env,
+      HOME: lifecycleHome,
+      USERPROFILE: lifecycleHome,
+      PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin`,
+    }
+    fs.rmSync(lifecycleHome, { recursive: true, force: true })
+
+    const install = spawnSync(
+      '/bin/bash',
+      [path.join(ROOT_DIR, 'plugins', 'agy-memory-layer', 'scripts', 'install.sh')],
+      { cwd: ROOT_DIR, env, encoding: 'utf-8' },
+    )
+    assert.strictEqual(install.status, 0, install.stderr)
+    assert.strictEqual(fs.lstatSync(targetLink).isSymbolicLink(), true)
+    assert.strictEqual(fs.existsSync(path.join(memoryRoot, '.git')), true)
+    const configLink = path.join(lifecycleHome, '.gemini', 'config', 'plugins', 'agy-memory-layer')
+    assert.strictEqual(fs.lstatSync(configLink).isSymbolicLink(), true)
+
+    const refresh = spawnSync(
+      '/bin/bash',
+      [path.join(ROOT_DIR, 'plugins', 'agy-memory-layer', 'scripts', 'update.sh')],
+      { cwd: ROOT_DIR, env, encoding: 'utf-8' },
+    )
+    assert.strictEqual(refresh.status, 0, refresh.stderr)
+
+    const uninstallScript = path.join(
+      ROOT_DIR,
+      'plugins',
+      'agy-memory-layer',
+      'scripts',
+      'uninstall.sh',
+    )
+    const uninstall = spawnSync('/bin/bash', [uninstallScript], {
+      cwd: ROOT_DIR,
+      env,
+      encoding: 'utf-8',
+    })
+    assert.strictEqual(uninstall.status, 0, uninstall.stderr)
+    assert.strictEqual(fs.existsSync(targetLink), false)
+    assert.strictEqual(fs.existsSync(configLink), false)
+    assert.strictEqual(fs.existsSync(memoryRoot), true)
+
+    const thirdPartyPlugin = path.join(lifecycleHome, 'third-party-plugin')
+    fs.mkdirSync(thirdPartyPlugin, { recursive: true })
+    fs.writeFileSync(
+      path.join(thirdPartyPlugin, 'plugin.json'),
+      JSON.stringify({ name: 'third-party-plugin' }),
+    )
+    fs.symlinkSync(thirdPartyPlugin, targetLink)
+    const refusedThirdPartyRefresh = spawnSync(
+      '/bin/bash',
+      [path.join(ROOT_DIR, 'plugins', 'agy-memory-layer', 'scripts', 'update.sh')],
+      { cwd: ROOT_DIR, env, encoding: 'utf-8' },
+    )
+    assert.strictEqual(refusedThirdPartyRefresh.status, 1)
+    assert.strictEqual(fs.lstatSync(targetLink).isSymbolicLink(), true)
+    fs.unlinkSync(targetLink)
+
+    fs.mkdirSync(targetLink, { recursive: true })
+    fs.writeFileSync(path.join(targetLink, 'owner-marker'), 'preserve')
+    const refusedRefresh = spawnSync(
+      '/bin/bash',
+      [path.join(ROOT_DIR, 'plugins', 'agy-memory-layer', 'scripts', 'update.sh')],
+      { cwd: ROOT_DIR, env, encoding: 'utf-8' },
+    )
+    assert.strictEqual(refusedRefresh.status, 1)
+    assert.strictEqual(fs.existsSync(path.join(targetLink, 'owner-marker')), true)
+    fs.rmSync(targetLink, { recursive: true, force: true })
+
+    fs.symlinkSync(path.join(ROOT_DIR, 'plugins', 'agy-memory-layer'), targetLink)
+    const refusedPurge = spawnSync('/bin/bash', [uninstallScript, '--purge'], {
+      cwd: ROOT_DIR,
+      env,
+      encoding: 'utf-8',
+    })
+    assert.strictEqual(refusedPurge.status, 1)
+    assert.strictEqual(fs.existsSync(memoryRoot), true)
+    assert.strictEqual(fs.lstatSync(targetLink).isSymbolicLink(), true)
+
+    const confirmedPurge = spawnSync('/bin/bash', [uninstallScript, '--purge', '--confirm-purge'], {
+      cwd: ROOT_DIR,
+      env,
+      encoding: 'utf-8',
+    })
+    assert.strictEqual(confirmedPurge.status, 0, confirmedPurge.stderr)
+    assert.strictEqual(fs.existsSync(memoryRoot), false)
+
+    fs.mkdirSync(memoryRoot, { recursive: true })
+    fs.writeFileSync(path.join(memoryRoot, 'third-party-marker'), 'preserve')
+    fs.symlinkSync(path.join(ROOT_DIR, 'plugins', 'agy-memory-layer'), targetLink)
+    const refusedUnprovenPurge = spawnSync(
+      '/bin/bash',
+      [uninstallScript, '--purge', '--confirm-purge'],
+      { cwd: ROOT_DIR, env, encoding: 'utf-8' },
+    )
+    assert.strictEqual(refusedUnprovenPurge.status, 1)
+    assert.strictEqual(fs.existsSync(path.join(memoryRoot, 'third-party-marker')), true)
+    fs.rmSync(lifecycleHome, { recursive: true, force: true })
+
+    const legacyHome = path.join(TEST_TEMP_ROOT, 'legacy-owner-home')
+    const legacyPath = path.join(legacyHome, '.gemini', 'antigravity-cli', 'plugins', 'memfs')
+    fs.mkdirSync(legacyPath, { recursive: true })
+    fs.writeFileSync(path.join(legacyPath, 'owner-marker'), 'preserve')
+    const refusedLegacyInstall = spawnSync(
+      '/bin/bash',
+      [path.join(ROOT_DIR, 'plugins', 'agy-memory-layer', 'scripts', 'install.sh')],
+      {
+        cwd: ROOT_DIR,
+        env: { ...env, HOME: legacyHome, USERPROFILE: legacyHome },
+        encoding: 'utf-8',
+      },
+    )
+    assert.strictEqual(refusedLegacyInstall.status, 1)
+    assert.strictEqual(fs.existsSync(path.join(legacyPath, 'owner-marker')), true)
+    assert.strictEqual(
+      fs.existsSync(path.join(legacyHome, '.gemini', 'memory')),
+      false,
+      'ownership preflight must run before MemFS initialization',
+    )
+    fs.rmSync(legacyHome, { recursive: true, force: true })
+
+    const rootInstallerHome = path.join(TEST_TEMP_ROOT, 'root-installer-home')
+    const rootInstallerEnv = {
+      ...env,
+      HOME: rootInstallerHome,
+      USERPROFILE: rootInstallerHome,
+    }
+    const rootInstall = spawnSync('/bin/bash', [path.join(ROOT_DIR, 'install.sh')], {
+      cwd: ROOT_DIR,
+      env: rootInstallerEnv,
+      encoding: 'utf-8',
+    })
+    assert.strictEqual(rootInstall.status, 0, rootInstall.stderr)
+    const rootPluginLink = path.join(
+      rootInstallerHome,
+      '.gemini',
+      'antigravity-cli',
+      'plugins',
+      'agy-memory-layer',
+    )
+    const rootConfigLink = path.join(
+      rootInstallerHome,
+      '.gemini',
+      'config',
+      'plugins',
+      'agy-memory-layer',
+    )
+    assert.strictEqual(fs.lstatSync(rootPluginLink).isSymbolicLink(), true)
+    assert.strictEqual(fs.lstatSync(rootConfigLink).isSymbolicLink(), true)
+    const rootUninstall = spawnSync('/bin/bash', [uninstallScript], {
+      cwd: ROOT_DIR,
+      env: rootInstallerEnv,
+      encoding: 'utf-8',
+    })
+    assert.strictEqual(rootUninstall.status, 0, rootUninstall.stderr)
+    assert.strictEqual(fs.existsSync(rootPluginLink), false)
+    assert.strictEqual(fs.existsSync(rootConfigLink), false)
+    assert.strictEqual(
+      fs.existsSync(path.join(rootInstallerHome, '.gemini', 'memory', '.git')),
+      true,
+    )
+    fs.rmSync(rootInstallerHome, { recursive: true, force: true })
+  })
+
   it('tests memory-approval dual-mode policy, proposals, and reviews', () => {
     const policy = getApprovalPolicy()
     assert.strictEqual(policy.defaultMode, 'auto')
@@ -315,7 +583,17 @@ describe('Unit Coverage Extensions', () => {
         recursive: true,
         force: true,
       })
+      commitMemoryPaths({
+        memoryRoot: MEMORY_ROOT,
+        relativePaths: ['projects/test-approval-slug/project.md'],
+        reason: 'test: remove approved memory fixture',
+      })
     }
+
+    assert.throws(
+      () => proposeMemoryUpdate('../escape.md', 'unsafe'),
+      /unsafe segment|must be relative/,
+    )
   })
 
   it('tests ts-inspector in-memory diagnostics, type resolution, and definition lookup', () => {
@@ -379,9 +657,12 @@ describe('Unit Coverage Extensions', () => {
       path.join(tempProjDir, 'rules.md'),
       '# Rules\n- Rule 1\n- Rule 2\n- Rule 1\n- Rule 2\n',
     )
+    const originalRules = fs.readFileSync(path.join(tempProjDir, 'rules.md'), 'utf-8')
 
     const projRes = compactProjectMemory('compactor-test-proj', { dryRun: false }, tempMemfs)
     assert.strictEqual(projRes.totalTokensSaved > 0, true)
+    assert.strictEqual(fs.readFileSync(path.join(tempProjDir, 'rules.md'), 'utf-8'), originalRules)
+    assert.throws(() => compactProjectMemory('../escape', {}, tempMemfs), /Invalid project slug/)
 
     const autoRes = runAutoCompaction(tempMemfs, { dryRun: true })
     assert.strictEqual(typeof autoRes.timestamp, 'string')
@@ -515,6 +796,24 @@ describe('Unit Coverage Extensions', () => {
     fs.rmSync(tempLetta, { recursive: true, force: true })
     fs.rmSync(tempMemfs, { recursive: true, force: true })
 
+    fs.mkdirSync(tempMemfs, { recursive: true })
+    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: tempMemfs })
+    execFileSync(
+      'git',
+      [
+        '-c',
+        'user.name=tests',
+        '-c',
+        'user.email=tests@example.invalid',
+        'commit',
+        '--allow-empty',
+        '-q',
+        '-m',
+        'test: seed Letta sync MemFS',
+      ],
+      { cwd: tempMemfs },
+    )
+
     const agentDir = path.join(tempLetta, 'agents', 'agent-test-1234', 'memory')
 
     fs.mkdirSync(path.join(agentDir, 'system'), { recursive: true })
@@ -540,18 +839,84 @@ describe('Unit Coverage Extensions', () => {
     const discoveredAgent = findPrimaryLettaAgent(tempLetta)
     assert.strictEqual(discoveredAgent, 'agent-test-1234')
 
+    assert.throws(
+      () =>
+        syncLettaMemory({
+          lettaRoot: tempLetta,
+          memoryRoot: tempMemfs,
+          dryRun: true,
+        }),
+      /Select the Letta agent explicitly/,
+    )
+    assert.throws(
+      () =>
+        syncLettaMemory({
+          lettaRoot: tempLetta,
+          memoryRoot: tempMemfs,
+          dryRun: true,
+          targetAgentId: 'agent-test-1234',
+        }),
+      /Select the import scope explicitly/,
+    )
+    assert.throws(
+      () =>
+        syncLettaMemory({
+          lettaRoot: tempLetta,
+          memoryRoot: tempMemfs,
+          dryRun: true,
+          targetAgentId: 'agent-test-1234',
+          targetScope: 'invalid' as 'global',
+        }),
+      /Invalid target scope/,
+    )
+    assert.throws(
+      () =>
+        syncLettaMemory({
+          lettaRoot: tempLetta,
+          memoryRoot: tempMemfs,
+          dryRun: true,
+          targetAgentId: 'agent-test-1234',
+          targetScope: 'project',
+        }),
+      /requires --project-slug/,
+    )
+    const projectDryRun = syncLettaMemory({
+      lettaRoot: tempLetta,
+      memoryRoot: tempMemfs,
+      dryRun: true,
+      targetAgentId: 'agent-test-1234',
+      targetScope: 'project',
+      projectSlug: 'org-repo-a',
+    })
+    assert.strictEqual(projectDryRun.globalHumanUpdated, false)
+    assert.strictEqual(projectDryRun.syncedProjectsCount, 1)
+    assert.throws(
+      () =>
+        syncLettaMemory({
+          lettaRoot: tempLetta,
+          memoryRoot: tempMemfs,
+          dryRun: false,
+          targetAgentId: 'agent-test-1234',
+          targetScope: 'global',
+        }),
+      /requires --confirm-import/,
+    )
+
     // Test live sync into sandbox MemFS
     const syncRes = syncLettaMemory({
       lettaRoot: tempLetta,
       memoryRoot: tempMemfs,
       dryRun: false,
-      autoCommit: false,
+      autoCommit: true,
+      targetAgentId: 'agent-test-1234',
+      targetScope: 'global',
+      confirmed: true,
     })
 
     assert.strictEqual(syncRes.status, 'SYNCED_SUCCESSFULLY')
     assert.strictEqual(syncRes.globalHumanUpdated, true)
     assert.strictEqual(syncRes.importedReferencesCount, 1)
-    assert.strictEqual(syncRes.syncedProjectsCount, 1)
+    assert.strictEqual(syncRes.syncedProjectsCount, 0)
 
     // Verify imported files in sandbox MemFS
     assert.strictEqual(fs.existsSync(path.join(tempMemfs, 'global', 'human.md')), true)
@@ -559,9 +924,47 @@ describe('Unit Coverage Extensions', () => {
       fs.existsSync(path.join(tempMemfs, 'global', 'reference', 'thai-grammar.md')),
       true,
     )
+    assert.strictEqual(fs.existsSync(path.join(tempMemfs, 'projects', 'org-repo-a')), false)
+
+    const projectSyncRes = syncLettaMemory({
+      lettaRoot: tempLetta,
+      memoryRoot: tempMemfs,
+      dryRun: false,
+      autoCommit: true,
+      targetAgentId: 'agent-test-1234',
+      targetScope: 'project',
+      projectSlug: 'org-repo-a',
+      confirmed: true,
+    })
+    assert.strictEqual(projectSyncRes.globalHumanUpdated, false)
+    assert.strictEqual(projectSyncRes.syncedProjectsCount, 1)
     assert.strictEqual(
       fs.existsSync(path.join(tempMemfs, 'projects', 'org-repo-a', 'rules.md')),
       true,
+    )
+    const projectCommitPaths = execFileSync('git', ['show', '--pretty=', '--name-only', 'HEAD'], {
+      cwd: tempMemfs,
+      encoding: 'utf-8',
+    })
+      .trim()
+      .split('\n')
+      .sort()
+    assert.deepStrictEqual(projectCommitPaths, [
+      'projects/org-repo-a/learnings/thai-grammar.md',
+      'projects/org-repo-a/rules.md',
+    ])
+
+    assert.throws(
+      () =>
+        syncLettaMemory({
+          lettaRoot: tempLetta,
+          memoryRoot: tempMemfs,
+          targetAgentId: 'agent-test-1234',
+          targetScope: 'project',
+          projectSlug: '../escape',
+          dryRun: true,
+        }),
+      /Invalid project slug/,
     )
 
     // Clean up

@@ -14,6 +14,12 @@ import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import {
+  assertMemoryRepositoryCleanForWrite,
+  commitMemoryPaths,
+  deleteMemoryFile,
+  writeMemoryBuffer,
+} from '../plugins/agy-memory-layer/scripts/memory-repository.ts'
 
 // -----------------------------------------------------------------------------
 // Type Definitions (Strictly type aliases ONLY - No interface)
@@ -498,14 +504,16 @@ export const importMemoryBundle = (options: ImportOptions): ImportResult => {
     fs.mkdirSync(targetDir, { recursive: true })
   }
 
+  const changedPaths = new Set<string>()
+  const isGitRepo = fs.existsSync(path.join(targetDir, '.git'))
+  if (isGitRepo) assertMemoryRepositoryCleanForWrite(targetDir)
+
   // Clean target if requested
   if (options.cleanTarget) {
     const existing = scanMemoryDirectory(targetDir)
     for (const rel of existing) {
-      const full = path.join(targetDir, rel)
-      if (fs.existsSync(full)) {
-        fs.unlinkSync(full)
-      }
+      deleteMemoryFile(targetDir, rel)
+      changedPaths.add(rel)
     }
   }
 
@@ -523,8 +531,9 @@ export const importMemoryBundle = (options: ImportOptions): ImportResult => {
     }
 
     const contentBuffer = Buffer.from(fileEntry.content, fileEntry.encoding || 'utf-8')
-    fs.writeFileSync(targetFilePath, contentBuffer)
+    writeMemoryBuffer(targetDir, fileEntry.relativePath, contentBuffer)
     restoredFiles.push(fileEntry.relativePath)
+    changedPaths.add(fileEntry.relativePath)
   }
 
   // Git auto-commit if target is a git repository
@@ -532,21 +541,17 @@ export const importMemoryBundle = (options: ImportOptions): ImportResult => {
   let commitHash: string | undefined
 
   const shouldAutoCommit = options.autoCommit !== false
-  const isGitRepo = fs.existsSync(path.join(targetDir, '.git'))
 
-  if (shouldAutoCommit && isGitRepo && restoredFiles.length > 0) {
-    try {
-      execSync('git add -A', { cwd: targetDir, stdio: ['ignore', 'ignore', 'pipe'] })
-      const commitMsg = `backup: restore ${restoredFiles.length} memory blocks (${new Date().toISOString()})`
-      execSync(`git commit -m "${commitMsg}"`, {
-        cwd: targetDir,
-        stdio: ['ignore', 'ignore', 'pipe'],
-      })
+  if (shouldAutoCommit && isGitRepo && changedPaths.size > 0) {
+    const commitMsg = `backup: restore ${restoredFiles.length} memory blocks (${new Date().toISOString()})`
+    const commit = commitMemoryPaths({
+      memoryRoot: targetDir,
+      relativePaths: [...changedPaths],
+      reason: commitMsg,
+    })
+    if (commit.committed) {
       commitHash = getGitCommitHash(targetDir) || undefined
       gitCommitted = true
-    } catch {
-      // If git commit has nothing to commit or fails, continue gracefully
-      gitCommitted = false
     }
   }
 

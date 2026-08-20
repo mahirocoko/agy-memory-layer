@@ -1,38 +1,68 @@
 ---
 name: sync-letta
-description: Synchronize core memory blocks, user preferences, domain reference notes, and project rules from Letta Code (~/.letta) into Antigravity MemFS (~/.gemini/memory).
+description: Inspect and explicitly import selected Letta memory Markdown into Antigravity MemFS through contained, targeted commits.
 ---
 
-# /sync-letta - Letta Code Memory Synchronization
+# /sync-letta — Explicit Letta Markdown Import
 
-Synchronizes core memory blocks, user preferences, domain reference notes, and workspace project rules from Letta Code (`~/.letta`) into Antigravity MemFS (`~/.gemini/memory/`).
+This is a one-way, lossy import adapter. It is not live synchronization and does
+not preserve Letta agent identity, conversations, compaction records, or backend
+semantics.
 
-## 🤖 4-Step Agent-Groomed Interactive Pipeline
+## Workflow
 
-When the user triggers `/sync-letta` or requests to sync Letta memory:
-
-### Step 1: Scan Stateful Agents (Excluding Subagent Manifests)
-Run discovery to identify stateful agent directories (`agent-*`) and ignore all `.md` subagent manifests (`git-commit.md`, `ui-review.md`, etc.):
+### 1. List available stateful agents
 
 ```bash
 node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts list
 ```
 
-### Step 2: Interactive Selection via `ask_question`
-- **If multiple stateful agents exist** (e.g. `agent-4bf7dc78...` [Primary Coding] vs `agent-b93b5702...` [Novel Writer]):
-  - **MANDATORY**: You MUST ask the user first using the `ask_question` tool before syncing.
-  - Present each agent's ID, summary, detected project scope, and last modified date.
-  - Let the user choose whether to import as **Global User Memory** or **Project-Scoped Memory**.
+Always ask the user to choose the exact agent and target scope. Even a single
+agent requires `--agent-id`; never select a "first" agent
+silently. `global` writes only `global/*`. `project` additionally requires an
+exact `--project-slug` and writes only that project's memory paths.
 
-### Step 3: Raw Payload Extraction
-Extract the raw memory payload for the selected agent:
+### 2. Inspect the selected raw payload
 
 ```bash
-node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts payload --agent-id <agent-uuid>
+node --experimental-strip-types \
+  plugins/agy-memory-layer/scripts/letta-sync.ts \
+  payload --agent-id <agent-id>
 ```
 
-### Step 4: Cognitive Grooming & Distillation by Agent
-- **Strip Boilerplate**: Remove Letta prompt template guidelines ("Learn sideways...", "What are they building...", etc.).
-- **Deduplicate Semantically**: Compare against existing `global/human.md` or `projects/<slug>/rules.md` to avoid redundant rules.
-- **Section Synthesizing**: Synthesize only new durable facts into clean semantic sections (`## User Identity & Environment`, `## Communication & Style`, `## Coding Standards`).
-- **Persist to MemFS**: Write the groomed Markdown directly into MemFS and verify token budget.
+Explain which files can be imported and which Letta state will not survive the
+adapter.
+
+### 3. Dry-run the exact route
+
+```bash
+node --experimental-strip-types \
+  plugins/agy-memory-layer/scripts/letta-sync.ts \
+  status --dry-run \
+  --agent-id <agent-id> \
+  --target-scope <global|project> \
+  --project-slug <slug-if-project>
+```
+
+### 4. Confirm and run live import
+
+After explicit confirmation, repeat the exact command without `--dry-run`.
+The destination MemFS repository must be clean. Imported paths are validated and
+committed as a targeted set. Add the required `--confirm-import` flag:
+
+```bash
+node --experimental-strip-types \
+  plugins/agy-memory-layer/scripts/letta-sync.ts \
+  sync \
+  --agent-id <agent-id> \
+  --target-scope <global|project> \
+  --project-slug <slug-if-project> \
+  --confirm-import
+```
+
+## Current Boundary
+
+The script performs section-aware Markdown merging, not LLM cognitive grooming.
+If semantic rewriting is desired, prepare the replacement separately and route
+it through `memory-approval.ts propose` rather than claiming the raw importer
+performed model-based distillation.

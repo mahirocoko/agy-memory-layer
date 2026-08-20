@@ -9,6 +9,12 @@
 import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import {
+  assertMemoryRepositoryCleanForWrite,
+  commitMemoryPaths,
+  validateProjectSlug,
+  writeMemoryFile,
+} from './memory-repository.ts'
 
 export type CodebaseScanResult = {
   slug: string
@@ -30,6 +36,7 @@ export type CodebaseScanResult = {
 export type InitOptions = {
   force?: boolean
   dryRun?: boolean
+  confirmed?: boolean
 }
 
 export type InitResult = {
@@ -43,14 +50,21 @@ const memoryRoot =
   process.env.AGY_MEMORY_DIR || path.join(process.env.HOME || '', '.gemini', 'memory')
 
 export function getProjectSlug(workspaceDir: string = process.cwd()): string {
+  let source = path.basename(workspaceDir)
   try {
     const gitRoot = execSync('git rev-parse --show-toplevel 2>/dev/null', {
       cwd: workspaceDir,
       encoding: 'utf-8',
     }).trim()
-    if (gitRoot) return path.basename(gitRoot)
+    if (gitRoot) source = path.basename(gitRoot)
   } catch {}
-  return path.basename(workspaceDir)
+
+  const normalized = source
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100)
+  return validateProjectSlug(normalized || 'workspace')
 }
 
 export function scanCodebase(workspaceDir: string = process.cwd()): CodebaseScanResult {
@@ -271,33 +285,25 @@ export function initProjectMemory(
     }
   }
 
-  // Ensure directories exist
-  fs.mkdirSync(projectDir, { recursive: true })
-  fs.mkdirSync(learningsDir, { recursive: true })
+  if (!options.confirmed) {
+    throw new Error('Project initialization requires --confirm-init for protected memory files.')
+  }
+
+  assertMemoryRepositoryCleanForWrite(memoryRoot)
 
   // Write Memory Blocks
   const projectContent = generateProjectMemoryMarkdown(scan)
   const rulesContent = generateRulesMarkdown(scan)
 
-  fs.writeFileSync(projectMdPath, projectContent, 'utf-8')
-  fs.writeFileSync(rulesMdPath, rulesContent, 'utf-8')
+  writeMemoryFile(memoryRoot, `projects/${scan.slug}/project.md`, projectContent)
+  writeMemoryFile(memoryRoot, `projects/${scan.slug}/rules.md`, rulesContent)
+  fs.mkdirSync(learningsDir, { recursive: true })
 
-  // Auto-commit to MemFS Git
-  try {
-    if (fs.existsSync(path.join(memoryRoot, '.git'))) {
-      execSync('git add .', { cwd: memoryRoot, stdio: 'ignore' })
-      const status = execSync('git status --porcelain', {
-        cwd: memoryRoot,
-        encoding: 'utf-8',
-      }).trim()
-      if (status) {
-        execSync(`git commit -m "init(project): bootstrap memory for ${scan.slug}"`, {
-          cwd: memoryRoot,
-          stdio: 'ignore',
-        })
-      }
-    }
-  } catch {}
+  commitMemoryPaths({
+    memoryRoot,
+    relativePaths: [`projects/${scan.slug}/project.md`, `projects/${scan.slug}/rules.md`],
+    reason: `init(project): bootstrap memory for ${scan.slug}`,
+  })
 
   return {
     status: 'INITIALIZED',
@@ -311,9 +317,10 @@ if (process.argv[1]?.endsWith('init-project-memory.ts')) {
   const args = process.argv.slice(2)
   const force = args.includes('--force')
   const dryRun = args.includes('--dry-run')
+  const confirmed = args.includes('--confirm-init')
 
   console.log('\n🚀 Starting Codebase Onboarding & Memory Initialization...\n')
-  const res = initProjectMemory(process.cwd(), { force, dryRun })
+  const res = initProjectMemory(process.cwd(), { force, dryRun, confirmed })
 
   if (res.status === 'ALREADY_INITIALIZED') {
     console.log(`ℹ️ Project "${res.projectSlug}" is already initialized in MemFS.`)

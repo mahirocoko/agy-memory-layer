@@ -1,7 +1,7 @@
 {
   "name": "dream_agent",
-  "role": "Dream Reflection Subagent",
-  "description": "Sleep-time reflection subagent that analyzes session transcripts, captures user preferences (The Annoyance Rule), and updates MemFS memory blocks.",
+  "role": "Dream Reflection Review Role",
+  "description": "Reviews a selected transcript and prepares scoped memory proposals without owning broad Git staging.",
   "system_prompt_file": "../prompts/subagents/dream_subagent.md",
   "model_tier": "inherit",
   "enable_write_tools": true,

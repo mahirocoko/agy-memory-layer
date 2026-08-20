@@ -6,10 +6,17 @@
  * Fully cross-platform (Node.js/TypeScript) and limited to local filesystem/Git metadata reads.
  */
 
-import { execSync } from 'node:child_process'
-import * as fs from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
+import {
+  committedMemoryPathExists,
+  getMemoryRepositoryStatus,
+  listCommittedMemoryFiles,
+  readCommittedMemoryFile,
+  validateProjectSlug,
+} from './memory-repository.ts'
 
 export type PreInvocationPayload = {
   workspacePaths?: string[]
@@ -26,18 +33,29 @@ export type PreInvocationOutput = {
   injectSteps: InjectStep[]
 }
 
-export function resolveProjectSlug(wsPath: string, memRoot: string): string {
-  const memProjectsDir = path.join(memRoot, 'projects')
-  const basenameSlug = path.basename(wsPath).toLowerCase().replace(/\s+/g, '-')
+const toProjectSlug = (value: string): string => {
+  const candidate = value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100)
+  return validateProjectSlug(candidate || 'workspace')
+}
 
-  // 1. If folder exists in MemFS, preserve it
-  if (fs.existsSync(path.join(memProjectsDir, basenameSlug))) {
+export function resolveProjectSlug(wsPath: string, memRoot: string): string {
+  const basenameSlug = toProjectSlug(path.basename(wsPath))
+
+  // 1. Preserve an existing committed project identity.
+  if (
+    committedMemoryPathExists(memRoot, `projects/${basenameSlug}/project.md`) ||
+    committedMemoryPathExists(memRoot, `projects/${basenameSlug}/rules.md`)
+  ) {
     return basenameSlug
   }
 
   // 2. Try resolving Git remote canonical slug
   try {
-    const remote = execSync('git config --get remote.origin.url', {
+    const remote = execFileSync('git', ['config', '--get', 'remote.origin.url'], {
       cwd: wsPath,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -45,8 +63,11 @@ export function resolveProjectSlug(wsPath: string, memRoot: string): string {
     if (remote) {
       const match = remote.match(/[:/]([^/:]+)\/([^/:]+?)(?:\.git)?$/)
       if (match) {
-        const canonical = `${match[1]}-${match[2]}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
-        if (fs.existsSync(path.join(memProjectsDir, canonical))) {
+        const canonical = toProjectSlug(`${match[1]}-${match[2]}`)
+        if (
+          committedMemoryPathExists(memRoot, `projects/${canonical}/project.md`) ||
+          committedMemoryPathExists(memRoot, `projects/${canonical}/rules.md`)
+        ) {
           return canonical
         }
       }
@@ -61,27 +82,19 @@ export function getRecentLearningsSnippet(
   memRoot: string,
   maxItems: number = 2,
 ): string {
-  const learningsDir = path.join(memRoot, 'projects', projectSlug, 'learnings')
-  if (!fs.existsSync(learningsDir)) return ''
-
   try {
-    const files = fs
-      .readdirSync(learningsDir)
-      .filter((f) => f.endsWith('.md') && !f.startsWith('.'))
-      .map((f) => {
-        const fullPath = path.join(learningsDir, f)
-        const stat = fs.statSync(fullPath)
-        return { file: f, path: fullPath, mtime: stat.mtime }
-      })
-      .sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
+    const files = listCommittedMemoryFiles(memRoot, `projects/${projectSlug}/learnings`)
+      .filter((file) => file.endsWith('.md') && !path.basename(file).startsWith('.'))
+      .sort((a, b) => b.localeCompare(a))
       .slice(0, maxItems)
 
     if (files.length === 0) return ''
 
     const snippets: string[] = []
-    for (const f of files) {
+    for (const file of files) {
       try {
-        const content = fs.readFileSync(f.path, 'utf-8')
+        const content = readCommittedMemoryFile(memRoot, file)
+        if (!content) continue
         // Extract takeaways or primary objective
         const lines = content.split('\n').filter(Boolean)
         const durableHeaderIdx = lines.findIndex(
@@ -94,7 +107,7 @@ export function getRecentLearningsSnippet(
           excerpt = lines.slice(0, 3).join('\n')
         }
         if (excerpt.trim()) {
-          snippets.push(`- **${f.file.replace('.md', '')}**:\n${excerpt.trim()}`)
+          snippets.push(`- **${path.basename(file, '.md')}**:\n${excerpt.trim()}`)
         }
       } catch {}
     }
@@ -120,54 +133,44 @@ export function generatePreInvocationContext(inputJson: string): PreInvocationOu
       : process.cwd()
 
   const memRoot = process.env.AGY_MEMORY_DIR || path.join(os.homedir(), '.gemini', 'memory')
-  const globalHuman = path.join(memRoot, 'global', 'human.md')
-  const globalPersona = path.join(memRoot, 'global', 'persona.md')
   const projectSlug = resolveProjectSlug(wsPath, memRoot)
-  const projectMem = path.join(memRoot, 'projects', projectSlug, 'project.md')
-  const projectRules = path.join(memRoot, 'projects', projectSlug, 'rules.md')
 
   let contextText = ''
 
-  if (fs.existsSync(globalHuman)) {
-    try {
-      const human = fs.readFileSync(globalHuman, 'utf-8').trim()
-      if (human) {
-        contextText += `### 👤 User Profile & Preferences (global/human.md)\n${human}\n\n`
-      }
-    } catch {}
+  const human = readCommittedMemoryFile(memRoot, 'global/human.md')?.trim()
+  if (human) {
+    contextText += `### 👤 User Profile & Preferences (global/human.md)\n${human}\n\n`
   }
 
-  if (fs.existsSync(globalPersona)) {
-    try {
-      const persona = fs.readFileSync(globalPersona, 'utf-8').trim()
-      if (persona) {
-        contextText += `### 🤖 Agent Persona (global/persona.md)\n${persona}\n\n`
-      }
-    } catch {}
+  const persona = readCommittedMemoryFile(memRoot, 'global/persona.md')?.trim()
+  if (persona) {
+    contextText += `### 🤖 Agent Persona (global/persona.md)\n${persona}\n\n`
   }
 
-  if (fs.existsSync(projectMem)) {
-    try {
-      const proj = fs.readFileSync(projectMem, 'utf-8').trim()
-      if (proj) {
-        contextText += `### 📁 Project Context (${projectSlug}/project.md)\n${proj}\n\n`
-      }
-    } catch {}
+  const projectMemory = readCommittedMemoryFile(
+    memRoot,
+    `projects/${projectSlug}/project.md`,
+  )?.trim()
+  if (projectMemory) {
+    contextText += `### 📁 Project Context (${projectSlug}/project.md)\n${projectMemory}\n\n`
   }
 
-  if (fs.existsSync(projectRules)) {
-    try {
-      const rules = fs.readFileSync(projectRules, 'utf-8').trim()
-      if (rules) {
-        contextText += `### 📋 Project Rules (${projectSlug}/rules.md)\n${rules}\n\n`
-      }
-    } catch {}
+  const projectRules = readCommittedMemoryFile(memRoot, `projects/${projectSlug}/rules.md`)?.trim()
+  if (projectRules) {
+    contextText += `### 📋 Project Rules (${projectSlug}/rules.md)\n${projectRules}\n\n`
   }
 
   // Inject recent durable learnings proactively
   const learningsText = getRecentLearningsSnippet(projectSlug, memRoot, 2)
   if (learningsText) {
     contextText += learningsText
+  }
+
+  const repositoryStatus = getMemoryRepositoryStatus(memRoot)
+  if (repositoryStatus.state !== 'clean') {
+    const changedPaths = repositoryStatus.changedPaths.slice(0, 8).join(', ')
+    const changedSuffix = changedPaths ? `\nChanged paths: ${changedPaths}` : ''
+    contextText += `### ⚠️ MemFS Repository Status\n${repositoryStatus.summary}${changedSuffix}\nUncommitted memory is not active; commit or resolve it explicitly before relying on it.\n\n`
   }
 
   if (!contextText.trim()) {
@@ -191,11 +194,7 @@ export function generatePreInvocationContext(inputJson: string): PreInvocationOu
 }
 
 // CLI Execution Handler
-if (
-  process.argv[1] &&
-  (process.argv[1].endsWith('hook-inject-memory.ts') ||
-    process.argv[1].endsWith('hook-inject-memory.js'))
-) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   let stdinData = ''
   process.stdin.setEncoding('utf-8')
 

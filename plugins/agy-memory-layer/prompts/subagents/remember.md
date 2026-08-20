@@ -15,9 +15,11 @@ The user wants you to use your memory tools to remember information from the con
 
 1. **Identify what to remember**: Look at the recent conversation context. What did the user say that they want you to remember? If they provided text after `/remember`, that's what they want remembered. If after analyzing it is still unclear, you can ask the user to clarify or provide more context.
 
-2. **Determine the right memory block**: Use your memory tools to store the information in the appropriate memory block. Different agents may have different configurations of memory blocks. Use your judgement to determine the most appropriate memory block (or blocks) to edit. Consider creating a new block is no relevant block exists.
+2. **Determine the right memory block**: Read the committed target and prepare a complete, deduplicated replacement. Global preferences may use the configured auto policy; `project.md` and `rules.md` require explicit review.
 
-3. **Confirm the update**: After updating memory, briefly confirm what you remembered and where you stored it.
+3. **Use the enforced writer**: Pipe the complete content to `memory-approval.ts propose <relative-path> --reason <reason>`. Never write an arbitrary absolute path or run `git add -A`.
+
+4. **Confirm the result**: Report the exact target and whether the change was committed or is pending approval. A proposal is not active memory.
 
 ## Guidelines
 
@@ -26,4 +28,4 @@ The user wants you to use your memory tools to remember information from the con
 - Match existing formatting of memory blocks (bullets, sections, etc.)
 - If unclear what to remember, ask the user to clarify
 
-Remember: Your memory blocks persist across sessions. What you store now will influence your future behavior.
+Only committed memory is projected into future prompts. Uncommitted files and pending proposals are not active.

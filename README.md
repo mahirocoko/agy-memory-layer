@@ -1,32 +1,23 @@
 # 🧠 agy-memory-layer
 
-[![Coverage](https://img.shields.io/badge/Coverage-75.69%25-green.svg)](./TEST_REPORT.md)
-[![Tests](https://img.shields.io/badge/Tests-16%2F16%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
+[![Tests](https://img.shields.io/badge/Tests-18%2F18%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Stateful Git-Backed Memory Layer, Sleep-Time Reflection, Codebase Onboarding, and Memory Palace Plugin for Antigravity CLI (`agy`)**  
+> **Committed Git-Backed Memory, Explicit Dream Notes, Codebase Onboarding, and Memory Palace for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
-
-<p align="center">
-  <img src="./assets/architecture-flow.jpg" width="100%" alt="agy-memory-layer Architecture & Lifecycle Flow" />
-</p>
 
 ---
 
-## 🤖 Full 6-Subagent Suite (Complete Letta Code Parity)
+## 🤖 Six Declarative Subagent Roles
 
-`agy-memory-layer` ships with 6 declarative First-Class Subagents designed for Antigravity CLI:
+`agy-memory-layer` ships six Agy role manifests. They describe intended model and tool capabilities; this repository does not itself prove host-level process or tool confinement. See [`docs/letta-parity.md`](./docs/letta-parity.md) for the source-backed parity boundary.
 
-<p align="center">
-  <img src="./assets/subagents-architecture.jpg" width="100%" alt="First-Class Subagents Suite" />
-</p>
-
-| Subagent & Manifest | Role & Responsibilities | Model | Tools Allowed |
+| Subagent & Manifest | Role & Responsibilities | Model | Declared Capability Intent |
 | :--- | :--- | :---: | :---: |
 | **`dream_agent`**<br/>↳ [`dream_subagent.md`](./plugins/agy-memory-layer/prompts/subagents/dream_subagent.md) | **Dream Reflection Subagent**<br/>Analyzes transcripts, captures user preferences (*The Annoyance Rule*), and updates MemFS. | `inherit` | `Write` (MemFS) |
-| **`recall_agent`**<br/>↳ [`recall_subagent.md`](./plugins/agy-memory-layer/prompts/subagents/recall_subagent.md) | **Episodic Recall Specialist**<br/>Searches past 500+ transcripts via Hybrid Vector Cosine Similarity. | `flash` | `Read-only` |
+| **`recall_agent`**<br/>↳ [`recall_subagent.md`](./plugins/agy-memory-layer/prompts/subagents/recall_subagent.md) | **Episodic Recall Specialist**<br/>Searches available Antigravity transcripts via hybrid local similarity. | `flash` | `Read-only` |
 | **`onboarding_agent`**<br/>↳ [`onboarding.md`](./plugins/agy-memory-layer/prompts/subagents/onboarding.md) | **Codebase Onboarding Specialist**<br/>Explores repositories on Day 1 to bootstrap `project.md` and `rules.md`. | `flash` | `Write` (MemFS) |
 | **`memory_agent`**<br/>↳ [`remember.md`](./plugins/agy-memory-layer/prompts/subagents/remember.md) | **MemFS Memory Specialist**<br/>Proactively updates, organizes, and prunes core memory blocks. | `inherit` | `Write` (MemFS) |
 | **`history_analyzer_agent`**<br/>↳ [`recall_subagent_local.md`](./plugins/agy-memory-layer/prompts/subagents/recall_subagent_local.md) | **Deep History Analyzer**<br/>Investigates multi-step debugging traces across local conversation transcripts. | `flash` | `Read-only` |
@@ -34,35 +25,31 @@
 
 ---
 
-## 🧠 Hybrid Semantic Recall & Auto-Dream Lifecycle
-
-<p align="center">
-  <img src="./assets/semantic-recall-lifecycle.jpg" width="100%" alt="Hybrid Semantic Recall & Sleep-Time Reflection Lifecycle" />
-</p>
+## 🧠 Hybrid Semantic Recall & Explicit Dream Notes
 
 - **Vector Semantic Search**: Subword n-gram vector embeddings + BM25 keyword matching with cosine similarity scoring.
-- **Autonomous Sleep-Time Reflection**: Background daemon (`dream-daemon.ts`) discovers undreamed sessions across `brain/` and distills permanent learnings automatically.
+- **Explicit Dream Notes**: `dream-daemon.ts` can scan Antigravity transcripts and create deterministic learning notes when run manually or through an explicitly installed cron. It is not launched by Stop and is not yet equivalent to Letta's isolated reflection worktree.
 
 ---
 
 ## ✨ Features
 
-- 👤 **In-Context Memory Blocks**: Automatically injects your user profile (`human.md`), project architecture (`project.md`), and repo rules (`rules.md`) before every invocation.
+- 👤 **Committed In-Context Memory**: Injects committed `HEAD` versions of `human.md`, `persona.md`, project architecture, rules, and recent learnings before every invocation; uncommitted content is never activated.
 - 📦 **Git-Backed MemFS (`~/.gemini/memory/`)**: Decoupled from project source code; tracks all knowledge snapshots in an independent Git repository.
 - ⚡ **Zero-Friction Lifecycle Hooks**:
-  - `PreInvocation`: Ingests active memory blocks into the prompt context via `ephemeralMessage`.
-  - `Stop`: Auto-commits memory snapshots to Git after every turn with zero manual effort.
-- 🧠 **Hybrid Semantic Recall (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across 500+ past Antigravity conversation transcripts.
-- 🌙 **Sleep-Time Dreaming (`/dream` & `dream-daemon.ts`)**: Spawns background subagents or background cron daemon to distill learnings into MemFS.
+  - `PreInvocation`: Reads committed Git memory into `ephemeralMessage` and discloses dirty/conflict state separately.
+  - `Stop`: Reports MemFS status without staging, committing, deleting locks, or launching background work.
+- 🧠 **Hybrid Semantic Recall (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across available Antigravity conversation transcripts.
+- 🌙 **Dreaming (`/dream` & `dream-daemon.ts`)**: Explicit reflection guidance plus an optional deterministic transcript-note utility; isolated model-backed reflection remains deferred.
 - 🏛️ **Memory Palace (`/palace`)**: Interactive visual dashboard in your browser to inspect memory graphs, synapses, and Git commit timelines with anti-cache headers.
 - 🩺 **Memory Health Auditor (`/doctor`)**: Audits memory consistency and flags drift between memory rules and actual codebase state.
-- 🔌 **Standard Plugin Lifecycle**: Installs via symlink, toggleable with `agy plugin enable/disable`, and cleanly uninstallable.
+- 🔌 **Plugin Lifecycle**: Installs via symlink and is toggleable with `agy plugin enable/disable`; normal uninstall preserves MemFS, while purge is explicitly destructive.
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. One-Line Installation (No Clone Needed)
+### 1. One-Line Installation (No Manual Clone Required)
 
 Install directly to your machine with a single terminal command:
 
@@ -100,15 +87,15 @@ Once installed, the following commands are available directly inside Antigravity
 | **`/init`** | **Day 1 Onboarding**: Scans codebase architecture, entry points, linters, and scripts to seed `project.md` and `rules.md` immediately. | `/init` or `/init --force` |
 | **`/memory`** | Inspect active memory blocks and recent Git snapshot history. | `/memory` |
 | **`/memory search`** | Fast ranked search across historical `learnings/` logs, project rules, and global memory. | `/memory search docker` |
-| **`/recall`** | Hybrid Semantic Search across all 500+ past conversation sessions (Keywords + Vector Cosine Similarity). | `/recall palace token` or `/recall search "setup" --semantic` |
+| **`/recall`** | Hybrid search across available Antigravity conversation sessions, separate from editable Markdown memory. | `/recall palace token`, `/recall list`, or `/recall search "setup" --semantic` |
 | **`/remember`** | Record a preference, style guideline, or project rule into MemFS. | `/remember Always use exact flag (-E) when installing packages` |
 | **`/persona`** | Switch or inspect the active personality preset (`memo`, `linus`, `tutor`, `kawaii`, `architect`, `blank`). | `/persona linus` or `/persona list` |
-| **`/dream`** | Sleep-time reflection subagent and background daemon (`dream-daemon.ts`) to synthesize session learnings. | `/dream` or `node --experimental-strip-types scripts/dream-daemon.ts --run-now` |
+| **`/dream`** | Explicit reflection workflow; the deterministic daemon is a separate manual/optional-cron note generator. | `/dream` or `node --experimental-strip-types scripts/dream-daemon.ts --run-now` |
 | **`/doctor`** | Check memory health and detect rule contradictions with codebase. | `/doctor` |
 | **`/palace`** | Generate and open the interactive Memory Palace web dashboard. | `/palace` or `/palace --summary` |
-| **`/sync-letta`** | 4-step Agentic Cognitive Grooming to sync core memory from Letta Code (`~/.letta`). | `/sync-letta` |
+| **`/sync-letta`** | Explicit, one-way import of selected Letta Markdown into contained MemFS targets. | `/sync-letta` |
 | **`/sync`** | Sync MemFS with a remote private Git repository across multiple development machines. | `/sync setup <repo-url>` or `/sync push` |
-| **`/update`** | Update plugin to latest version while safely preserving all stored MemFS memory. | `/update` |
+| **`/update`** | Refresh permissions, active links, and hooks from the current source; it does not download a newer release. | `/update` |
 
 ---
 
@@ -157,7 +144,7 @@ node --experimental-strip-types tools/memory-backup.ts export -o ./memory-backup
 # 2. Verify bundle integrity & tamper detection
 node --experimental-strip-types tools/memory-backup.ts verify -i ./memory-backup.json
 
-# 3. Import & restore memory blocks to target MemFS (with Git auto-commit)
+# 3. Import & restore memory blocks with contained writes and a targeted Git commit
 node --experimental-strip-types tools/memory-backup.ts import -i ./memory-backup.json
 ```
 
@@ -171,11 +158,13 @@ node --experimental-strip-types tools/memory-backup.ts import -i ./memory-backup
 
 ## ⚙️ Plugin Management
 
-### Updating to Latest Version
+### Refreshing the Current Source Installation
 ```bash
-# Update plugin files and refresh hooks in one command (keeps your memory safe)
+# Refresh permissions, links, and hooks after updating the source checkout
 ./plugins/agy-memory-layer/scripts/update.sh
 ```
+
+`update.sh` does not fetch a release. Update a local checkout with Git, or rerun the root installer for a remote cached installation first.
 
 ### Temporarily Enable / Disable
 ```bash
@@ -191,9 +180,11 @@ agy plugin enable agy-memory-layer
 # Option 1: Safe uninstall (removes plugin, keeps Git memory repo intact)
 ./plugins/agy-memory-layer/scripts/uninstall.sh
 
-# Option 2: Complete purge (removes plugin and deletes ~/.gemini/memory/)
-./plugins/agy-memory-layer/scripts/uninstall.sh --purge
+# Option 2: Current destructive purge interface (permanently deletes ~/.gemini/memory/)
+./plugins/agy-memory-layer/scripts/uninstall.sh --purge --confirm-purge
 ```
+
+Purge is not part of normal uninstall. It requires the second confirmation flag, refuses a symlinked or unproven memory root, and is covered only in a disposable HOME fixture. Install, refresh, and uninstall also refuse registration symlinks whose resolved manifest is not `agy-memory-layer`; normal uninstall removes both plugin and config registration links while preserving MemFS.
 
 ---
 
@@ -204,27 +195,20 @@ agy plugin enable agy-memory-layer
 ### Running Tests Locally
 
 ```bash
-# Run 11 integration scenarios plus 15 focused unit cases
+# Run 11 integration scenarios plus 18 focused unit cases
 pnpm test
 
 # Run test suite with V8 code coverage report
 pnpm test:coverage
 ```
 
-### 📈 Code Coverage Report (Node.js Native V8 Coverage Engine)
+### 📈 Coverage Evidence
 
-| Subsystem / Script | Line % | Branch % | Function % | Status |
-| :--- | :---: | :---: | :---: | :---: |
-| `plugins/agy-memory-layer/scripts/hook-auto-commit.ts` | **70.37%** | 38.46% | **100.00%** | 🟢 High |
-| `plugins/agy-memory-layer/scripts/hook-inject-memory.ts` | **73.33%** | 30.00% | 55.56% | 🟡 Moderate |
-| `plugins/agy-memory-layer/scripts/init-project-memory.ts` | **88.89%** | 54.35% | **87.50%** | 🟢 High |
-| `plugins/agy-memory-layer/scripts/memory-search.ts` | **87.43%** | 55.17% | 58.33% | 🟢 High |
-| `plugins/agy-memory-layer/scripts/palace-generator.ts` | **86.04%** | 46.48% | 59.09% | 🟢 High |
-| `tools/memory-backup.ts` | **91.33%** | 69.15% | **100.00%** | 🟢 Very High |
-| `tests/run-test-suite.ts` | **86.41%** | 31.15% | **100.00%** | 🟢 High |
-| **All Files (Current Suite)** | **75.69%** | **54.74%** | **77.03%** | 🟢 **Healthy** |
+Run `pnpm test:coverage` for the current Node/V8 report. Per-file percentages are intentionally not copied into this README because they become stale after source changes.
 
-> 📋 **Detailed Test Run Evidence**: See [TEST_REPORT.md](./TEST_REPORT.md) for the latest isolated scenario results and measured timings.
+> 📋 **Detailed integration evidence**: See [TEST_REPORT.md](./TEST_REPORT.md) for the latest isolated scenario results and measured timings.
+
+> 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
 ---
 

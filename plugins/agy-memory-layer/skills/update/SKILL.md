@@ -1,11 +1,13 @@
 ---
 name: update
-description: Update agy-memory-layer plugin to the latest version while safely preserving all stored MemFS memory.
+description: Refresh the active agy-memory-layer link, permissions, and hook validation from the current installed source without modifying MemFS.
 ---
 
 # /update
 
-Updates the `agy-memory-layer` Antigravity CLI plugin to the latest release.
+Refreshes the active `agy-memory-layer` installation from its current source checkout.
+
+This command does **not** download a newer release. Update a local checkout with Git, or rerun the root installer for a remote cached installation, before invoking `/update`.
 
 ## Usage
 
@@ -29,7 +31,8 @@ fi
 
 ## Guarantees
 
-1. **MemFS Safety**: Never deletes or modifies user memories stored in `~/.gemini/memory/`.
+1. **MemFS Safety**: Never stages, commits, deletes, or rewrites user memories stored in `~/.gemini/memory/`.
 2. **Permission Refresh**: Re-applies executable permissions to all shell scripts.
-3. **Symlink Refresh**: Updates active plugin symlinks for Antigravity CLI.
-4. **Hook Validation**: Verifies `PreInvocation` and `Stop` hook contracts.
+3. **Symlink Refresh**: Updates active plugin symlinks only after the resolved manifest proves plugin ownership.
+4. **Hook Validation**: Verifies committed-memory `PreInvocation` and non-mutating `Stop` hook contracts.
+5. **No Download Claim**: Reports a source refresh only; release acquisition remains outside this script.

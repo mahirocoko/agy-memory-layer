@@ -1,47 +1,65 @@
 # Project Overview — `agy-memory-layer`
 
-`agy-memory-layer` is a stateful Git-backed memory layer, sleep-time reflection, and Memory Palace plugin for **Antigravity CLI (`agy`)**, inspired by the dual-memory and MemFS architecture of [Letta Code](https://github.com/letta-ai/letta-code).
+`agy-memory-layer` is an Antigravity CLI plugin that combines a user-owned,
+Git-backed Markdown memory repository with committed prompt projection, scoped
+project context, conversation recall, and optional learning utilities.
 
----
+The project is inspired by Letta Code, but adapts the behavior to one Agy user
+repository rather than copying Letta's per-agent storage and service APIs. The
+canonical boundary is [`letta-parity.md`](./letta-parity.md).
 
-## 🎯 Core Value Proposition
+## Core Value
 
-Standard AI coding assistants are stateless: each session starts from zero, forgetting previous bugs, architecture decisions, and developer preferences.
+1. **External MemFS** — `~/.gemini/memory/` stays outside application repos.
+2. **Committed projection** — PreInvocation reads active context from Git `HEAD`.
+3. **Explicit persistence** — writers validate containment and commit only owned
+   paths; project architecture/rules require review.
+4. **Observational Stop** — session end reports state without creating a commit
+   or starting background work.
+5. **Separate recall** — `/recall` searches Antigravity transcripts, while
+   `/memory search` searches Markdown memory.
+6. **Agy extensions** — Memory Palace, deterministic Dream notes, project
+   onboarding, Letta import, persona presets, backup/restore, and read-only
+   Markdown maintenance analysis.
 
-`agy-memory-layer` transforms Antigravity into a **stateful, long-term learning pair programmer**:
-1. **MemFS (Memory Filesystem)**: Stored in an external Git repo at `~/.gemini/memory/` (zero workspace pollution).
-2. **Proactive Ingestion**: PreInvocation hook injects `human.md` and `project.md` into every prompt.
-3. **Autonomous Reflection (`/dream`)**: 20-step count auto-dream trigger extracts rules and commits learnings.
-4. **Episodic Recall (`/recall`)**: Subword N-gram Vector Cosine Similarity searches 500+ transcripts in milliseconds.
-5. **Memory Palace (`/palace`)**: Interactive browser visualizer with cache-busting headers.
-
----
-
-## 🏗️ Architectural Topology
+## Runtime Topology
 
 ```text
-Antigravity CLI Execution Runtime
+Antigravity CLI
   │
-  ├── 1. PreInvocation Hook (scripts/hook-inject-memory.sh)
-  │      └── Ingests: ~/.gemini/memory/{global/human.md, projects/<slug>/project.md}
+  ├── PreInvocation
+  │     └── hook-inject-memory.ts
+  │           └── read committed HEAD through memory-repository.ts
   │
-  ├── 2. Core Execution & Tool Turns (Active Chat)
-  │      └── 6 First-Class Subagents (Dream, Recall, Onboarding, Memory, History, Skill Creator)
+  ├── Active conversation / explicit skills
+  │     ├── contained targeted memory writers
+  │     ├── 6 declarative subagent role manifests
+  │     └── recall / palace / doctor / sync utilities
   │
-  └── 3. Stop Hook (scripts/hook-auto-commit.sh)
-         ├── Commits dirty changes in ~/.gemini/memory/
-         └── Checks step-count (>= 20) ➜ Fires dream-daemon.ts asynchronously in background
+  └── Stop
+        └── hook-memory-status.ts
+              └── report clean / dirty / conflict / uninitialized
 ```
 
----
+## Subsystem Owners
 
-## 📦 Subsystems & Responsibilities
+| Subsystem | Primary owner | Current boundary |
+| --- | --- | --- |
+| Committed prompt projection | `scripts/hook-inject-memory.ts` | Reads `HEAD`; dirty content is not active |
+| Memory repository contract | `scripts/memory-repository.ts` | Containment, status, atomic writes, targeted commits |
+| Stop status | `scripts/hook-memory-status.ts` | Observational only |
+| Project initialization | `scripts/init-project-memory.ts` | Scoped scan and two-file commit |
+| Approval | `scripts/memory-approval.ts` | Auto global policy; explicit project/rules policy |
+| Transcript recall | `scripts/recall-engine.ts` | Local BM25 + n-gram search |
+| Deterministic Dream notes | `scripts/dream-daemon.ts` | Manual/optional cron; not Letta reflection parity |
+| Letta import | `scripts/letta-sync.ts` | Explicit agent selection and targeted import |
+| Memory Palace | `scripts/palace-generator.ts` | Read-only visualization |
+| Subagent manifests | `agents/*.json`, `scripts/agent-launcher.ts` | Declarative intent, not proven sandboxing |
 
-| Subsystem | Primary Script / Manifest | Role |
-| :--- | :--- | :--- |
-| **Hook Ingestion** | `scripts/hook-inject-memory.sh` | Emits `ephemeralMessage` JSON schema before turns |
-| **Auto-Commit Hook** | `scripts/hook-auto-commit.sh` | Auto-commits MemFS snapshots & triggers background daemon |
-| **Auto-Dream Daemon** | `scripts/dream-daemon.ts` | 20-step trigger, transcript scanner, synthesis & cron |
-| **Hybrid Recall Engine** | `scripts/recall-engine.ts` | BM25 + Subword N-gram Vector Cosine Similarity |
-| **Subagent Launcher** | `scripts/agent-launcher.ts` | Dynamic manifest resolution and system prompt binding |
-| **Memory Palace Visualizer**| `scripts/palace-generator.ts` | Generates interactive HTML dashboard with anti-cache headers |
+## Known Gaps
+
+- isolated, cursor-based model reflection with a clean memory worktree;
+- a release-acquiring updater with validation and rollback;
+- ownership-safe purge lifecycle and disposable-HOME lifecycle tests;
+- self-contained runtime artifacts for remote TypeScript execution;
+- host-level evidence for subagent capability enforcement.

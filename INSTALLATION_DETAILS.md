@@ -13,7 +13,7 @@
 │   └── plugins/agy-memory-layer/
 │       ├── plugin.json
 │       ├── hooks.json
-│       ├── agents/                  [First-Class Subagent Manifests (6 Subagents)]
+│       ├── agents/                  [Declarative Subagent Role Manifests (6 Roles)]
 │       ├── prompts/                 [Prompt Warehouse (system, persona, subagents)]
 │       ├── rules/AGENTS.md
 │       ├── skills/*/SKILL.md
@@ -34,6 +34,9 @@
                 ├── project.md
                 ├── rules.md
                 └── learnings/
+```
+
+State ชั่วคราวของ proposal และ Dream cursor จะอยู่ที่ `~/.gemini/memory.state/` แยกจาก Git repository จึงไม่ถูก inject เข้า prompt และไม่ติดไปกับ memory commit
 ---
 
 ## ⚡ วิธีการติดตั้ง (Installation Methods)
@@ -72,14 +75,15 @@ cd agy-memory-layer
      - `global/persona.md` : กำหนดบทบาทของ Agent ให้เป็น Stateful Pair Programmer
   4. ทำการ Commit ครั้งแรก:
      ```bash
-     git add -A && git commit -m "memory-layer: initial memory repository bootstrap"
+     git add global/human.md global/persona.md
+     git commit -m "memory-layer: initial memory repository bootstrap"
      ```
 
 ### Step 3: ทำการเชื่อมโยง Plugin เข้ากับ Antigravity CLI (Symlink)
 - **โฟลเดอร์เป้าหมาย**: `~/.gemini/antigravity-cli/plugins/`
 - **สิ่งที่เกิดขึ้น**:
   1. สร้างโฟลเดอร์ `~/.gemini/antigravity-cli/plugins/` หากยังไม่มี
-  2. ลบ Symlink เก่าที่อาจตกค้าง (เช่น `memfs`)
+  2. ลบเฉพาะ symlink เก่าที่ปลายทางมี manifest ยืนยันว่าเป็น `agy-memory-layer` ถ้าเป็น path หรือ symlink ของระบบอื่น script จะหยุดทันที
   3. สร้าง Symbolic Link จาก Source โฟลเดอร์ไปยังระบบของ Antigravity CLI:
      ```bash
      ln -sf "/path/to/plugins/agy-memory-layer" "~/.gemini/antigravity-cli/plugins/agy-memory-layer"
@@ -88,8 +92,8 @@ cd agy-memory-layer
 
 ### Step 4: ทดสอบความถูกต้องของ Hook Scripts (Sanity Check)
 - **สิ่งที่เกิดขึ้น**:
-  1. ทดลองยิง Mock JSON เข้า `hook-inject-memory.sh` เพื่อเช็คว่า Script ไม่ Error และส่ง JSON ออกมาได้ถูกต้อง
-  2. ทดลองยิง Mock JSON เข้า `hook-auto-commit.sh` เพื่อตรวจสอบสิทธิ์การ Commit
+  1. ทดลองยิง Mock JSON เข้า `hook-inject-memory.sh` เพื่อเช็คว่า script ส่ง JSON ถูก schema และอ่าน memory จาก committed `HEAD` ได้
+  2. ทดลองยิง Mock JSON เข้า `hook-memory-status.sh` เพื่อเช็คว่า Stop ส่ง `{"decision":"stop"}` โดยไม่แก้ไฟล์ ไม่ stage และไม่ commit
 
 ---
 
@@ -104,34 +108,39 @@ sequenceDiagram
     participant Engine as 🤖 Antigravity CLI
     participant Hook as 🪝 PreInvocation Hook
     participant Mem as 📁 ~/.gemini/memory
-    participant Commit as 🪝 Stop Hook
+    participant Stop as 🪝 Stop Hook
 
     User->>Engine: พิมพ์คำสั่ง / ข้อความ
     Engine->>Hook: เรียก hook-inject-memory.sh
-    Hook->>Mem: ดึง human.md + project.md ของโฟลเดอร์ปัจจุบัน
-    Hook-->>Engine: Inject ข้อความเป็น System Prompt ล่าสุด
+    Hook->>Mem: อ่าน human.md + project.md จาก committed HEAD
+    Hook-->>Engine: Inject เฉพาะ committed memory
     Engine->>User: ประมวลผลและตอบกลับพร้อมบริบท
-    Engine->>Commit: จบการทำงาน (Stop Event)
-    Commit->>Mem: git add . && git commit (บันทึก Snapshot อัตโนมัติ)
+    Engine->>Stop: จบการทำงาน (Stop Event)
+    Stop->>Mem: ตรวจสถานะ clean / dirty / conflict
+    Stop-->>Engine: ส่ง decision=stop โดยไม่แก้ Git state
 ```
+
+ถ้า repository มีไฟล์ที่ยังไม่ commit รอบถัดไปจะยังใช้เนื้อหาจาก `HEAD` เดิม พร้อมแจ้งสถานะ dirty แยกต่างหาก ไฟล์ใหม่จะ active ก็ต่อเมื่อผ่าน writer ที่ตรวจ path และ commit เฉพาะไฟล์ของงานนั้นแล้ว
 
 ---
 
 ## 🔄 รายละเอียดการอัปเดตเวอร์ชันใหม่ (`update.sh`)
 
-เมื่อมีการอัปเดตโค้ดหรือฟีเจอร์ใหม่ของปลั๊กอิน (เช่น UI ใหม่, ฟีเจอร์ Memory Palace ใหม่):
+หลังอัปเดต source checkout หรือรัน root installer เพื่อดึง remote cache แล้ว ใช้คำสั่งนี้เพื่อ refresh การติดตั้งที่ active อยู่:
 
 ```bash
-# อัปเดตด้วยสคริปต์อัตโนมัติ (1 คำสั่งจบ)
+# Refresh permissions, symlink และ hooks จาก source ปัจจุบัน
 ./plugins/agy-memory-layer/scripts/update.sh
 ```
 
-**สิ่งที่สคริปต์อัปเดตจัดการให้:**
-1. **Pull Code**: ดึงโค้ดเวอร์ชันล่าสุดจาก Git
-2. **Permissions**: ตั้งค่าสิทธิ์ execute (`chmod +x`) ให้กับสคริปต์และ hooks ทั้งหมด
-3. **Symlink Refresh**: อัปเดต symlink เชื่อมต่อไปยัง Antigravity CLI อัตโนมัติ
-4. **Hook Validation**: ตรวจสอบความถูกต้องของ lifecycle hooks
-5. **Memory Safety**: ข้อมูลความทรงจำทั้งหมดใน `~/.gemini/memory/` (`human.md`, `persona.md`, `project.md`, `learnings/`) **จะไม่ถูกแตะต้องหรือลบ ปลอดภัย 100%**
+`update.sh` **ไม่ได้สั่ง `git pull` และไม่ได้ดาวน์โหลด release ใหม่** หน้าที่ของมันมีแค่:
+
+1. ตั้งสิทธิ์ execute ให้ scripts และ hooks
+2. Refresh symlink ที่ Antigravity CLI ใช้อยู่
+3. ตรวจ lifecycle hooks ทุกครั้ง และตรวจ plugin schema ด้วย `agy plugin validate` เมื่อเครื่องมี `agy` CLI
+4. ไม่ stage, commit หรือลบไฟล์ใน `~/.gemini/memory/`
+
+ถ้าเป็น local checkout ให้อัปเดต source ด้วย Git ก่อน ถ้าติดตั้งแบบ one-liner ให้รัน root installer ซ้ำเพื่ออัปเดต remote cache แล้วค่อยใช้ `/update`
 
 ---
 
@@ -141,14 +150,15 @@ sequenceDiagram
 ```bash
 ./plugins/agy-memory-layer/scripts/uninstall.sh
 ```
-- **สิ่งที่ถูกลบ**: ลบเฉพาะ Symlink ที่ `~/.gemini/antigravity-cli/plugins/agy-memory-layer`
+- **สิ่งที่ถูกลบ**: ลบ symlink ที่ยืนยัน ownership แล้วจากทั้ง `~/.gemini/antigravity-cli/plugins/agy-memory-layer` และ `~/.gemini/config/plugins/agy-memory-layer`
 - **สิ่งที่ยังอยู่**: ข้อมูล Memory ใน `~/.gemini/memory/` **จะยังอยู่ครบทั้งหมด** (หากลงใหม่ในอนาคต ความรู้เดิมจะไม่หาย)
 
 ### 2. แบบล้างหมดจด (Complete Purge)
 ```bash
-./plugins/agy-memory-layer/scripts/uninstall.sh --purge
+./plugins/agy-memory-layer/scripts/uninstall.sh --purge --confirm-purge
 ```
-- **สิ่งที่ถูกลบ**: ลบทั้ง Symlink ของ Plugin และลบโฟลเดอร์ `~/.gemini/memory/` ออกจากเครื่องทั้งหมด
+- **สิ่งที่ถูกลบ**: ลบ symlink ของ Plugin ทั้งสองตำแหน่ง และลบโฟลเดอร์ `~/.gemini/memory/` ออกจากเครื่องทั้งหมด
+- คำสั่งนี้ลบข้อมูลถาวร จึงต้องใส่ `--confirm-purge` ซ้ำอีกชั้น และ script จะไม่ purge ถ้า memory root เป็น symlink หรือไม่มีโครงสร้าง MemFS ที่ยืนยันได้ ส่วน symlink ของ plugin จะถูกลบก็ต่อเมื่อ manifest ปลายทางเป็น `agy-memory-layer` เท่านั้น ถ้าต้องการเก็บความจำ อย่าใช้ `--purge`
 
 ---
 

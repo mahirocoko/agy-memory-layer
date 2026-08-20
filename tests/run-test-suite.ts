@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 
-import { execSync, spawnSync } from 'node:child_process'
+import { execFileSync, execSync, spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import {
+  commitMemoryPaths,
+  readCommittedMemoryFile,
+  writeMemoryFile,
+} from '../plugins/agy-memory-layer/scripts/memory-repository.ts'
 import { TEST_MEMORY_ROOT, TEST_TEMP_ROOT } from './test-environment.ts'
 
 export type TestResult = {
@@ -103,47 +108,64 @@ await runTest('Hooks Contract', 'PreInvocation Hook outputs valid AGY JSON schem
     }
   }
 
-  return `Valid JSON schema with ${output.injectSteps.length} injected steps. Execution speed: fast.`
+  const committedHuman = readCommittedMemoryFile(MEMORY_ROOT, 'global/human.md')
+  if (!committedHuman) throw new Error('Missing committed global human fixture')
+  writeMemoryFile(MEMORY_ROOT, 'global/human.md', '# UNCOMMITTED_SENTINEL\n')
+  const dirtyProc = spawnSync('bash', [scriptPath], {
+    input: payload,
+    encoding: 'utf-8',
+  })
+  const dirtyMessage = JSON.parse(dirtyProc.stdout.trim()).injectSteps[0].ephemeralMessage
+  if (dirtyMessage.includes('UNCOMMITTED_SENTINEL')) {
+    throw new Error('PreInvocation injected uncommitted working-tree memory')
+  }
+  if (!dirtyMessage.includes('Test Human Profile')) {
+    throw new Error('PreInvocation did not preserve the committed memory projection')
+  }
+  if (!dirtyMessage.includes('Uncommitted memory is not active')) {
+    throw new Error('PreInvocation did not disclose dirty memory state')
+  }
+  writeMemoryFile(MEMORY_ROOT, 'global/human.md', committedHuman)
+
+  return `Valid JSON schema with ${output.injectSteps.length} committed-memory projection step(s).`
 })
 
-await runTest(
-  'Hooks Contract',
-  'Stop Hook triggers automated Git commit on memory mutation',
-  () => {
-    const commitScript = path.join(SCRIPTS_DIR, 'hook-auto-commit.sh')
-    const testFile = path.join(MEMORY_ROOT, 'global', 'test_marker.tmp')
+await runTest('Hooks Contract', 'Stop Hook reports dirty memory without mutating Git state', () => {
+  const stopScript = path.join(SCRIPTS_DIR, 'hook-memory-status.sh')
+  const testFile = path.join(MEMORY_ROOT, 'global', 'test_marker.tmp')
+  const headBefore = execSync('git rev-parse HEAD', { cwd: MEMORY_ROOT, encoding: 'utf-8' }).trim()
 
-    // Create dirty state in memory
-    fs.writeFileSync(testFile, `Test timestamp: ${Date.now()}`)
+  // Create dirty state in memory
+  fs.writeFileSync(testFile, `Test timestamp: ${Date.now()}`)
 
-    const proc = spawnSync('bash', [commitScript], {
-      input: JSON.stringify({ decision: 'stop' }),
-      encoding: 'utf-8',
-    })
+  const proc = spawnSync('bash', [stopScript], {
+    input: JSON.stringify({ decision: 'stop' }),
+    encoding: 'utf-8',
+  })
 
-    if (proc.status !== 0) {
-      throw new Error(`hook-auto-commit.sh failed: ${proc.stderr}`)
-    }
+  if (proc.status !== 0) {
+    throw new Error(`hook-memory-status.sh failed: ${proc.stderr}`)
+  }
 
-    // Verify git status is clean now
-    const gitStatus = execSync('git status --porcelain', { cwd: MEMORY_ROOT, encoding: 'utf-8' })
-    if (gitStatus.includes('test_marker.tmp')) {
-      throw new Error('Git memory repository was not committed by Stop hook')
-    }
+  const output = JSON.parse(proc.stdout.trim())
+  if (output.decision !== 'stop') throw new Error('Stop hook returned an invalid decision')
 
-    // Clean up test marker
-    fs.unlinkSync(testFile)
-    try {
-      execSync("git add -A && git commit -m 'test: cleanup test marker' >/dev/null 2>&1", {
-        cwd: MEMORY_ROOT,
-      })
-    } catch (_e) {
-      // ignore
-    }
+  // Verify Stop did not commit or clean the dirty path.
+  const gitStatus = execSync('git status --porcelain', { cwd: MEMORY_ROOT, encoding: 'utf-8' })
+  if (!gitStatus.includes('test_marker.tmp')) {
+    throw new Error('Stop hook unexpectedly modified the dirty memory path')
+  }
+  const headAfter = execSync('git rev-parse HEAD', { cwd: MEMORY_ROOT, encoding: 'utf-8' }).trim()
+  if (headAfter !== headBefore) throw new Error('Stop hook unexpectedly created a Git commit')
+  if (!proc.stderr.includes('Stop did not modify the repository')) {
+    throw new Error('Stop hook did not surface dirty repository status')
+  }
 
-    return 'Verified automatic git add & commit on memory modifications.'
-  },
-)
+  // Clean up test marker
+  fs.unlinkSync(testFile)
+
+  return 'Verified Stop reports dirty state while preserving HEAD and the working tree.'
+})
 
 // -----------------------------------------------------------------------------
 // Suite 2: Multi-Workspace Isolation & Context Boundaries
@@ -167,6 +189,11 @@ await runTest(
 
     fs.writeFileSync(path.join(dirA, 'project.md'), '# Project Alpha\nSecret Alpha DB: SQLite')
     fs.writeFileSync(path.join(dirB, 'project.md'), '# Project Beta\nSecret Beta DB: CockroachDB')
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [`projects/${slugA}/project.md`, `projects/${slugB}/project.md`],
+      reason: 'test: seed isolated project memories',
+    })
 
     // Test payload A
     const procA = spawnSync('bash', [scriptPath], {
@@ -198,13 +225,11 @@ await runTest(
     // Cleanup fake test projects
     fs.rmSync(dirA, { recursive: true, force: true })
     fs.rmSync(dirB, { recursive: true, force: true })
-    try {
-      execSync("git add -A && git commit -m 'test: cleanup test workspaces' >/dev/null 2>&1", {
-        cwd: MEMORY_ROOT,
-      })
-    } catch (_e) {
-      // Ignore empty commit
-    }
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [`projects/${slugA}/project.md`, `projects/${slugB}/project.md`],
+      reason: 'test: remove isolated project memories',
+    })
 
     return 'Project A and Project B contexts are strictly isolated; Global profile is shared 100%.'
   },
@@ -317,11 +342,11 @@ await runTest('AGY Plugin Schema', "Plugin passes 'agy plugin validate' with zer
 })
 
 // -----------------------------------------------------------------------------
-// Suite 6: Autonomous Proactive Directives Verification
+// Suite 6: Proactive, Approval-Aware Directives Verification
 // -----------------------------------------------------------------------------
 await runTest(
-  'Autonomous Directives',
-  'rules/AGENTS.md adheres to Letta-style proactive autonomous learning',
+  'Proactive Directives',
+  'rules/AGENTS.md keeps proactive learning behind explicit lifecycle boundaries',
   () => {
     const agentsMdPath = path.join(PLUGIN_DIR, 'rules', 'AGENTS.md')
     if (!fs.existsSync(agentsMdPath)) {
@@ -330,13 +355,14 @@ await runTest(
 
     const content = fs.readFileSync(agentsMdPath, 'utf-8')
     const requiredKeywords = [
-      'Autonomous Memory Directives',
+      'Proactive Memory Directives',
       'Proactive Codebase Onboarding',
       'Proactive User Learning',
       'Proactive Project Architecture',
       'Proactive Reflection & Dreaming',
       'PreInvocation',
       'Stop',
+      'explicit approval',
     ]
 
     for (const kw of requiredKeywords) {
@@ -345,7 +371,7 @@ await runTest(
       }
     }
 
-    return 'All 7 core autonomous directives verified in rules/AGENTS.md.'
+    return 'All 8 proactive and approval-aware directives verified in rules/AGENTS.md.'
   },
 )
 
@@ -387,7 +413,7 @@ await runTest(
       ),
     )
 
-    const initResult = initProjectMemory(tempWorkspace, { force: true })
+    const initResult = initProjectMemory(tempWorkspace, { force: true, confirmed: true })
     if (initResult.status !== 'INITIALIZED') {
       throw new Error(`Initialization failed: ${initResult.status}`)
     }
@@ -459,28 +485,94 @@ await runTest(
 // -----------------------------------------------------------------------------
 await runTest('Remote Git Sync', 'Manages remote URL setup and sync status cleanly', () => {
   const syncScript = path.join(SCRIPTS_DIR, 'sync-memory.sh')
+  const syncRoot = path.join(TEST_TEMP_ROOT, 'remote-sync-memory')
+  const bareRemote = path.join(TEST_TEMP_ROOT, 'remote-sync.git')
+  const peerRoot = path.join(TEST_TEMP_ROOT, 'remote-sync-peer')
+  fs.mkdirSync(path.join(syncRoot, 'global'), { recursive: true })
+  fs.writeFileSync(path.join(syncRoot, 'global', 'human.md'), '# Remote Sync Fixture\n')
+  execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: syncRoot })
+  execFileSync('git', ['add', 'global/human.md'], { cwd: syncRoot })
+  execFileSync(
+    'git',
+    [
+      '-c',
+      'user.name=tests',
+      '-c',
+      'user.email=tests@example.invalid',
+      'commit',
+      '-q',
+      '-m',
+      'test: seed remote sync fixture',
+    ],
+    { cwd: syncRoot },
+  )
+  execFileSync('git', ['init', '-q', '--bare', '-b', 'main', bareRemote])
+  const syncEnv = { ...process.env, AGY_MEMORY_DIR: syncRoot }
 
   // Test status
-  const procStatus = spawnSync('bash', [syncScript, 'status'], { encoding: 'utf-8' })
+  const procStatus = spawnSync('bash', [syncScript, 'status'], {
+    encoding: 'utf-8',
+    env: syncEnv,
+  })
   if (procStatus.status !== 0 || !procStatus.stdout.includes('MemFS Remote Sync Status')) {
     throw new Error(`sync-memory.sh status failed: ${procStatus.stderr}`)
   }
 
-  // Test setup with dummy remote
-  const testRemote = 'https://github.com/mahirocoko/test-memory-sync.git'
-  const procSetup = spawnSync('bash', [syncScript, 'setup', testRemote], { encoding: 'utf-8' })
+  // Test setup and successful local push/pull without network access.
+  const procSetup = spawnSync('bash', [syncScript, 'setup', bareRemote], {
+    encoding: 'utf-8',
+    env: syncEnv,
+  })
   if (procSetup.status !== 0 || !procSetup.stdout.includes('origin')) {
     throw new Error(`sync-memory.sh setup failed: ${procSetup.stderr}`)
   }
+  const firstPush = spawnSync('bash', [syncScript, 'push'], {
+    encoding: 'utf-8',
+    env: syncEnv,
+  })
+  if (firstPush.status !== 0) throw new Error(`Initial local push failed: ${firstPush.stderr}`)
 
-  // Clean up remote
-  try {
-    execSync('git remote remove origin', { cwd: MEMORY_ROOT, stdio: ['ignore', 'ignore', 'pipe'] })
-  } catch (_e) {
-    // ignore
+  execFileSync('git', ['clone', '-q', bareRemote, peerRoot])
+  fs.writeFileSync(path.join(peerRoot, 'global', 'remote.md'), '# Pulled from peer\n')
+  execFileSync('git', ['add', 'global/remote.md'], { cwd: peerRoot })
+  execFileSync(
+    'git',
+    [
+      '-c',
+      'user.name=tests',
+      '-c',
+      'user.email=tests@example.invalid',
+      'commit',
+      '-q',
+      '-m',
+      'test: add peer memory',
+    ],
+    { cwd: peerRoot },
+  )
+  execFileSync('git', ['push', '-q', 'origin', 'main'], { cwd: peerRoot })
+  const pull = spawnSync('bash', [syncScript, 'pull'], {
+    encoding: 'utf-8',
+    env: syncEnv,
+  })
+  if (pull.status !== 0 || !fs.existsSync(path.join(syncRoot, 'global', 'remote.md'))) {
+    throw new Error(`Local pull integration failed: ${pull.stderr}`)
   }
 
-  return 'Remote setup and sync status verified.'
+  const fixtureDirtyMarker = path.join(syncRoot, 'global', 'remote-sync-dirty.tmp')
+  fs.writeFileSync(fixtureDirtyMarker, 'uncommitted')
+  const refusedDirtyPush = spawnSync('bash', [syncScript, 'push'], {
+    encoding: 'utf-8',
+    env: syncEnv,
+  })
+  if (refusedDirtyPush.status === 0 || !refusedDirtyPush.stderr.includes('uncommitted changes')) {
+    throw new Error('sync-memory.sh did not reject dirty MemFS before network access')
+  }
+  fs.unlinkSync(fixtureDirtyMarker)
+  fs.rmSync(syncRoot, { recursive: true, force: true })
+  fs.rmSync(peerRoot, { recursive: true, force: true })
+  fs.rmSync(bareRemote, { recursive: true, force: true })
+
+  return 'Local bare-remote push/pull passed; dirty MemFS is rejected before network access.'
 })
 
 // -----------------------------------------------------------------------------
@@ -542,8 +634,8 @@ ${results.map((r) => `| **${r.suite}** | ${r.name} | ${r.status === 'PASSED' ? '
 
 ## 🛡️ Verification Proofs & Invariants Guaranteed
 
-1. **Autonomous Ingestion Contract (\`PreInvocation\`)**:
-   - The Hook delivers active memory blocks via \`injectSteps[].ephemeralMessage\` within its registered five-second host timeout.
+1. **Committed Ingestion Contract (\`PreInvocation\`)**:
+   - The Hook delivers committed \`HEAD\` memory via \`injectSteps[].ephemeralMessage\` and excludes an uncommitted sentinel.
 
 2. **Day 1 Codebase Scanner (\`/init\`)**:
    - Analyzes fixture manifests, entry points, linters, scripts, and documentation to seed \`project.md\` and \`rules.md\` deterministically.
@@ -552,13 +644,13 @@ ${results.map((r) => `| **${r.suite}** | ${r.name} | ${r.status === 'PASSED' ? '
    - Ranked retrieval returns exact file paths, line numbers, and snippets from the isolated MemFS fixture.
 
 4. **Multi-Device Remote Sync (\`/sync\`)**:
-   - Status and remote setup behavior are verified against an isolated Git fixture without network access.
+   - Push, pull, status, setup, and dirty-repository refusal are verified against a disposable local bare remote without external network access.
 
-5. **Automated Persistence & Rollback (\`Stop Hook\`)**:
-   - A dirty isolated MemFS fixture produces a serialized Git commit and supports one-command rollback.
+5. **Explicit Persistence & Non-Mutating Stop**:
+   - Targeted writers reject unrelated dirty paths; Stop preserves both \`HEAD\` and dirty working-tree content while reporting status.
 
 6. **Native Tooling Compatibility**:
-   - Verified with \`agy plugin validate\` (11 skills, 6 agents, 2 hooks active).
+   - Verified with \`agy plugin validate\` (11 skills, 6 declarative agent roles, 2 hooks active).
 `
 
 fs.writeFileSync(TEST_REPORT_FILE, markdown, 'utf-8')

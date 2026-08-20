@@ -13,7 +13,7 @@ Host Workspace (learn-letta-code)
   │
   ├── plugins/agy-memory-layer/ (Plugin Bundle symlinked to ~/.gemini/antigravity-cli/plugins/)
   │   ├── plugin.json & hooks.json
-  │   ├── agents/                  (6 First-Class Subagent Manifests)
+  │   ├── agents/                  (6 declarative subagent role manifests)
   │   ├── prompts/                 (Prompt Warehouse: system, persona, subagents)
   │   ├── rules/AGENTS.md          (In-Context Autonomous Directives)
   │   ├── skills/*/SKILL.md        (11 Slash Command Skills)
@@ -52,7 +52,7 @@ Host Workspace (learn-letta-code)
   - `plugins/agy-memory-layer/plugin.json`
   - `plugins/agy-memory-layer/scripts/palace-generator.ts`
   - `CONTRACT.md`
-  - `~/.gemini/memory/projects/<slug>/project.md`
+- User-owned MemFS is not a release metadata surface and must not be edited for a package version bump.
 
 ### 7. Code Search & CocoIndex Governance
 - **Strict Preflight**: Never chain `ccc init && ccc index` without filename-only preflight.
@@ -69,12 +69,13 @@ Always run the full test suite before concluding changes:
 pnpm test
 ```
 
-Expected output: **11/11 integration scenarios** in `TEST_REPORT.md` and **16/16 Node test-runner tests** passing.
+Expected output: **11/11 integration scenarios** in `TEST_REPORT.md` and **18/18 Node test-runner tests** passing.
 - PreInvocation hook schema validation
-- Stop hook auto-commit and step-count trigger
+- Committed-HEAD projection and non-mutating Stop status
+- Contained paths and targeted memory commits
 - Memory Palace HTML generator with cache-busting headers
 - Hybrid Semantic Recall engine (BM25 + Cosine Similarity)
-- Auto-Dream background daemon & 20-step count triggers
+- Explicit/manual Dream daemon scanner and 20-step count logic
 - Agent launcher subagent manifest resolution
 
 ---
@@ -85,6 +86,7 @@ Detailed operational documentation is split into modular files under [`docs/`](f
 
 - [`docs/onboarding.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/onboarding.md) — Day 1 setup, installation lifecycle, and environment verification.
 - [`docs/project-overview.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/project-overview.md) — Deep architectural overview and MemFS design.
+- [`docs/letta-parity.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/letta-parity.md) — Canonical Letta behavior → Agy adaptation → implementation status matrix.
 - [`docs/development-commands.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/development-commands.md) — Script runners, testing, and daemon commands.
 - [`docs/file-organization.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/file-organization.md) — Directory layout and responsibility matrix.
 - [`docs/best-practices.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/best-practices.md) — Coding conventions, non-blocking hooks, and memory hygiene.

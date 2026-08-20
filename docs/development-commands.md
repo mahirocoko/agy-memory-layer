@@ -9,7 +9,7 @@ This reference documents all testing, verification, script runners, and daemon c
 Run the primary Node.js test runner suite:
 
 ```bash
-# Run 11 integration scenarios plus 15 focused unit cases
+# Run 11 integration scenarios plus 18 focused unit cases
 pnpm test
 
 # Run tests directly with Node 22+ type stripping
@@ -18,9 +18,9 @@ node --experimental-strip-types --test --test-concurrency=1 tests/run-test-suite
 
 ---
 
-## 🌙 Auto-Dream Background Daemon
+## 🌙 Deterministic Dream Note Utility
 
-The Auto-Dream daemon (`plugins/agy-memory-layer/scripts/dream-daemon.ts`) handles background synthesis of conversation transcripts.
+`dream-daemon.ts` scans Antigravity transcripts and writes deterministic learning notes. It is separate from Stop and does not provide Letta's model-backed isolated reflection worktree.
 
 ```bash
 # Check status of pending undreamed sessions and step count threshold
@@ -32,7 +32,7 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts
 # Force immediate synthesis regardless of session age
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now --force
 
-# Run automatic step-count check (used by Stop Hook)
+# Run the step-count check explicitly (Stop does not invoke it)
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --auto-check
 
 # Install background cron job on macOS (runs every 2 hours)
@@ -42,6 +42,8 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --uninstall-cron
 ```
 
+Cron installation is an explicit user choice. Treat it as an Agy utility, not as proven Letta reflection parity.
+
 ---
 
 ## 🔍 Hybrid Semantic Recall Subsystem
@@ -50,7 +52,10 @@ The Hybrid Recall engine (`plugins/agy-memory-layer/scripts/recall-engine.ts`) s
 
 ```bash
 # Hybrid Search (Default: BM25 + Subword N-Gram Vector Cosine Similarity)
-node --experimental-strip-types plugins/agy-memory-layer/scripts/recall-engine.ts search "memory palace token calculation"
+node --experimental-strip-types plugins/agy-memory-layer/scripts/recall-engine.ts "memory palace token calculation"
+
+# List the 20 most recent available transcript sessions
+node --experimental-strip-types plugins/agy-memory-layer/scripts/recall-engine.ts list
 
 # Vector Semantic Search Only (Concept / Synonym matching)
 node --experimental-strip-types plugins/agy-memory-layer/scripts/recall-engine.ts search "how did we fix caching" --semantic
@@ -95,19 +100,22 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/switch-persona.
 
 ---
 
-## 🤖 Letta Memory Sync & Cognitive Grooming Engine
+## 🤖 Explicit Letta Markdown Import
 
-Synchronizes core memory blocks from Letta Code (`~/.letta`) into Antigravity MemFS.
+Inspects and imports selected Letta Markdown into Antigravity MemFS. This is a one-way adapter, not live sync or LLM grooming.
 
 ```bash
 # List all stateful agents (excluding subagent manifests)
 node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts list
 
-# Extract raw payload for LLM cognitive grooming
+# Extract the selected raw payload for review
 node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts payload --agent-id <agent-id>
 
 # Run dry-run sync simulation
-node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts status --dry-run
+node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts status --dry-run --agent-id <agent-id> --target-scope global
+
+# Run a reviewed project route live
+node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts sync --agent-id <agent-id> --target-scope project --project-slug <slug> --confirm-import
 ```
 
 ---
@@ -118,10 +126,10 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts s
 # 1. In-Memory TypeScript Language Inspector (in-process AST diagnostics)
 node --experimental-strip-types plugins/agy-memory-layer/scripts/ts-inspector.ts diagnostics
 
-# 2. Memory Auto-Compactor & Lossless Token Pruner
-node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-compactor.ts compact
+# 2. Read-only Markdown Memory Maintenance Analysis
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-compactor.ts compact --dry-run
 
-# 3. Autonomous Skill Synthesizer & Auto-Promotion Engine
+# 3. Skill Candidate Synthesizer
 node --experimental-strip-types plugins/agy-memory-layer/scripts/skill-synthesizer.ts scan
 
 # 4. Cross-Project Knowledge Synapse Matching

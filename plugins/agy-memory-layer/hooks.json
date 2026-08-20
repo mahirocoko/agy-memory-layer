@@ -8,11 +8,11 @@
       }
     ]
   },
-  "memfs-auto-commit": {
+  "memfs-status": {
     "Stop": [
       {
         "type": "command",
-        "command": "./scripts/hook-auto-commit.sh",
+        "command": "./scripts/hook-memory-status.sh",
         "timeout": 10
       }
     ]

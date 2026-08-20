@@ -1,18 +1,24 @@
 #!/usr/bin/env node
 
 /**
- * Letta Code -> Antigravity MemFS Memory Synchronization Engine
- * Extracts raw candidate memory payloads from ~/.letta for Agentic Cognitive Grooming.
+ * Explicit Letta Code -> Antigravity MemFS Markdown Import.
+ * Extracts selected Markdown from ~/.letta and merges it into contained targets.
  *
  * Rules:
  * - TypeScript type alias ONLY (no interface).
  * - Pure ESM imports with Zero external npm dependencies.
- * - Agentic Grooming Architecture (Extracts payloads for Agent distillation).
+ * - Requires exact agent selection, dry-run review, and live confirmation.
  */
 
-import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import {
+  assertMemoryRepositoryCleanForWrite,
+  commitMemoryPaths,
+  resolveMemoryPath,
+  validateProjectSlug,
+  writeMemoryFile,
+} from './memory-repository.ts'
 
 export type StatefulAgentInfo = {
   id: string
@@ -51,9 +57,9 @@ export type LettaSyncOptions = {
   targetScope?: 'global' | 'project'
   projectSlug?: string
   syncGlobal?: boolean
-  syncProjects?: boolean
   syncReferences?: boolean
   autoCommit?: boolean
+  confirmed?: boolean
 }
 
 export type LettaSyncResult = {
@@ -243,7 +249,7 @@ export function listStatefulAgents(lettaRoot?: string): StatefulAgentInfo[] {
 }
 
 /**
- * Extracts raw payload from a specific Letta agent for Cognitive Grooming
+ * Extracts raw payload from one explicitly selected Letta agent for review.
  */
 export function extractAgentPayload(lettaRoot: string, agentId: string): AgentPayload | null {
   const agentDir = path.join(lettaRoot, 'agents', agentId)
@@ -356,13 +362,41 @@ export function syncLettaMemory(options: LettaSyncOptions = {}): LettaSyncResult
   }
 
   const agents = listStatefulAgents(lettaRoot)
-  const activeAgentId =
-    options.targetAgentId || findPrimaryLettaAgent(lettaRoot, options.targetAgentId)
-  const agentMeta = agents.find((a) => a.id === activeAgentId)
+  if (agents.length > 0 && !options.targetAgentId) {
+    throw new Error('Select the Letta agent explicitly with --agent-id.')
+  }
+  if (agents.length > 0 && !options.targetScope) {
+    throw new Error('Select the import scope explicitly with --target-scope global|project.')
+  }
+  if (options.targetScope && !['global', 'project'].includes(options.targetScope)) {
+    throw new Error(`Invalid target scope: ${String(options.targetScope)}`)
+  }
+  if (options.targetScope === 'project' && !options.projectSlug) {
+    throw new Error('Project-scoped import requires --project-slug.')
+  }
+  const activeAgentId = options.targetAgentId || agents[0]?.id || null
+  if (options.targetAgentId && !agents.some((agent) => agent.id === options.targetAgentId)) {
+    throw new Error(`Letta agent not found: ${options.targetAgentId}`)
+  }
+  const targetScope: 'global' | 'project' = options.targetScope || 'global'
+  const projectSlug = validateProjectSlug(options.projectSlug || 'letta-imported')
+  const changedPaths = new Set<string>()
 
-  const targetScope: 'global' | 'project' =
-    options.targetScope || (agentMeta?.isLikelyGeneral ? 'global' : 'project')
-  const projectSlug = options.projectSlug || agentMeta?.detectedProjectSlug || 'letta-imported'
+  if (!isDryRun && !options.confirmed) {
+    throw new Error('Live Letta import requires --confirm-import after reviewing a dry run.')
+  }
+  if (!isDryRun) assertMemoryRepositoryCleanForWrite(memoryRoot)
+
+  const readTarget = (relativePath: string): string => {
+    const resolved = resolveMemoryPath(memoryRoot, relativePath)
+    return fs.existsSync(resolved.absolutePath)
+      ? fs.readFileSync(resolved.absolutePath, 'utf-8')
+      : ''
+  }
+  const writeTarget = (relativePath: string, content: string): void => {
+    writeMemoryFile(memoryRoot, relativePath, content)
+    changedPaths.add(relativePath)
+  }
 
   let globalHumanUpdated = false
   const globalPersonaUpdated = false
@@ -375,10 +409,8 @@ export function syncLettaMemory(options: LettaSyncOptions = {}): LettaSyncResult
     if (payload) {
       if (targetScope === 'global') {
         if (options.syncGlobal !== false && payload.humanRaw) {
-          const memfsHumanPath = path.join(memoryRoot, 'global', 'human.md')
-          const existingHuman = fs.existsSync(memfsHumanPath)
-            ? fs.readFileSync(memfsHumanPath, 'utf-8')
-            : ''
+          const humanRelativePath = 'global/human.md'
+          const existingHuman = readTarget(humanRelativePath)
 
           const mergedHuman = mergeMarkdownDocs(
             existingHuman,
@@ -390,67 +422,41 @@ export function syncLettaMemory(options: LettaSyncOptions = {}): LettaSyncResult
             globalHumanUpdated = true
             details.push(`Merged human.md into global profile from Letta agent (${activeAgentId})`)
             if (!isDryRun) {
-              fs.mkdirSync(path.join(memoryRoot, 'global'), { recursive: true })
-              fs.writeFileSync(memfsHumanPath, mergedHuman, 'utf-8')
+              writeTarget(humanRelativePath, mergedHuman)
             }
           }
         }
 
         if (options.syncReferences !== false) {
-          const targetRefDir = path.join(memoryRoot, 'global', 'reference')
           for (const ref of payload.references) {
-            const dstPath = path.join(targetRefDir, ref.name)
-            if (!fs.existsSync(dstPath) || fs.readFileSync(dstPath, 'utf-8') !== ref.content) {
+            const referenceRelativePath = `global/reference/${ref.name}`
+            if (readTarget(referenceRelativePath) !== ref.content) {
               importedReferencesCount++
               details.push(`Imported global reference knowledge: ${ref.name}`)
               if (!isDryRun) {
-                fs.mkdirSync(targetRefDir, { recursive: true })
-                fs.writeFileSync(dstPath, ref.content, 'utf-8')
-              }
-            }
-          }
-        }
-
-        // Sync project rules from Letta projects
-        if (options.syncProjects !== false && payload.projectRules.length > 0) {
-          for (const pRule of payload.projectRules) {
-            const memfsProjectDir = path.join(memoryRoot, 'projects', pRule.projectSlug)
-            const dstRulesPath = path.join(memfsProjectDir, 'rules.md')
-            const existingRules = fs.existsSync(dstRulesPath)
-              ? fs.readFileSync(dstRulesPath, 'utf-8')
-              : ''
-
-            const mergedRules = mergeMarkdownDocs(
-              existingRules,
-              pRule.content,
-              `Imported from Letta Project (${pRule.projectSlug})`,
-            )
-
-            if (mergedRules !== existingRules) {
-              importedRulesCount++
-              syncedProjectsCount++
-              details.push(
-                `Synced project rules for [${pRule.projectSlug}] from ${pRule.sourceFile}`,
-              )
-              if (!isDryRun) {
-                fs.mkdirSync(memfsProjectDir, { recursive: true })
-                fs.writeFileSync(dstRulesPath, mergedRules, 'utf-8')
+                writeTarget(referenceRelativePath, ref.content)
               }
             }
           }
         }
       } else {
         // Project-scoped sync
-        const targetProjDir = path.join(memoryRoot, 'projects', projectSlug)
-        if (payload.humanRaw) {
-          const targetRulesPath = path.join(targetProjDir, 'rules.md')
-          const existingRules = fs.existsSync(targetRulesPath)
-            ? fs.readFileSync(targetRulesPath, 'utf-8')
-            : ''
+        const matchingProjectRules = payload.projectRules.filter(
+          (rule) => validateProjectSlug(rule.projectSlug) === projectSlug,
+        )
+        const projectSource = [
+          payload.humanRaw,
+          ...matchingProjectRules.map((rule) => rule.content),
+        ]
+          .filter(Boolean)
+          .join('\n\n')
+        if (projectSource) {
+          const rulesRelativePath = `projects/${projectSlug}/rules.md`
+          const existingRules = readTarget(rulesRelativePath)
 
           const mergedRules = mergeMarkdownDocs(
             existingRules,
-            payload.humanRaw,
+            projectSource,
             `Imported from Letta Project Agent (${activeAgentId})`,
           )
 
@@ -459,22 +465,19 @@ export function syncLettaMemory(options: LettaSyncOptions = {}): LettaSyncResult
             syncedProjectsCount++
             details.push(`Imported agent memory into project [${projectSlug}] rules.md`)
             if (!isDryRun) {
-              fs.mkdirSync(targetProjDir, { recursive: true })
-              fs.writeFileSync(targetRulesPath, mergedRules, 'utf-8')
+              writeTarget(rulesRelativePath, mergedRules)
             }
           }
         }
 
         if (options.syncReferences !== false) {
-          const targetRefDir = path.join(targetProjDir, 'learnings')
           for (const ref of payload.references) {
-            const dstPath = path.join(targetRefDir, ref.name)
-            if (!fs.existsSync(dstPath) || fs.readFileSync(dstPath, 'utf-8') !== ref.content) {
+            const referenceRelativePath = `projects/${projectSlug}/learnings/${ref.name}`
+            if (readTarget(referenceRelativePath) !== ref.content) {
               importedReferencesCount++
               details.push(`Imported reference into project [${projectSlug}]: ${ref.name}`)
               if (!isDryRun) {
-                fs.mkdirSync(targetRefDir, { recursive: true })
-                fs.writeFileSync(dstPath, ref.content, 'utf-8')
+                writeTarget(referenceRelativePath, ref.content)
               }
             }
           }
@@ -484,19 +487,12 @@ export function syncLettaMemory(options: LettaSyncOptions = {}): LettaSyncResult
   }
 
   // Auto-commit MemFS changes if not dry-run and modified
-  if (!isDryRun && (globalHumanUpdated || importedRulesCount > 0 || importedReferencesCount > 0)) {
-    if (options.autoCommit !== false && fs.existsSync(path.join(memoryRoot, '.git'))) {
-      try {
-        execSync('git add -A', {
-          cwd: memoryRoot,
-          stdio: ['ignore', 'ignore', 'pipe'],
-        })
-        execSync('git commit -m "sync(letta): imported core memory from Letta Code"', {
-          cwd: memoryRoot,
-          stdio: ['ignore', 'ignore', 'pipe'],
-        })
-      } catch {}
-    }
+  if (!isDryRun && changedPaths.size > 0 && options.autoCommit !== false) {
+    commitMemoryPaths({
+      memoryRoot,
+      relativePaths: [...changedPaths],
+      reason: 'sync(letta): imported core memory from Letta Code',
+    })
   }
 
   return {
@@ -535,13 +531,18 @@ if (process.argv[1]?.endsWith('letta-sync.ts')) {
     if (agentId === '--agent-id' && args[2]) {
       agentId = args[2]
     }
-    const targetAgent =
-      agentId || findPrimaryLettaAgent(path.join(process.env.HOME || '', '.letta'))
+    const cliLettaRoot = path.join(process.env.HOME || '', '.letta')
+    const cliAgents = listStatefulAgents(cliLettaRoot)
+    if (!agentId && cliAgents.length > 1) {
+      console.error('Multiple Letta agents found. Select one with --agent-id.')
+      process.exit(1)
+    }
+    const targetAgent = agentId || cliAgents[0]?.id || null
     if (!targetAgent) {
       console.error('No stateful Letta agent found.')
       process.exit(1)
     }
-    const payload = extractAgentPayload(path.join(process.env.HOME || '', '.letta'), targetAgent)
+    const payload = extractAgentPayload(cliLettaRoot, targetAgent)
     console.log(JSON.stringify(payload, null, 2))
     process.exit(0)
   }
@@ -549,6 +550,7 @@ if (process.argv[1]?.endsWith('letta-sync.ts')) {
   let targetAgentId: string | undefined
   let targetScope: 'global' | 'project' | undefined
   let projectSlug: string | undefined
+  const confirmed = args.includes('--confirm-import')
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--agent-id' && args[i + 1]) {
@@ -571,6 +573,7 @@ if (process.argv[1]?.endsWith('letta-sync.ts')) {
     targetAgentId,
     targetScope,
     projectSlug,
+    confirmed,
   })
 
   console.log(`- Letta Root Directory     : ${res.lettaRoot}`)

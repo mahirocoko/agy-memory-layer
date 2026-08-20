@@ -31,15 +31,18 @@ Determine where the new knowledge belongs:
    mkdir -p "${MEMORY_ROOT}/global" "${MEMORY_ROOT}/projects/${PROJECT_SLUG}"
    ```
 
-2. **Update Target File**:
-   - Use `replace_file_content` or `write_to_file` to cleanly append or update the rule under the relevant heading.
-   - Avoid duplicate or contradictory entries; refine existing statements if needed.
+2. **Prepare Complete Target Content**:
+   - Read the committed target, avoid duplicate or contradictory entries, and prepare the complete proposed replacement in a temporary file.
+   - Global files may follow the configured auto policy. `project.md` and `rules.md` are explicit-review surfaces.
 
-3. **Commit to Git**:
+3. **Route Through the Enforced Approval Boundary**:
    ```bash
-   git -C "$MEMORY_ROOT" add -A
-   git -C "$MEMORY_ROOT" commit -m "remember: $(date +%Y-%m-%d) - [brief summary of rule]"
+   node --experimental-strip-types \
+     plugins/agy-memory-layer/scripts/memory-approval.ts \
+     propose "projects/<slug>/rules.md" \
+     --reason "[brief durable reason]" < /tmp/proposed-memory.md
    ```
+   The writer validates containment, requires a clean MemFS repository, and commits only the target path in auto mode. Explicit-mode proposals remain outside the Git working tree until approval.
 
 4. **Confirm to User**:
-   - Report the exact file updated and the rule recorded.
+   - Report the exact target and whether it was committed or is pending approval.

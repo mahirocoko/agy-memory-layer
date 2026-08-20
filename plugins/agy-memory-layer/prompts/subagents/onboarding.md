@@ -11,5 +11,5 @@ You are performing Day 1 codebase onboarding for a newly opened repository.
    - Synthesize high-signal `project.md` (Domain concepts, tech stack, directory boundaries).
    - Synthesize codebase conventions in `rules.md` (Formatting, testing rules, typing standards).
 3. **Commit into MemFS**:
-   - Seed `~/.gemini/memory/projects/<project-slug>/project.md` and `rules.md`.
-   - Commit initial snapshot to the independent memory git repository.
+   - Run `init-project-memory.ts` rather than writing or staging arbitrary paths.
+   - The initializer validates the slug, requires a clean MemFS repository, and commits only `project.md` and `rules.md`.

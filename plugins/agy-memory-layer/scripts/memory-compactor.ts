@@ -1,24 +1,23 @@
 #!/usr/bin/env node
 
 /**
- * Memory Auto-Eviction & Token Compactor Engine for agy-memory-layer (MemFS)
- * Provides deterministic token budget enforcement, rule deduplication,
- * stale snapshot pruning, and archival compaction for MemFS.
+ * Read-only token and Markdown maintenance analyzer for agy-memory-layer.
+ * Reports deduplication, empty-section, and archival opportunities without
+ * mutating MemFS. Approved writers own any resulting edits.
  *
  * Rules:
  * - TypeScript type alias ONLY (no interface).
  * - Zero external npm dependencies.
  */
 
-import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { resolveMemoryPath, validateProjectSlug } from './memory-repository.ts'
 
 export type CompactionOptions = {
   softBudget?: number
   hardBudget?: number
   dryRun?: boolean
-  autoCommit?: boolean
 }
 
 export type FileCompactionResult = {
@@ -52,7 +51,7 @@ export type OverallCompactionResult = {
   global: GlobalCompactionResult
   projects: ProjectCompactionResult[]
   totalTokensSaved: number
-  status: 'COMPACTED' | 'ALREADY_OPTIMAL'
+  status: 'COMPACTION_RECOMMENDED' | 'ALREADY_OPTIMAL'
 }
 
 export const DEFAULT_SOFT_BUDGET = 2000
@@ -180,16 +179,18 @@ export function compactMarkdownContent(
 }
 
 /**
- * Compacts a single file on disk
+ * Analyzes a single contained file without mutating it.
  */
 export function compactFile(
   filePath: string,
   memoryRoot: string,
   options: CompactionOptions = {},
 ): FileCompactionResult {
-  if (!fs.existsSync(filePath)) {
+  const relativePath = path.relative(memoryRoot, filePath).split(path.sep).join('/')
+  const resolved = resolveMemoryPath(memoryRoot, relativePath)
+  if (!fs.existsSync(resolved.absolutePath)) {
     return {
-      relativePath: path.relative(memoryRoot, filePath),
+      relativePath,
       originalTokens: 0,
       compactedTokens: 0,
       tokensSaved: 0,
@@ -199,19 +200,15 @@ export function compactFile(
     }
   }
 
-  const raw = fs.readFileSync(filePath, 'utf-8')
+  const raw = fs.readFileSync(resolved.absolutePath, 'utf-8')
   const originalTokens = estimateTokens(raw)
   const { compacted, deduplicatedCount, prunedSectionsCount } = compactMarkdownContent(raw, options)
   const compactedTokens = estimateTokens(compacted)
   const tokensSaved = Math.max(0, originalTokens - compactedTokens)
   const changed = raw !== compacted
 
-  if (changed && !options.dryRun) {
-    fs.writeFileSync(filePath, compacted, 'utf-8')
-  }
-
   return {
-    relativePath: path.relative(memoryRoot, filePath),
+    relativePath,
     originalTokens,
     compactedTokens,
     tokensSaved,
@@ -229,6 +226,7 @@ export function compactProjectMemory(
   options: CompactionOptions = {},
   customMemoryRoot?: string,
 ): ProjectCompactionResult {
+  projectSlug = validateProjectSlug(projectSlug)
   const memoryRoot = customMemoryRoot || path.join(process.env.HOME || '', '.gemini', 'memory')
   const projectDir = path.join(memoryRoot, 'projects', projectSlug)
 
@@ -268,23 +266,7 @@ export function compactProjectMemory(
       filesResults.push(compactFile(fullPath, memoryRoot, options))
     }
 
-    // If more than 15 learnings, bundle older ones into an archive
-    if (learningFiles.length > 15 && !options.dryRun) {
-      const olderFiles = learningFiles.slice(0, learningFiles.length - 10)
-      const archiveName = `archive_${new Date().toISOString().slice(0, 7)}.md`
-      const archivePath = path.join(learningsDir, archiveName)
-
-      let combinedArchive = `# Archived Historical Learnings (${archiveName})\n\n`
-      for (const oldFile of olderFiles) {
-        const p = path.join(learningsDir, oldFile)
-        const content = fs.readFileSync(p, 'utf-8')
-        combinedArchive += `## From ${oldFile}\n${content}\n\n---\n\n`
-        fs.unlinkSync(p)
-        archivedLearningsCount++
-      }
-
-      fs.writeFileSync(archivePath, combinedArchive, 'utf-8')
-    }
+    if (learningFiles.length > 15) archivedLearningsCount = learningFiles.length - 10
   }
 
   const totalOriginalTokens = filesResults.reduce((acc, f) => acc + f.originalTokens, 0)
@@ -327,7 +309,7 @@ export function compactGlobalMemory(
 }
 
 /**
- * Runs full MemFS compaction across global and all projects
+ * Analyzes full MemFS compaction opportunities without mutating memory.
  */
 export function runAutoCompaction(
   customMemoryRoot?: string,
@@ -356,31 +338,13 @@ export function runAutoCompaction(
     totalTokensSaved > 0 ||
     projectsResults.some((p) => p.archivedLearningsCount > 0 || p.files.some((f) => f.changed))
 
-  // Auto-commit if git repo and changed
-  if (hasChanges && !options.dryRun && options.autoCommit !== false) {
-    if (fs.existsSync(path.join(memoryRoot, '.git'))) {
-      try {
-        execSync('git add -A', { cwd: memoryRoot, stdio: ['ignore', 'ignore', 'pipe'] })
-        execSync(
-          `git commit -m "compactor: automated memory budget compaction (-${totalTokensSaved} tokens)"`,
-          {
-            cwd: memoryRoot,
-            stdio: ['ignore', 'ignore', 'pipe'],
-          },
-        )
-      } catch {
-        // Continue gracefully
-      }
-    }
-  }
-
   return {
     timestamp: new Date().toISOString(),
     dryRun: Boolean(options.dryRun),
     global: globalRes,
     projects: projectsResults,
     totalTokensSaved,
-    status: hasChanges ? 'COMPACTED' : 'ALREADY_OPTIMAL',
+    status: hasChanges ? 'COMPACTION_RECOMMENDED' : 'ALREADY_OPTIMAL',
   }
 }
 
@@ -390,26 +354,26 @@ export function runAutoCompaction(
 if (process.argv[1]?.endsWith('memory-compactor.ts')) {
   const args = process.argv.slice(2)
   const cmd = args[0] || 'status'
-  const isDryRun = args.includes('--dry-run')
 
   if (cmd === 'compact' || cmd === 'run') {
     const slug = args[1] && !args[1].startsWith('-') ? args[1] : undefined
-    console.log(`\n🧹 Running Memory Compaction Engine (${isDryRun ? 'DRY-RUN' : 'LIVE'})...\n`)
+    console.log(`\n🧹 Analyzing Memory Compaction Opportunities (READ-ONLY)...\n`)
 
     if (slug) {
-      const res = compactProjectMemory(slug, { dryRun: isDryRun })
+      const res = compactProjectMemory(slug, { dryRun: true })
       console.log(`📦 Project: ${res.projectSlug}`)
       console.log(`   Original Tokens : ${res.totalOriginalTokens}`)
       console.log(`   Compacted Tokens: ${res.totalCompactedTokens}`)
       console.log(`   Tokens Saved    : ${res.totalTokensSaved}`)
       if (res.archivedLearningsCount > 0) {
-        console.log(`   Archived Notes  : ${res.archivedLearningsCount} files`)
+        console.log(`   Archive Candidates: ${res.archivedLearningsCount} files`)
       }
+      console.log('   No files were modified. Route selected replacements through approval.')
       console.log('')
     } else {
-      const res = runAutoCompaction(undefined, { dryRun: isDryRun })
+      const res = runAutoCompaction(undefined, { dryRun: true })
       console.log(`==================================================`)
-      console.log(`✨ MemFS Auto-Compaction Complete`)
+      console.log(`✨ MemFS Compaction Analysis Complete`)
       console.log(`==================================================`)
       console.log(`- Status        : ${res.status}`)
       console.log(`- Total Saved   : ${res.totalTokensSaved} tokens`)

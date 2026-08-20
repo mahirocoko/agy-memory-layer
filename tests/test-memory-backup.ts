@@ -346,9 +346,45 @@ runTest('Import Security', 'Rejects checksum-valid paths that escape or bypass t
     )
   }
 
+  const symlinkTarget = path.join(BACKUP_TEST_ROOT, 'symlink-containment-target')
+  const outsideDir = path.join(BACKUP_TEST_ROOT, 'outside-symlink-target')
+  fs.mkdirSync(symlinkTarget, { recursive: true })
+  fs.mkdirSync(outsideDir, { recursive: true })
+  fs.symlinkSync(outsideDir, path.join(symlinkTarget, 'global'))
+  spawnSync('git', ['init', '-q', '-b', 'main'], { cwd: symlinkTarget })
+  spawnSync('git', ['add', 'global'], { cwd: symlinkTarget })
+  spawnSync(
+    'git',
+    [
+      '-c',
+      'user.name=tests',
+      '-c',
+      'user.email=tests@example.invalid',
+      'commit',
+      '-q',
+      '-m',
+      'test: seed symlink fixture',
+    ],
+    { cwd: symlinkTarget },
+  )
+
+  assert.throws(
+    () =>
+      importMemoryBundle({
+        bundleData: originalBundle,
+        targetDir: symlinkTarget,
+        overwrite: true,
+        autoCommit: false,
+      }),
+    /outside configured root/,
+  )
+  assert.strictEqual(fs.existsSync(path.join(outsideDir, 'human.md')), false)
+
   assert.strictEqual(fs.existsSync(OUTSIDE_ESCAPE_PATH), false)
   fs.rmSync(targetDir, { recursive: true, force: true })
-  return `Rejected ${unsafePaths.length} unsafe portable path variants before restore.`
+  fs.rmSync(symlinkTarget, { recursive: true, force: true })
+  fs.rmSync(outsideDir, { recursive: true, force: true })
+  return `Rejected ${unsafePaths.length} unsafe path variants plus a committed symlink escape.`
 })
 
 // Clean up test sandbox
