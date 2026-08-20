@@ -210,6 +210,8 @@ Run `pnpm test:coverage` for the current Node/V8 report. Per-file percentages ar
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
+> 🚀 **Release notes**: [`v1.12.1`](./docs/releases/v1.12.1.md) records the safety-contract migration, verification evidence, upgrade path, and deferred boundaries.
+
 ---
 
 ## 📄 License & Acknowledgements

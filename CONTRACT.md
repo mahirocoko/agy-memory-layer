@@ -4,7 +4,7 @@
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Unreleased contract-parity repair; latest Git tag remains `v1.12.0`
+**Release state:** Released as `v1.12.1` on 2026-08-20
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -159,7 +159,7 @@ them sandboxed execution boundaries without host-level evidence.
 
 ## Verification Contract
 
-Required checks for this unreleased repair:
+Required checks for this release:
 
 ```bash
 pnpm check
@@ -186,7 +186,7 @@ install/refresh/uninstall/purge lifecycle. Remote sync is exercised against a
 disposable local bare repository. Neither report proves cron, external network,
 or AGY host-enforcement behavior.
 
-Final measured coverage for this working-tree release candidate is **77.35%
+Final measured coverage for the `v1.12.1` release candidate is **77.35%
 lines**, **58.24% branches**, and **78.14% functions**. Coverage is evidence, not
 a substitute for the behavioral negative controls above.
 
@@ -204,8 +204,9 @@ See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 3. Built JavaScript artifacts or installed runtime dependencies for remote
    TypeScript-dependent utilities.
 4. Host-level proof or narrower claims for subagent tool restrictions.
-5. Release notes, release workflow, and exact release-candidate evidence before
-   tagging `v1.12.1`.
+5. An automated release workflow remains deferred. `v1.12.1` uses the existing
+   manual tag/GitHub Release path with exact notes and evidence in
+   [`docs/releases/v1.12.1.md`](./docs/releases/v1.12.1.md).
 
 ## Distribution
 

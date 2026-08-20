@@ -25,6 +25,7 @@ learn-letta-code/
 │   ├── onboarding.md                        # Day 1 setup and verification
 │   ├── project-overview.md                  # Architecture and subsystem overview
 │   ├── letta-parity.md                      # Canonical Letta behavior/adaptation/status matrix
+│   ├── releases/v1.12.1.md                  # Release notes and exact verification evidence
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene
