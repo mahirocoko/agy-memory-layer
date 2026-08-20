@@ -7,7 +7,7 @@ Welcome to the **`agy-memory-layer`** repository. This guide covers the Day 1 de
 ## 1. Prerequisites
 
 Ensure your machine has the following tools installed:
-- **Node.js**: `v20+` or `v22+`
+- **Node.js**: `v22+`
 - **Git**: `2.30+`
 - **Antigravity CLI (`agy`)**: `1.1+`
 
@@ -20,6 +20,9 @@ Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/mahirocoko/agy-memory-layer.git
 cd agy-memory-layer
+
+# Install the pinned development dependencies
+pnpm install --frozen-lockfile
 
 # Install plugin into local Antigravity CLI
 ./install.sh
@@ -38,10 +41,10 @@ cd agy-memory-layer
 Run the complete test suite:
 
 ```bash
-npm test
+pnpm test
 ```
 
-You should see all 9 unit and integration test suites pass with 100% success.
+You should see all 11 integration scenarios and 16 Node test-runner tests pass.
 
 ---
 

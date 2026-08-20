@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
 set -e
 
-# Read JSON payload from stdin
-STDIN_INPUT=$(cat)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Extract first workspace path using node or jq
+# 1. Prefer cross-platform TypeScript / Node implementation if available
+if [ -f "${SCRIPT_DIR}/hook-inject-memory.ts" ]; then
+  exec node --experimental-strip-types "${SCRIPT_DIR}/hook-inject-memory.ts"
+elif [ -f "${SCRIPT_DIR}/hook-inject-memory.js" ]; then
+  exec node "${SCRIPT_DIR}/hook-inject-memory.js"
+fi
+
+# Fallback POSIX execution
+STDIN_INPUT=$(cat)
 WORKSPACE_PATH=$(echo "$STDIN_INPUT" | node -e '
   try {
     const fs = require("fs");
@@ -16,7 +23,7 @@ WORKSPACE_PATH=$(echo "$STDIN_INPUT" | node -e '
   }
 ')
 
-MEMORY_ROOT="${HOME}/.gemini/memory"
+MEMORY_ROOT="${AGY_MEMORY_DIR:-${HOME}/.gemini/memory}"
 GLOBAL_HUMAN="${MEMORY_ROOT}/global/human.md"
 GLOBAL_PERSONA="${MEMORY_ROOT}/global/persona.md"
 
@@ -25,16 +32,15 @@ PROJECT_SLUG=$(node -e '
   const fs = require("fs");
   const execSync = require("child_process").execSync;
   const ws = process.argv[1] || process.cwd();
-  const memProjectsDir = path.join(process.env.HOME || "", ".gemini", "memory", "projects");
+  const memoryRoot = process.env.AGY_MEMORY_DIR || path.join(process.env.HOME || "", ".gemini", "memory");
+  const memProjectsDir = path.join(memoryRoot, "projects");
   const basenameSlug = path.basename(ws).toLowerCase().replace(/\s+/g, "-");
 
-  // 1. If basename folder already exists in MemFS, preserve it
   if (fs.existsSync(path.join(memProjectsDir, basenameSlug))) {
     process.stdout.write(basenameSlug);
     process.exit(0);
   }
 
-  // 2. Try resolving Git remote org-repo canonical slug
   try {
     const remote = execSync("git config --get remote.origin.url", {
       cwd: ws,
@@ -58,12 +64,16 @@ PROJECT_SLUG=$(node -e '
 PROJECT_MEM="${MEMORY_ROOT}/projects/${PROJECT_SLUG}/project.md"
 PROJECT_RULES="${MEMORY_ROOT}/projects/${PROJECT_SLUG}/rules.md"
 
-# Build ephemeral memory context
 CONTEXT_TEXT=""
 
 if [ -f "$GLOBAL_HUMAN" ]; then
   HUMAN_CONTENT=$(cat "$GLOBAL_HUMAN")
   CONTEXT_TEXT="${CONTEXT_TEXT}### 👤 User Profile & Preferences (global/human.md)\n${HUMAN_CONTENT}\n\n"
+fi
+
+if [ -f "$GLOBAL_PERSONA" ]; then
+  PERSONA_CONTENT=$(cat "$GLOBAL_PERSONA")
+  CONTEXT_TEXT="${CONTEXT_TEXT}### 🤖 Agent Persona (global/persona.md)\n${PERSONA_CONTENT}\n\n"
 fi
 
 if [ -f "$PROJECT_MEM" ]; then
@@ -76,7 +86,6 @@ if [ -f "$PROJECT_RULES" ]; then
   CONTEXT_TEXT="${CONTEXT_TEXT}### 📋 Project Rules (${PROJECT_SLUG}/rules.md)\n${RULES_CONTENT}\n\n"
 fi
 
-# Output JSON to stdout for AGY PreInvocation hook
 if [ -n "$CONTEXT_TEXT" ]; then
   node -e '
     const text = process.argv[1];

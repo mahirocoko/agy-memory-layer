@@ -20,9 +20,9 @@ This guide explains the architectural patterns used across hooks, background dae
             ▼
 [Output JSON Envelope]
 {
-  "hookSpecificOutput": {
-    "ephemeralMessage": "🧠 **[MemFS Active Memory]** ... "
-  }
+  "injectSteps": [
+    { "ephemeralMessage": "🧠 **[MemFS Active Memory]** ... " }
+  ]
 }
 ```
 
@@ -39,8 +39,8 @@ This guide explains the architectural patterns used across hooks, background dae
             ├── 1. Synchronous: Check Git Status in ~/.gemini/memory/
             │      └── If dirty: git add -A && git commit -m "memfs auto-snapshot: ..."
             │
-            ├── 2. Asynchronous (Background Subshell):
-            │      └── (node scripts/dream-daemon.js --auto-check >/dev/null 2>&1 &)
+            ├── 2. Asynchronous (Detached Node Process):
+            │      └── node --experimental-strip-types scripts/dream-daemon.ts --auto-check
             │          └── Checks if active session >= 20 steps ➜ synthesizes learning
             │
             ▼
@@ -49,13 +49,13 @@ This guide explains the architectural patterns used across hooks, background dae
 
 ---
 
-## 3. Dynamic Subagent Resolver Pattern (`agent-launcher.js`)
+## 3. Dynamic Subagent Resolver Pattern (`agent-launcher.ts`)
 
 ```text
 [Subagent Request: "dream_agent"]
             │
             ▼
-[scripts/agent-launcher.js]
+[scripts/agent-launcher.ts]
             │
             ├── 1. Read plugins/agy-memory-layer/agents/dream_agent.json
             ├── 2. Resolve System Prompt from prompts/subagents/dream_subagent.md

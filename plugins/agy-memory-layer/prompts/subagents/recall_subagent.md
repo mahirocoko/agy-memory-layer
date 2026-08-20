@@ -12,7 +12,7 @@ Your task is to recall past conversations, code decisions, and problem-solving h
 Use the built-in recall engine script to search historical conversation transcripts:
 
 ```bash
-node plugins/agy-memory-layer/scripts/recall-engine.js search "<topic/keywords>"
+node --experimental-strip-types plugins/agy-memory-layer/scripts/recall-engine.ts search "<topic/keywords>"
 ```
 
 ### Search Strategy: Needle + Expand

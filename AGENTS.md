@@ -16,8 +16,8 @@ Host Workspace (learn-letta-code)
   │   ├── agents/                  (6 First-Class Subagent Manifests)
   │   ├── prompts/                 (Prompt Warehouse: system, persona, subagents)
   │   ├── rules/AGENTS.md          (In-Context Autonomous Directives)
-  │   ├── skills/*/SKILL.md        (10 Slash Command Skills)
-  │   └── scripts/*.js, *.sh       (Lifecycle Hooks, Daemon & Palace Generator)
+  │   ├── skills/*/SKILL.md        (11 Slash Command Skills)
+  │   └── scripts/*.ts, *.sh       (Lifecycle Hooks, Daemon & Palace Generator)
   │
   └── ~/.gemini/memory/            (Independent Git MemFS Repository)
       ├── global/                  (human.md, persona.md)
@@ -44,13 +44,13 @@ Host Workspace (learn-letta-code)
 - **ห้าม `git push` ขึ้น remote repository เด็ดขาด**: Never run `git push` unless the user explicitly orders a push in their prompt.
 
 ### 5. Dependency Management
-- Always use the exact version flag (`-E`) when installing packages: `npm i -E <package>`.
+- Use the repository's pinned pnpm toolchain and exact versions: `pnpm add -E <package>`.
 
 ### 6. Version Bump & Manifest Sync
 - Whenever code is updated or a new release is prepared, bump the version simultaneously across all manifest surfaces:
   - `package.json`
   - `plugins/agy-memory-layer/plugin.json`
-  - `plugins/agy-memory-layer/scripts/palace-generator.js`
+  - `plugins/agy-memory-layer/scripts/palace-generator.ts`
   - `CONTRACT.md`
   - `~/.gemini/memory/projects/<slug>/project.md`
 
@@ -66,10 +66,10 @@ Host Workspace (learn-letta-code)
 Always run the full test suite before concluding changes:
 
 ```bash
-npm test
+pnpm test
 ```
 
-Expected output: **9/9 test suites passing (100% Green)**.
+Expected output: **11/11 integration scenarios** in `TEST_REPORT.md` and **16/16 Node test-runner tests** passing.
 - PreInvocation hook schema validation
 - Stop hook auto-commit and step-count trigger
 - Memory Palace HTML generator with cache-busting headers

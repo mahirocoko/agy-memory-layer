@@ -9,7 +9,7 @@ Antigravity stores conversation transcripts as JSON Lines at:
 ## Execution
 Run the local recall engine:
 ```bash
-node plugins/agy-memory-layer/scripts/recall-engine.js search "<query>"
+node --experimental-strip-types plugins/agy-memory-layer/scripts/recall-engine.ts search "<query>"
 ```
 
 ## Strategy

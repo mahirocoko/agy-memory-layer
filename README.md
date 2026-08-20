@@ -1,6 +1,6 @@
 # 🧠 agy-memory-layer
 
-[![Coverage](https://img.shields.io/badge/Coverage-92.4%25-brightgreen.svg)](./TEST_REPORT.md)
+[![Coverage](https://img.shields.io/badge/Coverage-75.69%25-green.svg)](./TEST_REPORT.md)
 [![Tests](https://img.shields.io/badge/Tests-16%2F16%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
@@ -41,7 +41,7 @@
 </p>
 
 - **Vector Semantic Search**: Subword n-gram vector embeddings + BM25 keyword matching with cosine similarity scoring.
-- **Autonomous Sleep-Time Reflection**: Background daemon (`dream-daemon.js`) discovers undreamed sessions across `brain/` and distills permanent learnings automatically.
+- **Autonomous Sleep-Time Reflection**: Background daemon (`dream-daemon.ts`) discovers undreamed sessions across `brain/` and distills permanent learnings automatically.
 
 ---
 
@@ -53,7 +53,7 @@
   - `PreInvocation`: Ingests active memory blocks into the prompt context via `ephemeralMessage`.
   - `Stop`: Auto-commits memory snapshots to Git after every turn with zero manual effort.
 - 🧠 **Hybrid Semantic Recall (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across 500+ past Antigravity conversation transcripts.
-- 🌙 **Sleep-Time Dreaming (`/dream` & `dream-daemon.js`)**: Spawns background subagents or background cron daemon to distill learnings into MemFS.
+- 🌙 **Sleep-Time Dreaming (`/dream` & `dream-daemon.ts`)**: Spawns background subagents or background cron daemon to distill learnings into MemFS.
 - 🏛️ **Memory Palace (`/palace`)**: Interactive visual dashboard in your browser to inspect memory graphs, synapses, and Git commit timelines with anti-cache headers.
 - 🩺 **Memory Health Auditor (`/doctor`)**: Audits memory consistency and flags drift between memory rules and actual codebase state.
 - 🔌 **Standard Plugin Lifecycle**: Installs via symlink, toggleable with `agy plugin enable/disable`, and cleanly uninstallable.
@@ -103,7 +103,7 @@ Once installed, the following commands are available directly inside Antigravity
 | **`/recall`** | Hybrid Semantic Search across all 500+ past conversation sessions (Keywords + Vector Cosine Similarity). | `/recall palace token` or `/recall search "setup" --semantic` |
 | **`/remember`** | Record a preference, style guideline, or project rule into MemFS. | `/remember Always use exact flag (-E) when installing packages` |
 | **`/persona`** | Switch or inspect the active personality preset (`memo`, `linus`, `tutor`, `kawaii`, `architect`, `blank`). | `/persona linus` or `/persona list` |
-| **`/dream`** | Sleep-time reflection subagent and background daemon (`dream-daemon.js`) to synthesize session learnings. | `/dream` or `node scripts/dream-daemon.js --run-now` |
+| **`/dream`** | Sleep-time reflection subagent and background daemon (`dream-daemon.ts`) to synthesize session learnings. | `/dream` or `node --experimental-strip-types scripts/dream-daemon.ts --run-now` |
 | **`/doctor`** | Check memory health and detect rule contradictions with codebase. | `/doctor` |
 | **`/palace`** | Generate and open the interactive Memory Palace web dashboard. | `/palace` or `/palace --summary` |
 | **`/sync-letta`** | 4-step Agentic Cognitive Grooming to sync core memory from Letta Code (`~/.letta`). | `/sync-letta` |
@@ -204,27 +204,27 @@ agy plugin enable agy-memory-layer
 ### Running Tests Locally
 
 ```bash
-# Run all 11 automated test suites
-npm test
+# Run 11 integration scenarios plus 15 focused unit cases
+pnpm test
 
 # Run test suite with V8 code coverage report
-npm run test:coverage
+pnpm test:coverage
 ```
 
 ### 📈 Code Coverage Report (Node.js Native V8 Coverage Engine)
 
 | Subsystem / Script | Line % | Branch % | Function % | Status |
 | :--- | :---: | :---: | :---: | :---: |
-| `plugins/agy-memory-layer/scripts/init-project-memory.js` | **87.66%** | 54.88% | **90.00%** | 🟢 High |
-| `plugins/agy-memory-layer/scripts/memory-search.js` | **71.63%** | **76.92%** | **75.00%** | 🟢 High |
-| `plugins/agy-memory-layer/scripts/palace-generator.js` | **98.39%** | 37.50% | **88.89%** | 🟢 Very High |
-| `tools/memory-backup.ts` | **79.24%** | 40.26% | **85.71%** | 🟢 High |
-| `tests/run-test-suite.js` | **84.08%** | 31.58% | **100.00%** | 🟢 High |
-| `tests/test-memory-backup.js` | **89.45%** | 51.61% | **100.00%** | 🟢 High |
-| `tests/unit-coverage.test.js` | **100.00%** | **87.50%** | **100.00%** | 🟢 Full |
-| **All Files (Total System)** | **85.51%** | **47.87%** | **92.86%** | 🟢 **Production Grade** |
+| `plugins/agy-memory-layer/scripts/hook-auto-commit.ts` | **70.37%** | 38.46% | **100.00%** | 🟢 High |
+| `plugins/agy-memory-layer/scripts/hook-inject-memory.ts` | **73.33%** | 30.00% | 55.56% | 🟡 Moderate |
+| `plugins/agy-memory-layer/scripts/init-project-memory.ts` | **88.89%** | 54.35% | **87.50%** | 🟢 High |
+| `plugins/agy-memory-layer/scripts/memory-search.ts` | **87.43%** | 55.17% | 58.33% | 🟢 High |
+| `plugins/agy-memory-layer/scripts/palace-generator.ts` | **86.04%** | 46.48% | 59.09% | 🟢 High |
+| `tools/memory-backup.ts` | **91.33%** | 69.15% | **100.00%** | 🟢 Very High |
+| `tests/run-test-suite.ts` | **86.41%** | 31.15% | **100.00%** | 🟢 High |
+| **All Files (Current Suite)** | **75.69%** | **54.74%** | **77.03%** | 🟢 **Healthy** |
 
-> 📋 **Detailed Test Run Evidence**: See [TEST_REPORT.md](./TEST_REPORT.md) for full execution logs and timing benchmarks (< 1.0s).
+> 📋 **Detailed Test Run Evidence**: See [TEST_REPORT.md](./TEST_REPORT.md) for the latest isolated scenario results and measured timings.
 
 ---
 

@@ -23,7 +23,7 @@ Sync your MemFS Git repository (`~/.gemini/memory/`) with a remote private Git r
 /sync push
 
 # 5. Full bidirectional sync (pull + push)
-/sync all
+/sync sync
 ```
 
 ## How It Works

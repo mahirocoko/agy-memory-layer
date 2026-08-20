@@ -13,6 +13,7 @@ import { execSync } from 'node:child_process'
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 // -----------------------------------------------------------------------------
 // Type Definitions (Strictly type aliases ONLY - No interface)
@@ -111,6 +112,51 @@ export const computeSha256 = (data: string | Buffer): string => {
  */
 export const normalizeRelPath = (relPath: string): string => {
   return relPath.split(path.sep).join('/')
+}
+
+/**
+ * Validates the portable relative-path contract used by bundle manifests.
+ */
+export const validateBundleRelativePath = (relativePath: string): string => {
+  if (!relativePath || relativePath.includes('\0')) {
+    throw new Error('Unsafe bundle path: path must be a non-empty relative path')
+  }
+
+  if (relativePath.includes('\\')) {
+    throw new Error(`Unsafe bundle path '${relativePath}': use forward slashes only`)
+  }
+
+  if (path.posix.isAbsolute(relativePath) || path.win32.isAbsolute(relativePath)) {
+    throw new Error(`Unsafe bundle path '${relativePath}': absolute paths are not allowed`)
+  }
+
+  const segments = relativePath.split('/')
+  if (segments.some((segment) => segment === '' || segment === '.' || segment === '..')) {
+    throw new Error(`Unsafe bundle path '${relativePath}': traversal segments are not allowed`)
+  }
+
+  return relativePath
+}
+
+/**
+ * Resolves a validated bundle path and proves it remains inside the import target.
+ */
+export const resolveImportTargetPath = (targetDir: string, relativePath: string): string => {
+  const validatedPath = validateBundleRelativePath(relativePath)
+  const resolvedTarget = path.resolve(targetDir)
+  const resolvedFile = path.resolve(resolvedTarget, ...validatedPath.split('/'))
+  const relativeToTarget = path.relative(resolvedTarget, resolvedFile)
+
+  if (
+    relativeToTarget === '' ||
+    relativeToTarget === '..' ||
+    relativeToTarget.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativeToTarget)
+  ) {
+    throw new Error(`Unsafe bundle path '${relativePath}': target escapes the import directory`)
+  }
+
+  return resolvedFile
 }
 
 /**
@@ -334,6 +380,22 @@ export const verifyMemoryBundle = (bundleOrPath: string | MemoryBundle): Verific
   let allFilesValid = true
 
   for (const fileEntry of bundle.manifest.files) {
+    try {
+      validateBundleRelativePath(fileEntry.relativePath)
+    } catch (err: unknown) {
+      allFilesValid = false
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      errors.push(errorMsg)
+      fileDetails.push({
+        relativePath: fileEntry.relativePath,
+        valid: false,
+        expectedSha256: fileEntry.sha256,
+        actualSha256: fileEntry.sha256,
+        error: errorMsg,
+      })
+      continue
+    }
+
     const rawBuffer = Buffer.from(fileEntry.content, fileEntry.encoding || 'utf-8')
     const computedFileSha256 = computeSha256(rawBuffer)
     const valid = computedFileSha256 === fileEntry.sha256
@@ -400,12 +462,20 @@ export const importMemoryBundle = (options: ImportOptions): ImportResult => {
     throw new Error(`Bundle integrity verification failed:\n- ${verification.errors.join('\n- ')}`)
   }
 
+  const validatedEntries = bundle.manifest.files.map((fileEntry) => ({
+    fileEntry,
+    targetFilePath: resolveImportTargetPath(targetDir, fileEntry.relativePath),
+  }))
+  const uniqueTargets = new Set(validatedEntries.map(({ targetFilePath }) => targetFilePath))
+  if (uniqueTargets.size !== validatedEntries.length) {
+    throw new Error('Unsafe bundle manifest: multiple entries resolve to the same target path')
+  }
+
   const restoredFiles: string[] = []
   const skippedFiles: string[] = []
 
   if (options.dryRun) {
-    for (const fileEntry of bundle.manifest.files) {
-      const targetFilePath = path.join(targetDir, fileEntry.relativePath)
+    for (const { fileEntry, targetFilePath } of validatedEntries) {
       if (fs.existsSync(targetFilePath) && !options.overwrite) {
         skippedFiles.push(fileEntry.relativePath)
       } else {
@@ -440,8 +510,7 @@ export const importMemoryBundle = (options: ImportOptions): ImportResult => {
   }
 
   // Restore files
-  for (const fileEntry of bundle.manifest.files) {
-    const targetFilePath = path.join(targetDir, fileEntry.relativePath)
+  for (const { fileEntry, targetFilePath } of validatedEntries) {
     const parentDir = path.dirname(targetFilePath)
 
     if (fs.existsSync(targetFilePath) && !options.overwrite && !options.cleanTarget) {
@@ -684,10 +753,8 @@ export const runCli = (args: string[]): void => {
 }
 
 // Direct CLI execution check
-const isMain =
-  import.meta.url === `file://${process.argv[1]}` ||
-  process.argv[1]?.endsWith('memory-backup.ts') ||
-  process.argv[1]?.endsWith('memory-backup.js')
+const entryPath = process.argv[1] ? path.resolve(process.argv[1]) : null
+const isMain = entryPath ? pathToFileURL(entryPath).href === import.meta.url : false
 
 if (isMain) {
   runCli(process.argv.slice(2))

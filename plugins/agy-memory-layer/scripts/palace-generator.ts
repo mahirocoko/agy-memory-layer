@@ -9,7 +9,10 @@ import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
-const memoryRoot = process.env.MEMORY_ROOT || path.join(process.env.HOME || '', '.gemini', 'memory')
+const memoryRoot =
+  process.env.AGY_MEMORY_DIR ||
+  process.env.MEMORY_ROOT ||
+  path.join(process.env.HOME || '', '.gemini', 'memory')
 const brainDir = path.join(process.env.HOME || '', '.gemini', 'antigravity-cli', 'brain')
 const activeWorkspace = process.argv[2] || process.cwd()
 const outputFile = process.argv[3] || '/tmp/agy-memory-palace.html'
@@ -1396,7 +1399,7 @@ const html = `<!DOCTYPE html>
     <div class="top-header">
       <div class="brand-left">
         <span>🧠 Antigravity MemFS</span>
-        <span class="brand-badge">agy-memory-layer v1.12.0</span>
+        <span class="brand-badge">agy-memory-layer v1.12.1</span>
         ${
           memfsGitStatus.state === 'dirty'
             ? `<span class="brand-badge" style="background: rgba(245, 158, 11, 0.15); color: #fde047; border-color: rgba(245, 158, 11, 0.4);">🧠 MemFS: +${memfsGitStatus.dirtyCount} dirty</span>`

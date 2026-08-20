@@ -3,6 +3,7 @@
 import { execSync, spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { TEST_MEMORY_ROOT, TEST_TEMP_ROOT } from './test-environment.ts'
 
 export type TestResult = {
   suite: string
@@ -16,15 +17,21 @@ export type TestResult = {
 const ROOT_DIR = path.resolve(import.meta.dirname, '..')
 const PLUGIN_DIR = path.join(ROOT_DIR, 'plugins', 'agy-memory-layer')
 const SCRIPTS_DIR = path.join(PLUGIN_DIR, 'scripts')
-const MEMORY_ROOT = path.join(process.env.HOME || '', '.gemini', 'memory')
+const MEMORY_ROOT = TEST_MEMORY_ROOT
 const TEST_REPORT_FILE = path.join(ROOT_DIR, 'TEST_REPORT.md')
 
 const results: TestResult[] = []
 
+const getCommandVersion = (command: string, args: string[]): string => {
+  const result = spawnSync(command, args, { encoding: 'utf-8' })
+  if (result.status !== 0) return 'unavailable'
+  return (result.stdout || result.stderr).trim().split('\n')[0] || 'unknown'
+}
+
 async function runTest(
   suite: string,
   name: string,
-  testFn: () => Promise<string | void> | string | void,
+  testFn: () => Promise<string | undefined> | string | undefined,
 ): Promise<void> {
   const startTime = Date.now()
   console.log(`▶ [${suite}] ${name}...`)
@@ -91,6 +98,9 @@ await runTest('Hooks Contract', 'PreInvocation Hook outputs valid AGY JSON schem
     if (!step.ephemeralMessage.includes('MemFS Active Memory')) {
       throw new Error('ephemeralMessage does not contain memory marker')
     }
+    if (!step.ephemeralMessage.includes('Agent Persona')) {
+      throw new Error('ephemeralMessage does not contain global persona memory')
+    }
   }
 
   return `Valid JSON schema with ${output.injectSteps.length} injected steps. Execution speed: fast.`
@@ -143,8 +153,8 @@ await runTest(
   'Separates Project A and Project B while preserving Global User profile',
   () => {
     const scriptPath = path.join(SCRIPTS_DIR, 'hook-inject-memory.sh')
-    const fakeWorkspaceA = '/tmp/sandbox-project-alpha'
-    const fakeWorkspaceB = '/tmp/sandbox-project-beta'
+    const fakeWorkspaceA = path.join(TEST_TEMP_ROOT, 'sandbox-project-alpha')
+    const fakeWorkspaceB = path.join(TEST_TEMP_ROOT, 'sandbox-project-beta')
 
     const slugA = 'sandbox-project-alpha'
     const slugB = 'sandbox-project-beta'
@@ -208,7 +218,7 @@ await runTest(
   'Palace generator builds interactive HTML with all live projects & git timeline',
   () => {
     const palaceGenerator = path.join(SCRIPTS_DIR, 'palace-generator.ts')
-    const tempHtml = '/tmp/test-palace-verification.html'
+    const tempHtml = path.join(TEST_TEMP_ROOT, 'test-palace-verification.html')
 
     const proc = spawnSync(
       'node',
@@ -229,7 +239,8 @@ await runTest(
     const html = fs.readFileSync(tempHtml, 'utf-8')
 
     // Check required HTML sections
-    if (!html.includes('Memory Palace') || !html.includes('learn-letta-code')) {
+    const expectedWorkspaceName = path.basename(ROOT_DIR)
+    if (!html.includes('Memory Palace') || !html.includes(expectedWorkspaceName)) {
       throw new Error('Palace HTML is missing key dashboard headers')
     }
 
@@ -302,7 +313,7 @@ await runTest('AGY Plugin Schema', "Plugin passes 'agy plugin validate' with zer
     throw new Error(`Validation output did not show success: ${output}`)
   }
 
-  return 'Native AGY plugin validation: 7 skills, 2 hooks processed with 0 errors.'
+  return 'Native AGY plugin validation: 11 skills, 6 agents, 2 hooks processed with 0 errors.'
 })
 
 // -----------------------------------------------------------------------------
@@ -359,7 +370,7 @@ await runTest(
     }
 
     // Test temporary workspace initialization
-    const tempWorkspace = '/tmp/test-init-sample-repo'
+    const tempWorkspace = path.join(TEST_TEMP_ROOT, 'test-init-sample-repo')
     fs.mkdirSync(path.join(tempWorkspace, 'src'), { recursive: true })
     fs.writeFileSync(
       path.join(tempWorkspace, 'package.json'),
@@ -417,8 +428,19 @@ await runTest(
   async () => {
     const { searchMemory } = await import(path.join(SCRIPTS_DIR, 'memory-search.ts'))
 
+    const statusProc = spawnSync(
+      'node',
+      ['--experimental-strip-types', path.join(SCRIPTS_DIR, 'memory-search.ts'), '--status'],
+      { encoding: 'utf-8' },
+    )
+    if (statusProc.status !== 0 || !statusProc.stdout.includes('MemFS Status')) {
+      throw new Error(`Memory status command failed: ${statusProc.stderr || statusProc.stdout}`)
+    }
+
     // Search for something we know is in memory
+    const searchStart = performance.now()
     const results = searchMemory('typescript')
+    const searchDuration = performance.now() - searchStart
     if (!Array.isArray(results) || results.length === 0) {
       throw new Error("Memory search returned 0 results for 'typescript'")
     }
@@ -428,7 +450,7 @@ await runTest(
       throw new Error('Search result missing file path or line matches')
     }
 
-    return `Search engine returned ${results.length} ranked matches with line snippets in < 10ms.`
+    return `Search engine returned ${results.length} ranked matches in ${searchDuration.toFixed(2)}ms.`
   },
 )
 
@@ -477,7 +499,7 @@ await runTest(
       throw new Error(`test-memory-backup.ts failed:\n${proc.stdout}\n${proc.stderr}`)
     }
 
-    return 'All 5 backup unit tests passed (SHA-256 integrity, tamper detection, byte-for-byte restore, zero interfaces).'
+    return 'All 7 backup utility tests passed, including checksum integrity and import path containment.'
   },
 )
 
@@ -488,12 +510,13 @@ const totalTests = results.length
 const passedTests = results.filter((r) => r.status === 'PASSED').length
 const failedTests = results.filter((r) => r.status === 'FAILED').length
 const totalDuration = results.reduce((acc, r) => acc + r.duration, 0)
+const agyVersion = getCommandVersion('agy', ['--version'])
 
 const markdown = `# 🧪 Comprehensive Test & Verification Report: \`agy-memory-layer\`
 
-**Date**: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC  
-**Environment**: macOS (Darwin) · Antigravity CLI 1.1.14 · Node ${process.version}  
-**Storage Target**: \`~/.gemini/memory/\` (Git-backed MemFS)  
+**Date**: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
+**Environment**: macOS (Darwin) · Antigravity CLI ${agyVersion} · Node ${process.version}
+**Storage Target**: disposable test HOME (isolated from the user's real \`~/.gemini/memory/\`)
 **Overall Result**: ${failedTests === 0 ? '🟢 **ALL TESTS PASSED (100%)**' : '🔴 **SOME TESTS FAILED**'}
 
 ---
@@ -520,22 +543,22 @@ ${results.map((r) => `| **${r.suite}** | ${r.name} | ${r.status === 'PASSED' ? '
 ## 🛡️ Verification Proofs & Invariants Guaranteed
 
 1. **Autonomous Ingestion Contract (\`PreInvocation\`)**:
-   - The Hook intercepts every conversation turn and delivers active memory blocks via protojson \`ephemeralMessage\` in **< 15ms**.
+   - The Hook delivers active memory blocks via \`injectSteps[].ephemeralMessage\` within its registered five-second host timeout.
 
 2. **Day 1 Codebase Scanner (\`/init\`)**:
-   - Analyzes manifests, entry points, linters, scripts, and documentation to seed high-signal \`project.md\` and \`rules.md\` instantly.
+   - Analyzes fixture manifests, entry points, linters, scripts, and documentation to seed \`project.md\` and \`rules.md\` deterministically.
 
 3. **Historical Learnings Search (\`/memory search\`)**:
-   - Fast ranked retrieval across all past architectural decisions and debugging logs in **< 10ms**.
+   - Ranked retrieval returns exact file paths, line numbers, and snippets from the isolated MemFS fixture.
 
 4. **Multi-Device Remote Sync (\`/sync\`)**:
-   - Supports seamless synchronization of memory snapshots with private GitHub/GitLab repositories.
+   - Status and remote setup behavior are verified against an isolated Git fixture without network access.
 
 5. **Automated Persistence & Rollback (\`Stop Hook\`)**:
-   - Every file change made to \`~/.gemini/memory/\` automatically results in a serialized Git commit with one-command rollback.
+   - A dirty isolated MemFS fixture produces a serialized Git commit and supports one-command rollback.
 
 6. **Native Tooling Compatibility**:
-   - Verified with \`agy plugin validate\` (7 skills, 2 hooks active).
+   - Verified with \`agy plugin validate\` (11 skills, 6 agents, 2 hooks active).
 `
 
 fs.writeFileSync(TEST_REPORT_FILE, markdown, 'utf-8')
@@ -545,3 +568,7 @@ console.log(
   `Passed: ${passedTests}/${totalTests} (${Math.round((passedTests / totalTests) * 100)}%) in ${totalDuration}ms`,
 )
 console.log('==================================================')
+
+if (failedTests > 0) {
+  process.exitCode = 1
+}

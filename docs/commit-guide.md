@@ -8,7 +8,7 @@ This guide specifies the non-negotiable commit rules, review workflow, and relea
 
 1. **Never Commit Automatically**:
    - Every commit requires prior user inspection.
-   - Run `npm test`, display `git status --short`, and present diffs (`git diff --stat`) before asking or waiting for commit approval.
+   - Run `pnpm test`, display `git status --short`, and present diffs (`git diff --stat`) before asking or waiting for commit approval.
 2. **Never Push to Remote Automatically**:
    - `git push` is strictly forbidden unless the user explicitly orders a push in their prompt.
 3. **No Amend on Shared Commits**:

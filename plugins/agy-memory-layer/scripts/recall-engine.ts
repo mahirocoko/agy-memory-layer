@@ -195,7 +195,7 @@ export async function searchRecall(
   query: string,
   options: RecallSearchOptions = {},
 ): Promise<RecallHit[]> {
-  if (!query || !query.trim()) {
+  if (!query?.trim()) {
     throw new Error('Search query must not be empty.')
   }
 
@@ -291,7 +291,7 @@ export async function searchRecall(
   return results.slice(0, limit)
 }
 
-if (process.argv[1] && process.argv[1].endsWith('recall-engine.ts')) {
+if (process.argv[1]?.endsWith('recall-engine.ts')) {
   const args = process.argv.slice(2)
   const cmd = args[0]
 

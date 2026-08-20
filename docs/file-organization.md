@@ -29,7 +29,7 @@ learn-letta-code/
 │   ├── commit-guide.md                      # Git commit rules and review workflow
 │   ├── code-style/
 │   │   ├── typescript.md                    # Strict `type` alias conventions
-│   │   ├── imports.md                       # Node.js and CommonJS import rules
+│   │   ├── imports.md                       # Native ESM and Node.js import rules
 │   │   └── formatting.md                    # Code formatting and markdown standards
 │   └── patterns/
 │       └── services-pattern.md              # Daemon, hook, and recall service patterns
@@ -47,14 +47,14 @@ learn-letta-code/
 │   │
 │   ├── prompts/                             # Prompt Warehouse (System, Personas, Subagents)
 │   │   ├── system/                          # Benchmarks & core system prompts
-│   │   ├── persona/                         # 9 Personality presets (memo, linus, tutor, etc.)
+│   │   ├── persona/                         # 6 personality presets (memo, linus, tutor, architect, kawaii, blank)
 │   │   ├── human/                           # User profile templates
 │   │   └── subagents/                       # System prompts for all 6 subagents
 │   │
 │   ├── rules/
 │   │   └── AGENTS.md                        # In-Context autonomous memory directives
 │   │
-│   ├── skills/                              # 10 Slash command skill definitions
+│   ├── skills/                              # 11 Slash command skill definitions
 │   │   ├── init/SKILL.md
 │   │   ├── memory/SKILL.md
 │   │   ├── recall/SKILL.md
@@ -64,20 +64,34 @@ learn-letta-code/
 │   │   ├── doctor/SKILL.md
 │   │   ├── palace/SKILL.md
 │   │   ├── sync/SKILL.md
+│   │   ├── sync-letta/SKILL.md
 │   │   └── update/SKILL.md
 │   │
 │   └── scripts/                             # Runtime scripts and executables
 │       ├── hook-inject-memory.sh            # PreInvocation hook (injects MemFS)
+│       ├── hook-inject-memory.ts            # Preferred native ESM hook implementation
 │       ├── hook-auto-commit.sh              # Stop hook (auto-commits & async daemon trigger)
-│       ├── dream-daemon.js                  # 20-step auto-dream daemon & cron scheduler
-│       ├── recall-engine.js                 # Subword N-Gram Vector & BM25 hybrid recall
-│       ├── agent-launcher.js                # Dynamic subagent resolver
-│       ├── palace-generator.js              # Memory Palace HTML generator
-│       ├── switch-persona.js                # Persona preset switcher
+│       ├── hook-auto-commit.ts              # Preferred native ESM hook implementation
+│       ├── dream-daemon.ts                  # 20-step auto-dream daemon & cron scheduler
+│       ├── recall-engine.ts                 # Subword N-Gram Vector & BM25 hybrid recall
+│       ├── memory-search.ts                 # MemFS status and ranked text search
+│       ├── init-project-memory.ts           # Codebase onboarding and memory seeding
+│       ├── agent-launcher.ts                # Dynamic subagent resolver
+│       ├── palace-generator.ts              # Memory Palace HTML generator
+│       ├── switch-persona.ts                # Persona preset switcher
+│       ├── letta-sync.ts                    # Letta payload extraction and MemFS import
+│       ├── memory-approval.ts               # Optional proposal/approval workflow
+│       ├── memory-compactor.ts              # Token compaction and learning archival
+│       ├── skill-synthesizer.ts             # Repeated-pattern skill drafts
+│       ├── cross-project-synapse.ts         # Cross-project learning retrieval
+│       ├── ts-inspector.ts                  # In-memory TypeScript language service
+│       ├── worktree-manager.ts              # Isolated worktree utilities
 │       ├── install.sh                       # Installer script
 │       └── uninstall.sh                     # Uninstaller script
 │
 └── tests/                                   # Automated test harness
-    ├── run-test-suite.js                    # Test harness runner
-    └── unit-coverage.test.js                # Full unit test coverage suites
+    ├── test-environment.ts                  # Disposable HOME/MemFS fixture
+    ├── run-test-suite.ts                    # Integration scenario runner and report generator
+    ├── test-memory-backup.ts                # Backup integrity and path-containment tests
+    └── unit-coverage.test.ts                # Focused engine unit cases
 ```

@@ -306,7 +306,7 @@ export function scanAndSynthesizeSkills(
 // -----------------------------------------------------------------------------
 if (process.argv[1]?.endsWith('skill-synthesizer.ts')) {
   const args = process.argv.slice(2)
-  const cmd = args[0] || 'scan'
+  const _cmd = args[0] || 'scan'
 
   console.log(`\n🔍 MemFS Skill Synthesizer & Auto-Promotion Engine\n`)
   const result = scanAndSynthesizeSkills()

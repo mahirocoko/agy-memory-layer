@@ -1,6 +1,6 @@
 {
   "name": "agy-memory-layer",
-  "version": "1.12.0",
+  "version": "1.12.1",
   "description": "Stateful Git-backed MemFS, sleep-time reflection, and Memory Palace for Antigravity CLI",
   "author": "Mahiro",
   "license": "MIT"

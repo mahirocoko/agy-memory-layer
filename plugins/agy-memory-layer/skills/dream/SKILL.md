@@ -47,19 +47,19 @@ YOUR MISSION:
 
 ---
 
-## 🌙 Auto-Dream Background Daemon (`dream-daemon.js`)
+## 🌙 Auto-Dream Background Daemon (`dream-daemon.ts`)
 
 For automated, non-interactive sleep-time reflection across historical and idle conversations:
 
 ```bash
 # Check status of pending undreamed sessions
-node plugins/agy-memory-layer/scripts/dream-daemon.js --status
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --status
 
 # Process and synthesize all pending sessions immediately
-node plugins/agy-memory-layer/scripts/dream-daemon.js --run-now
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now
 
 # Install background cron job (runs every 2 hours)
-node plugins/agy-memory-layer/scripts/dream-daemon.js --install-cron
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --install-cron
 ```
 
 ### Step 3: Present Dream Summary

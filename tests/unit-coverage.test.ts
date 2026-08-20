@@ -1,13 +1,14 @@
 import * as assert from 'node:assert'
-import { spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { describe, it } from 'node:test'
+import { TEST_ENVIRONMENT, TEST_MEMORY_ROOT, TEST_TEMP_ROOT } from './test-environment.ts'
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '..')
 const PLUGIN_DIR = path.join(ROOT_DIR, 'plugins', 'agy-memory-layer')
 const SCRIPTS_DIR = path.join(PLUGIN_DIR, 'scripts')
-const MEMORY_ROOT = path.join(process.env.HOME || '', '.gemini', 'memory')
+const MEMORY_ROOT = TEST_MEMORY_ROOT
 
 const { initProjectMemory, scanCodebase } = await import(
   path.join(SCRIPTS_DIR, 'init-project-memory.ts')
@@ -24,13 +25,8 @@ const { scanPendingConversations, synthesizeConversationLearning, printStatus } 
   path.join(SCRIPTS_DIR, 'dream-daemon.ts')
 )
 const { listSubagents, getSubagent } = await import(path.join(SCRIPTS_DIR, 'agent-launcher.ts'))
-const {
-  createIsolatedWorktree,
-  getWorktreeDiff,
-  applyWorktreeChanges,
-  cleanupWorktree,
-  listActiveWorktrees,
-} = await import(path.join(SCRIPTS_DIR, 'worktree-manager.ts'))
+const { createIsolatedWorktree, getWorktreeDiff, cleanupWorktree, listActiveWorktrees } =
+  await import(path.join(SCRIPTS_DIR, 'worktree-manager.ts'))
 const {
   getApprovalPolicy,
   getApprovalModeForFile,
@@ -40,14 +36,9 @@ const {
   reviewProposal,
 } = await import(path.join(SCRIPTS_DIR, 'memory-approval.ts'))
 const { createTsInspector } = await import(path.join(SCRIPTS_DIR, 'ts-inspector.ts'))
-const {
-  estimateTokens,
-  compactMarkdownContent,
-  compactFile,
-  compactProjectMemory,
-  runAutoCompaction,
-} = await import(path.join(SCRIPTS_DIR, 'memory-compactor.ts'))
-const { scanAndSynthesizeSkills, generateDraftSkill, scanMemfsLearnings } = await import(
+const { estimateTokens, compactMarkdownContent, compactProjectMemory, runAutoCompaction } =
+  await import(path.join(SCRIPTS_DIR, 'memory-compactor.ts'))
+const { scanAndSynthesizeSkills, generateDraftSkill } = await import(
   path.join(SCRIPTS_DIR, 'skill-synthesizer.ts')
 )
 const { findCrossProjectSynapses, formatSynapseNotice } = await import(
@@ -59,7 +50,7 @@ const { syncLettaMemory, normalizeLettaProjectSlug, findPrimaryLettaAgent } = aw
 
 describe('Unit Coverage Extensions', () => {
   it('tests init-project-memory with Rust, Go, Python, and Docker manifests', () => {
-    const tempDir = '/tmp/test-multi-stack-project'
+    const tempDir = path.join(TEST_TEMP_ROOT, 'test-multi-stack-project')
     fs.mkdirSync(path.join(tempDir, 'src'), { recursive: true })
     fs.writeFileSync(path.join(tempDir, 'Cargo.toml'), '[package]\nname = "rust-app"')
     fs.writeFileSync(path.join(tempDir, 'go.mod'), 'module mygoapp\ngo 1.22')
@@ -113,7 +104,7 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(helpOutput.includes('MemFS Backup & Restore Utility'), true)
 
     // Test export command CLI
-    const tempBundle = '/tmp/test-cli-bundle.json'
+    const tempBundle = path.join(TEST_TEMP_ROOT, 'test-cli-bundle.json')
     runCli(['export', '-o', tempBundle, '--json'])
     assert.strictEqual(fs.existsSync(tempBundle), true)
 
@@ -229,7 +220,22 @@ describe('Unit Coverage Extensions', () => {
 
   it('tests worktree-manager isolation, diffing, patch apply, and cleanup', () => {
     const testId = `test-wt-${Date.now().toString(36)}`
-    const wt = createIsolatedWorktree(ROOT_DIR, { subagentId: testId })
+    const fixtureRepo = path.join(TEST_ENVIRONMENT.homeDir, 'worktree-source')
+    fs.mkdirSync(fixtureRepo, { recursive: true })
+    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: fixtureRepo })
+    execFileSync('git', ['config', 'user.name', 'agy-memory-layer tests'], {
+      cwd: fixtureRepo,
+    })
+    execFileSync('git', ['config', 'user.email', 'tests@example.invalid'], {
+      cwd: fixtureRepo,
+    })
+    fs.writeFileSync(path.join(fixtureRepo, 'README.md'), '# Worktree fixture\n')
+    execFileSync('git', ['add', 'README.md'], { cwd: fixtureRepo })
+    execFileSync('git', ['commit', '-q', '-m', 'test: seed worktree fixture'], {
+      cwd: fixtureRepo,
+    })
+
+    const wt = createIsolatedWorktree(fixtureRepo, { subagentId: testId })
 
     assert.strictEqual(fs.existsSync(wt.worktreePath), true)
     assert.strictEqual(typeof wt.branchName, 'string')
@@ -250,7 +256,7 @@ describe('Unit Coverage Extensions', () => {
     )
 
     // Check listActiveWorktrees
-    const activeList = listActiveWorktrees(ROOT_DIR)
+    const activeList = listActiveWorktrees(fixtureRepo)
     assert.strictEqual(
       activeList.some((p: string) => p.includes(testId)),
       true,
@@ -259,6 +265,7 @@ describe('Unit Coverage Extensions', () => {
     // Clean up worktree
     cleanupWorktree(wt, { deleteBranch: true })
     assert.strictEqual(fs.existsSync(wt.worktreePath), false)
+    fs.rmSync(fixtureRepo, { recursive: true, force: true })
   })
 
   it('tests memory-approval dual-mode policy, proposals, and reviews', () => {
@@ -284,18 +291,20 @@ describe('Unit Coverage Extensions', () => {
     )
     assert.strictEqual(propRes.status, 'PENDING_APPROVAL')
     assert.strictEqual(typeof propRes.proposalId, 'string')
+    const proposalId = propRes.proposalId
+    assert.ok(proposalId)
 
     const pending = listPendingProposals()
     assert.strictEqual(
-      pending.some((p: { id: string }) => p.id === propRes.proposalId),
+      pending.some((p: { id: string }) => p.id === proposalId),
       true,
     )
 
-    const fetched = getPendingProposal(propRes.proposalId!)
+    const fetched = getPendingProposal(proposalId)
     assert.strictEqual(fetched?.reason, 'Refactored backend architecture')
 
     // Review approve
-    const reviewApprove = reviewProposal(propRes.proposalId!, 'approve')
+    const reviewApprove = reviewProposal(proposalId, 'approve')
     assert.strictEqual(reviewApprove.decision, 'approve')
     assert.strictEqual(reviewApprove.success, true)
 
@@ -363,7 +372,7 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(compacted.includes('## Valid Section'), true)
 
     // 3. Mock MemFS sandbox compaction test
-    const tempMemfs = '/tmp/test-compactor-memfs'
+    const tempMemfs = path.join(TEST_TEMP_ROOT, 'test-compactor-memfs')
     const tempProjDir = path.join(tempMemfs, 'projects', 'compactor-test-proj')
     fs.mkdirSync(tempProjDir, { recursive: true })
     fs.writeFileSync(
@@ -386,7 +395,7 @@ describe('Unit Coverage Extensions', () => {
     // 1. Test draft skill markdown generator
     const sampleCluster = [
       {
-        filePath: '/tmp/learnings/1.md',
+        filePath: path.join(TEST_TEMP_ROOT, 'learnings', '1.md'),
         fileName: '1.md',
         projectSlug: 'proj-a',
         title: 'Fix SQLite WAL Lock',
@@ -394,7 +403,7 @@ describe('Unit Coverage Extensions', () => {
         vector: {},
       },
       {
-        filePath: '/tmp/learnings/2.md',
+        filePath: path.join(TEST_TEMP_ROOT, 'learnings', '2.md'),
         fileName: '2.md',
         projectSlug: 'proj-b',
         title: 'Fix SQLite WAL Lock Contention',
@@ -402,7 +411,7 @@ describe('Unit Coverage Extensions', () => {
         vector: {},
       },
       {
-        filePath: '/tmp/learnings/3.md',
+        filePath: path.join(TEST_TEMP_ROOT, 'learnings', '3.md'),
         fileName: '3.md',
         projectSlug: 'proj-c',
         title: 'Prevent SQLite Database Locked Errors',
@@ -421,7 +430,7 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(draft.includes('Synthesized by `agy-memory-layer` Skill Synthesizer'), true)
 
     // 2. Test sandbox scan & synthesis
-    const tempMemfs = '/tmp/test-synthesizer-memfs'
+    const tempMemfs = path.join(TEST_TEMP_ROOT, 'test-synthesizer-memfs')
     const tempProjDir = path.join(tempMemfs, 'projects', 'test-app', 'learnings')
     fs.mkdirSync(tempProjDir, { recursive: true })
 
@@ -450,7 +459,7 @@ describe('Unit Coverage Extensions', () => {
   })
 
   it('tests cross-project-synapse matching and notice formatting', () => {
-    const tempMemfs = '/tmp/test-synapse-memfs'
+    const tempMemfs = path.join(TEST_TEMP_ROOT, 'test-synapse-memfs')
     const projADir = path.join(tempMemfs, 'projects', 'project-a', 'learnings')
     const projBDir = path.join(tempMemfs, 'projects', 'project-b', 'learnings')
 
@@ -501,8 +510,8 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(slugC, 'my-project')
 
     // 2. Mock Letta sandbox sync test
-    const tempLetta = '/tmp/test-letta-sync-root'
-    const tempMemfs = '/tmp/test-letta-sync-memfs'
+    const tempLetta = path.join(TEST_TEMP_ROOT, 'test-letta-sync-root')
+    const tempMemfs = path.join(TEST_TEMP_ROOT, 'test-letta-sync-memfs')
     fs.rmSync(tempLetta, { recursive: true, force: true })
     fs.rmSync(tempMemfs, { recursive: true, force: true })
 

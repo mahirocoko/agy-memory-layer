@@ -44,8 +44,8 @@ You MUST autonomously update, consult, and maintain your memory without waiting 
   - **Action**: Invoke `/doctor` to audit consistency between Git MemFS and actual workspace state.
 
 ### G. Autonomous Episodic Recall (`recall`)
-- Whenever the user asks "What did we talk about previously regarding X?", "How did we solve bug Y in the earlier session?", or when you detect missing context from prior sessions:
-  - **Action**: **Do NOT ask the user to type `/recall`**. Autonomously run `recall-engine.js search "<query>"` or invoke a recall research subagent behind the scenes, extract the historical facts, and seamlessly answer the user with full past-session continuity!
+- **Strict Invariant**: Whenever the user asks "What did we talk about previously regarding X?", "How did we solve bug Y in the earlier session?", mentions past mistakes/failures ("พลาด", "พัง", "เคย"), or when analyzing system behavior/architecture across multiple sessions:
+  - **Action**: **Do NOT wait for the user to ask twice and do NOT ask the user to type `/recall`**. Autonomously run `recall-engine.ts search "<query>"` or invoke a recall research subagent behind the scenes, extract historical facts and transcript logs, and seamlessly answer the user with full multi-session continuity!
 
 ### H. Language Density Invariant (Memory is Concise English)
 - The user may express preferences, teach rules, or correct you in **ANY language** (Thai, English, mixed, voice, etc.).

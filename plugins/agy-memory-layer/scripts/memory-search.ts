@@ -5,6 +5,7 @@
  * Performs fast text search across global profiles, project memories, and learnings.
  */
 
+import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
@@ -21,8 +22,80 @@ export type MemorySearchOptions = {
   scope?: string
 }
 
+export type MemoryStatus = {
+  memoryRoot: string
+  initialized: boolean
+  globalFiles: string[]
+  projects: string[]
+  gitStatus: string[]
+  recentCommits: string[]
+}
+
 const memoryRoot =
   process.env.AGY_MEMORY_DIR || path.join(process.env.HOME || '', '.gemini', 'memory')
+
+export function getMemoryStatus(root: string = memoryRoot): MemoryStatus {
+  const initialized = fs.existsSync(path.join(root, '.git'))
+  const globalDir = path.join(root, 'global')
+  const projectsDir = path.join(root, 'projects')
+  const globalFiles = fs.existsSync(globalDir)
+    ? fs
+        .readdirSync(globalDir)
+        .filter((entry) => entry.endsWith('.md'))
+        .sort()
+    : []
+  const projects = fs.existsSync(projectsDir)
+    ? fs
+        .readdirSync(projectsDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort()
+    : []
+
+  let gitStatus: string[] = []
+  let recentCommits: string[] = []
+  if (initialized) {
+    try {
+      gitStatus = execSync('git status --short', { cwd: root, encoding: 'utf-8' })
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+    } catch {}
+    try {
+      recentCommits = execSync('git log -5 --pretty=format:%h%x09%s', {
+        cwd: root,
+        encoding: 'utf-8',
+      })
+        .trim()
+        .split('\n')
+        .filter(Boolean)
+    } catch {}
+  }
+
+  return { memoryRoot: root, initialized, globalFiles, projects, gitStatus, recentCommits }
+}
+
+export function printMemoryStatus(root: string = memoryRoot): void {
+  const status = getMemoryStatus(root)
+  console.log('\n🧠 MemFS Status\n')
+  console.log(`Root: ${status.memoryRoot}`)
+  console.log(`Git: ${status.initialized ? 'initialized' : 'missing'}`)
+  console.log(`Global blocks: ${status.globalFiles.join(', ') || '(none)'}`)
+  console.log(`Projects: ${status.projects.join(', ') || '(none)'}`)
+  console.log(`Working tree: ${status.gitStatus.length === 0 ? 'clean' : 'dirty'}`)
+  if (status.gitStatus.length > 0) {
+    status.gitStatus.forEach((line) => {
+      console.log(`  ${line}`)
+    })
+  }
+  if (status.recentCommits.length > 0) {
+    console.log('Recent snapshots:')
+    status.recentCommits.forEach((line) => {
+      console.log(`  ${line}`)
+    })
+  }
+  console.log('')
+}
 
 export function searchMemory(query: string, options: MemorySearchOptions = {}): SearchMatch[] {
   if (!query?.trim()) {
@@ -82,9 +155,14 @@ export function searchMemory(query: string, options: MemorySearchOptions = {}): 
   return results.slice(0, options.limit || 20)
 }
 
-if (process.argv[1] && process.argv[1].endsWith('memory-search.ts')) {
+if (process.argv[1]?.endsWith('memory-search.ts')) {
   const args = process.argv.slice(2)
   const query = args[0]
+
+  if (query === '--status' || query === 'status') {
+    printMemoryStatus()
+    process.exit(0)
+  }
 
   if (!query) {
     console.error('❌ Usage: node memory-search.ts "<search-query>"')

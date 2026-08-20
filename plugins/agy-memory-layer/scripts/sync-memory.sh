@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-MEMORY_ROOT="${HOME}/.gemini/memory"
+MEMORY_ROOT="${AGY_MEMORY_DIR:-${HOME}/.gemini/memory}"
 COMMAND="${1:-status}"
 ARG="${2:-}"
 

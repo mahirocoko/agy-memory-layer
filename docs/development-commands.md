@@ -9,57 +9,57 @@ This reference documents all testing, verification, script runners, and daemon c
 Run the primary Node.js test runner suite:
 
 ```bash
-# Run all 9 unit & integration test suites
-npm test
+# Run 11 integration scenarios plus 15 focused unit cases
+pnpm test
 
 # Run tests directly with Node 22+ type stripping
-node --experimental-strip-types --test tests/run-test-suite.js tests/unit-coverage.test.js
+node --experimental-strip-types --test --test-concurrency=1 tests/run-test-suite.ts tests/unit-coverage.test.ts
 ```
 
 ---
 
 ## 🌙 Auto-Dream Background Daemon
 
-The Auto-Dream daemon (`plugins/agy-memory-layer/scripts/dream-daemon.js`) handles background synthesis of conversation transcripts.
+The Auto-Dream daemon (`plugins/agy-memory-layer/scripts/dream-daemon.ts`) handles background synthesis of conversation transcripts.
 
 ```bash
 # Check status of pending undreamed sessions and step count threshold
-node plugins/agy-memory-layer/scripts/dream-daemon.js --status
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --status
 
 # Process and consolidate all pending sessions immediately
-node plugins/agy-memory-layer/scripts/dream-daemon.js --run-now
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now
 
 # Force immediate synthesis regardless of session age
-node plugins/agy-memory-layer/scripts/dream-daemon.js --run-now --force
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now --force
 
 # Run automatic step-count check (used by Stop Hook)
-node plugins/agy-memory-layer/scripts/dream-daemon.js --auto-check
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --auto-check
 
 # Install background cron job on macOS (runs every 2 hours)
-node plugins/agy-memory-layer/scripts/dream-daemon.js --install-cron
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --install-cron
 
 # Uninstall background cron job
-node plugins/agy-memory-layer/scripts/dream-daemon.js --uninstall-cron
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --uninstall-cron
 ```
 
 ---
 
 ## 🔍 Hybrid Semantic Recall Subsystem
 
-The Hybrid Recall engine (`plugins/agy-memory-layer/scripts/recall-engine.js`) searches historical transcripts.
+The Hybrid Recall engine (`plugins/agy-memory-layer/scripts/recall-engine.ts`) searches historical transcripts.
 
 ```bash
 # Hybrid Search (Default: BM25 + Subword N-Gram Vector Cosine Similarity)
-node plugins/agy-memory-layer/scripts/recall-engine.js search "memory palace token calculation"
+node --experimental-strip-types plugins/agy-memory-layer/scripts/recall-engine.ts search "memory palace token calculation"
 
 # Vector Semantic Search Only (Concept / Synonym matching)
-node plugins/agy-memory-layer/scripts/recall-engine.js search "how did we fix caching" --semantic
+node --experimental-strip-types plugins/agy-memory-layer/scripts/recall-engine.ts search "how did we fix caching" --semantic
 
 # Keyword Exact Match Only (BM25 exact token matching)
-node plugins/agy-memory-layer/scripts/recall-engine.js search "palace-generator.js" --keyword
+node --experimental-strip-types plugins/agy-memory-layer/scripts/recall-engine.ts search "palace-generator.ts" --keyword
 
-# Limit top results and filter by workspace
-node plugins/agy-memory-layer/scripts/recall-engine.js search "subagents" --limit 3 --workspace learn-letta-code
+# Search another topic with the default result limit
+node --experimental-strip-types plugins/agy-memory-layer/scripts/recall-engine.ts search "subagents"
 ```
 
 ---
@@ -69,11 +69,11 @@ node plugins/agy-memory-layer/scripts/recall-engine.js search "subagents" --limi
 Generates the interactive Memory Palace HTML visualizer.
 
 ```bash
-# Generate palace.html in current conversation directory and open browser
-node plugins/agy-memory-layer/scripts/palace-generator.js
+# Generate the default /tmp/agy-memory-palace.html and open it
+bash plugins/agy-memory-layer/scripts/palace-server.sh --open
 
-# Generate without auto-opening browser
-node plugins/agy-memory-layer/scripts/palace-generator.js --no-open
+# Generate to an explicit path without opening a browser
+bash plugins/agy-memory-layer/scripts/palace-server.sh /tmp/agy-memory-palace.html
 ```
 
 ---
@@ -84,13 +84,13 @@ Switches or inspects agent personality presets in `~/.gemini/memory/global/perso
 
 ```bash
 # List available persona presets
-node plugins/agy-memory-layer/scripts/switch-persona.js --list
+node --experimental-strip-types plugins/agy-memory-layer/scripts/switch-persona.ts --list
 
 # Switch to Linus (Stern Master) preset
-node plugins/agy-memory-layer/scripts/switch-persona.js linus
+node --experimental-strip-types plugins/agy-memory-layer/scripts/switch-persona.ts linus
 
 # Switch to Memo (Default Letta Code) preset
-node plugins/agy-memory-layer/scripts/switch-persona.js memo
+node --experimental-strip-types plugins/agy-memory-layer/scripts/switch-persona.ts memo
 ```
 
 ---
@@ -115,8 +115,8 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts s
 ## ⚡ Advanced Engine Subsystems
 
 ```bash
-# 1. In-Memory TypeScript Language Inspector (<50ms AST diagnostics)
-node --experimental-strip-types plugins/agy-memory-layer/scripts/ts-inspector.ts check
+# 1. In-Memory TypeScript Language Inspector (in-process AST diagnostics)
+node --experimental-strip-types plugins/agy-memory-layer/scripts/ts-inspector.ts diagnostics
 
 # 2. Memory Auto-Compactor & Lossless Token Pruner
 node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-compactor.ts compact
@@ -127,4 +127,3 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/skill-synthesiz
 # 4. Cross-Project Knowledge Synapse Matching
 node --experimental-strip-types plugins/agy-memory-layer/scripts/cross-project-synapse.ts "docker setup"
 ```
-

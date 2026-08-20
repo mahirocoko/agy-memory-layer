@@ -101,10 +101,7 @@ export function compactMarkdownContent(content: string): {
     }
 
     if (trimmed.length === 0) {
-      if (
-        resultLines.length === 0 ||
-        resultLines[resultLines.length - 1].trim().length === 0
-      ) {
+      if (resultLines.length === 0 || resultLines[resultLines.length - 1].trim().length === 0) {
         continue
       }
       resultLines.push('')
@@ -149,9 +146,7 @@ export function compactMarkdownContent(content: string): {
  * Normalizes Letta project directory name into a clean canonical slug
  */
 export function normalizeLettaProjectSlug(dirName: string): string {
-  const ghMatch = dirName.match(
-    /github\.com[_-]([a-zA-Z0-9_-]+)[_-]([a-zA-Z0-9_-]+)/,
-  )
+  const ghMatch = dirName.match(/github\.com[_-]([a-zA-Z0-9_-]+)[_-]([a-zA-Z0-9_-]+)/)
   if (ghMatch) {
     const org = ghMatch[1].toLowerCase().replace(/[^a-z0-9-]/g, '-')
     const repo = ghMatch[2].toLowerCase().replace(/[^a-z0-9-]/g, '-')
@@ -208,10 +203,7 @@ export function listStatefulAgents(lettaRoot?: string): StatefulAgentInfo[] {
       const pathMatch = humanContent.match(/\/Users\/[^\s`"']+/i)
       if (pathMatch) {
         const p = pathMatch[0]
-        detectedProjectSlug = path
-          .basename(p)
-          .toLowerCase()
-          .replace(/\s+/g, '-')
+        detectedProjectSlug = path.basename(p).toLowerCase().replace(/\s+/g, '-')
         isLikelyGeneral = false
       }
     }
@@ -253,10 +245,7 @@ export function listStatefulAgents(lettaRoot?: string): StatefulAgentInfo[] {
 /**
  * Extracts raw payload from a specific Letta agent for Cognitive Grooming
  */
-export function extractAgentPayload(
-  lettaRoot: string,
-  agentId: string,
-): AgentPayload | null {
+export function extractAgentPayload(lettaRoot: string, agentId: string): AgentPayload | null {
   const agentDir = path.join(lettaRoot, 'agents', agentId)
   if (!fs.existsSync(agentDir)) return null
 
@@ -265,12 +254,8 @@ export function extractAgentPayload(
   const personaPath = path.join(memDir, 'system', 'persona.md')
   const refDir = path.join(memDir, 'reference')
 
-  const humanRaw = fs.existsSync(humanPath)
-    ? fs.readFileSync(humanPath, 'utf-8')
-    : ''
-  const personaRaw = fs.existsSync(personaPath)
-    ? fs.readFileSync(personaPath, 'utf-8')
-    : ''
+  const humanRaw = fs.existsSync(humanPath) ? fs.readFileSync(humanPath, 'utf-8') : ''
+  const personaRaw = fs.existsSync(personaPath) ? fs.readFileSync(personaPath, 'utf-8') : ''
 
   const references: ReferenceNote[] = []
   if (fs.existsSync(refDir)) {
@@ -297,10 +282,7 @@ export function extractAgentPayload(
         projectRules.push({
           projectSlug: normalizeLettaProjectSlug(pDir),
           sourceFile: pFile,
-          content: fs.readFileSync(
-            path.join(lettaProjectsDir, pDir, pFile),
-            'utf-8',
-          ),
+          content: fs.readFileSync(path.join(lettaProjectsDir, pDir, pFile), 'utf-8'),
         })
       }
     }
@@ -318,10 +300,7 @@ export function extractAgentPayload(
 /**
  * Discovers the active/primary general agent in ~/.letta/agents/
  */
-export function findPrimaryLettaAgent(
-  lettaRoot: string,
-  targetAgentId?: string,
-): string | null {
+export function findPrimaryLettaAgent(lettaRoot: string, targetAgentId?: string): string | null {
   const agents = listStatefulAgents(lettaRoot)
   if (agents.length === 0) return null
 
@@ -339,11 +318,7 @@ export function findPrimaryLettaAgent(
 /**
  * Merges two Markdown documents losslessly with section deduplication
  */
-export function mergeMarkdownDocs(
-  existing: string,
-  incoming: string,
-  headerNote: string,
-): string {
+export function mergeMarkdownDocs(existing: string, incoming: string, headerNote: string): string {
   if (!existing || existing.trim().length === 0) return incoming
   if (!incoming || incoming.trim().length === 0) return existing
 
@@ -355,13 +330,10 @@ export function mergeMarkdownDocs(
 /**
  * Executes memory sync from Letta to MemFS
  */
-export function syncLettaMemory(
-  options: LettaSyncOptions = {},
-): LettaSyncResult {
+export function syncLettaMemory(options: LettaSyncOptions = {}): LettaSyncResult {
   const homeDir = process.env.HOME || ''
   const lettaRoot = options.lettaRoot || path.join(homeDir, '.letta')
-  const memoryRoot =
-    options.memoryRoot || path.join(homeDir, '.gemini', 'memory')
+  const memoryRoot = options.memoryRoot || path.join(homeDir, '.gemini', 'memory')
   const isDryRun = Boolean(options.dryRun)
   const details: string[] = []
 
@@ -385,19 +357,15 @@ export function syncLettaMemory(
 
   const agents = listStatefulAgents(lettaRoot)
   const activeAgentId =
-    options.targetAgentId ||
-    findPrimaryLettaAgent(lettaRoot, options.targetAgentId)
+    options.targetAgentId || findPrimaryLettaAgent(lettaRoot, options.targetAgentId)
   const agentMeta = agents.find((a) => a.id === activeAgentId)
 
   const targetScope: 'global' | 'project' =
     options.targetScope || (agentMeta?.isLikelyGeneral ? 'global' : 'project')
-  const projectSlug =
-    options.projectSlug ||
-    agentMeta?.detectedProjectSlug ||
-    'letta-imported'
+  const projectSlug = options.projectSlug || agentMeta?.detectedProjectSlug || 'letta-imported'
 
   let globalHumanUpdated = false
-  let globalPersonaUpdated = false
+  const globalPersonaUpdated = false
   let importedReferencesCount = 0
   let syncedProjectsCount = 0
   let importedRulesCount = 0
@@ -420,9 +388,7 @@ export function syncLettaMemory(
 
           if (mergedHuman !== existingHuman) {
             globalHumanUpdated = true
-            details.push(
-              `Merged human.md into global profile from Letta agent (${activeAgentId})`,
-            )
+            details.push(`Merged human.md into global profile from Letta agent (${activeAgentId})`)
             if (!isDryRun) {
               fs.mkdirSync(path.join(memoryRoot, 'global'), { recursive: true })
               fs.writeFileSync(memfsHumanPath, mergedHuman, 'utf-8')
@@ -434,10 +400,7 @@ export function syncLettaMemory(
           const targetRefDir = path.join(memoryRoot, 'global', 'reference')
           for (const ref of payload.references) {
             const dstPath = path.join(targetRefDir, ref.name)
-            if (
-              !fs.existsSync(dstPath) ||
-              fs.readFileSync(dstPath, 'utf-8') !== ref.content
-            ) {
+            if (!fs.existsSync(dstPath) || fs.readFileSync(dstPath, 'utf-8') !== ref.content) {
               importedReferencesCount++
               details.push(`Imported global reference knowledge: ${ref.name}`)
               if (!isDryRun) {
@@ -494,9 +457,7 @@ export function syncLettaMemory(
           if (mergedRules !== existingRules) {
             importedRulesCount++
             syncedProjectsCount++
-            details.push(
-              `Imported agent memory into project [${projectSlug}] rules.md`,
-            )
+            details.push(`Imported agent memory into project [${projectSlug}] rules.md`)
             if (!isDryRun) {
               fs.mkdirSync(targetProjDir, { recursive: true })
               fs.writeFileSync(targetRulesPath, mergedRules, 'utf-8')
@@ -508,14 +469,9 @@ export function syncLettaMemory(
           const targetRefDir = path.join(targetProjDir, 'learnings')
           for (const ref of payload.references) {
             const dstPath = path.join(targetRefDir, ref.name)
-            if (
-              !fs.existsSync(dstPath) ||
-              fs.readFileSync(dstPath, 'utf-8') !== ref.content
-            ) {
+            if (!fs.existsSync(dstPath) || fs.readFileSync(dstPath, 'utf-8') !== ref.content) {
               importedReferencesCount++
-              details.push(
-                `Imported reference into project [${projectSlug}]: ${ref.name}`,
-              )
+              details.push(`Imported reference into project [${projectSlug}]: ${ref.name}`)
               if (!isDryRun) {
                 fs.mkdirSync(targetRefDir, { recursive: true })
                 fs.writeFileSync(dstPath, ref.content, 'utf-8')
@@ -528,25 +484,17 @@ export function syncLettaMemory(
   }
 
   // Auto-commit MemFS changes if not dry-run and modified
-  if (
-    !isDryRun &&
-    (globalHumanUpdated ||
-      importedRulesCount > 0 ||
-      importedReferencesCount > 0)
-  ) {
-    if (
-      options.autoCommit !== false &&
-      fs.existsSync(path.join(memoryRoot, '.git'))
-    ) {
+  if (!isDryRun && (globalHumanUpdated || importedRulesCount > 0 || importedReferencesCount > 0)) {
+    if (options.autoCommit !== false && fs.existsSync(path.join(memoryRoot, '.git'))) {
       try {
         execSync('git add -A', {
           cwd: memoryRoot,
           stdio: ['ignore', 'ignore', 'pipe'],
         })
-        execSync(
-          'git commit -m "sync(letta): imported core memory from Letta Code"',
-          { cwd: memoryRoot, stdio: ['ignore', 'ignore', 'pipe'] },
-        )
+        execSync('git commit -m "sync(letta): imported core memory from Letta Code"', {
+          cwd: memoryRoot,
+          stdio: ['ignore', 'ignore', 'pipe'],
+        })
       } catch {}
     }
   }
@@ -587,7 +535,8 @@ if (process.argv[1]?.endsWith('letta-sync.ts')) {
     if (agentId === '--agent-id' && args[2]) {
       agentId = args[2]
     }
-    const targetAgent = agentId || findPrimaryLettaAgent(path.join(process.env.HOME || '', '.letta'))
+    const targetAgent =
+      agentId || findPrimaryLettaAgent(path.join(process.env.HOME || '', '.letta'))
     if (!targetAgent) {
       console.error('No stateful Letta agent found.')
       process.exit(1)
@@ -630,9 +579,7 @@ if (process.argv[1]?.endsWith('letta-sync.ts')) {
   console.log(
     `- Global Human Profile Sync: ${res.globalHumanUpdated ? '✅ Merged' : '✓ Up-to-date'}`,
   )
-  console.log(
-    `- Reference Knowledge Files: ${res.importedReferencesCount} imported`,
-  )
+  console.log(`- Reference Knowledge Files: ${res.importedReferencesCount} imported`)
   console.log(
     `- Synced Project Rules     : ${res.syncedProjectsCount} projects (${res.importedRulesCount} rules)`,
   )

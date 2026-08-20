@@ -1,8 +1,8 @@
 # Architecture & Design Contract: `agy-memory-layer` Plugin
 
-**Version**: 1.12.0  
-**Target Platform**: Antigravity CLI (`agy`)  
-**Status**: Active Production Standard  
+**Version**: 1.12.1
+**Target Platform**: Antigravity CLI (`agy`)
+**Status**: Active Production Standard
 **Inspired by**: Letta Code (`letta-ai/letta-code`) Dual-Memory & MemFS Architecture  
 
 ---
@@ -14,7 +14,7 @@
 It provides:
 1. **In-Context Core Memory Blocks** (`human.md`, `persona.md`, `project.md`, `rules.md`) dynamically injected into the agent's context window before every turn.
 2. **Git-Backed MemFS** stored outside the workspace (in `~/.gemini/memory/`) with automatic version control, diff tracking, and rollback capabilities.
-3. **Lifecycle Hooks** for sub-15ms memory ingestion (`PreInvocation`) and sub-30ms automated Git snapshots (`Stop`).
+3. **Lifecycle Hooks** bounded by host timeouts: `PreInvocation` performs local file reads only, while `Stop` snapshots Git state before detaching heavier reflection work.
 4. **Codebase Onboarding & Initializer (`/init`)**: Automatically scans a newly opened project (package manifests, entry points, linters, test runner, scripts, existing documentation) and seeds `project.md` and `rules.md` on Day 1.
 5. **Sleep-Time Dreaming / Reflection (`/dream`)**: Uses background subagents that read session transcripts (`transcript.jsonl`) to consolidate learnings, resolve contradictions, and prune outdated data.
 6. **Auto-Dream Background Daemon (`dream-daemon.ts`)**: Automatically discovers unconsolidated sessions across `brain/` and synthesizes durable learning logs into MemFS without manual intervention.
@@ -23,7 +23,7 @@ It provides:
 9. **Memory Palace (`/palace`)**: Interactive visual knowledge graph, Synapse network, and Git timeline viewer with anti-cache headers.
 10. **Tamper-Proof Backups (`tools/memory-backup.ts`)**: Standalone export/import with SHA-256 integrity verification.
 11. **Persona Preset Switcher (`/persona`)**: Instantly switches agent personality (`memo`, `linus`, `tutor`, `architect`, `kawaii`, `blank`).
-12. **In-Memory TypeScript Language Inspector (`ts-inspector.ts`)**: Sub-50ms AST diagnostics, hover type signatures, definition resolution, and cross-file references without spawning slow external compiler processes.
+12. **In-Memory TypeScript Language Inspector (`ts-inspector.ts`)**: In-process AST diagnostics, hover type signatures, definition resolution, and cross-file references without spawning an external compiler process.
 13. **Memory Auto-Eviction & Token Compactor Engine (`memory-compactor.ts`)**: Deterministic token budget enforcement, section-scoped rule deduplication, empty section pruning, and historical archival compaction.
 14. **Autonomous Skill Synthesizer & Auto-Promotion Engine (`skill-synthesizer.ts`)**: Detects recurring procedural patterns (3+ occurrences) in MemFS, clusters them via vector cosine similarity, and drafts production-ready `SKILL.md` candidates.
 15. **Cross-Project Knowledge Synapse Engine (`cross-project-synapse.ts`)**: Breaks knowledge silos across MemFS projects by matching active queries against cross-project learnings with subword n-gram vector cosine similarity.
@@ -64,17 +64,30 @@ plugins/agy-memory-layer/
 │   │   └── SKILL.md             # /palace: Visual Memory Palace dashboard & timeline viewer
 │   ├── sync/
 │   │   └── SKILL.md             # /sync: Remote Git synchronization with private repos
+│   ├── sync-letta/
+│   │   └── SKILL.md             # /sync-letta: Letta payload extraction and cognitive grooming
 │   └── update/
 │       └── SKILL.md             # /update: Update plugin to latest version preserving MemFS
 └── scripts/
     ├── hook-inject-memory.sh    # PreInvocation: Reads memory, monitors budget & outputs ephemeralMessage
+    ├── hook-inject-memory.ts    # Preferred native ESM PreInvocation implementation
     ├── hook-auto-commit.sh      # Stop: Performs git add & commit on memory repository
-    ├── init-project-memory.js   # Codebase scanner engine for /init
-    ├── memory-search.js         # Keyword & regex search engine for /memory search
-    ├── recall-engine.js         # Episodic conversation search engine for /recall
-    ├── switch-persona.js        # Persona preset manager for /persona
+    ├── hook-auto-commit.ts      # Preferred native ESM Stop implementation
+    ├── init-project-memory.ts   # Codebase scanner engine for /init
+    ├── memory-search.ts         # MemFS status and ranked text search
+    ├── recall-engine.ts         # Episodic conversation search engine for /recall
+    ├── dream-daemon.ts          # Step-count reflection daemon and cron manager
+    ├── switch-persona.ts        # Persona preset manager for /persona
+    ├── agent-launcher.ts        # Declarative subagent manifest resolver
+    ├── letta-sync.ts            # Letta payload extraction and MemFS import
+    ├── memory-approval.ts       # Optional proposal/approval workflow
+    ├── memory-compactor.ts      # Token compaction and learning archival
+    ├── skill-synthesizer.ts     # Repeated-pattern skill draft generator
+    ├── cross-project-synapse.ts # Cross-project learning retrieval
+    ├── ts-inspector.ts          # In-memory TypeScript language service
+    ├── worktree-manager.ts      # Isolated worktree utilities
     ├── sync-memory.sh           # Remote Git sync manager (push/pull/status)
-    ├── palace-generator.js      # Memory Palace HTML generator
+    ├── palace-generator.ts      # Memory Palace HTML generator
     ├── palace-server.sh         # Generates/opens interactive local Memory Palace HTML viewer
     ├── update.sh                # Automated in-place plugin updater
     ├── install.sh               # Bootstraps memory git repo & installs plugin
@@ -107,7 +120,7 @@ All memory is decoupled from individual workspace trees and maintained as an ind
 ```json
 {
   "name": "agy-memory-layer",
-  "version": "1.1.0",
+  "version": "1.12.1",
   "description": "Stateful Git-backed MemFS, sleep-time reflection, and codebase onboarding for Antigravity CLI",
   "author": "Mahiro",
   "license": "MIT"
@@ -124,16 +137,17 @@ All memory is decoupled from individual workspace trees and maintained as an ind
 | **`memory`** | `/memory` or `/memory search <query>` | Displays active memory blocks, Git commit timeline, or searches across historical `learnings/` logs for matching lessons. |
 | **`recall`** | `/recall <query>` or `/recall list` | **Episodic Recall**: Searches across all 500+ historical conversation transcripts for discussions, bug fixes, decisions, and code snippets. |
 | **`remember`** | `/remember <fact/rule>` | Appends or updates specific memory files (`human.md` or `rules.md`) and immediately commits a snapshot. |
-| **`persona`** | `/persona <preset>` | Switches or inspects the active personality preset (`memo`, `linus`, `tutor`, `architect`, `custom`) in `global/persona.md`. |
+| **`persona`** | `/persona <preset>` | Switches or inspects the active personality preset (`memo`, `linus`, `tutor`, `architect`, `kawaii`, `blank`) in `global/persona.md`. |
 | **`dream`** | `/dream` or `/reflect` | Spawns a background reflection subagent. The subagent reads session transcripts (`transcript.jsonl`), extracts user corrections and conventions, cleans outdated entries, and writes dated learning logs. |
 | **`doctor`** | `/doctor` or `/memory-doctor` | Runs an audit against the active codebase to detect if memory rules or architecture assumptions have drifted from codebase reality. |
 | **`palace`** | `/palace` or `/palace --summary` | Visual Memory Palace viewer: Generates an interactive visual map of all memory nodes, file connections, commit history timeline, and diffs (standalone HTML viewer or Mermaid Artifact). |
 | **`sync`** | `/sync` or `/sync setup <url>` | Syncs MemFS with a remote private Git repository (GitHub/GitLab) across multiple machines with automatic push/pull. |
+| **`sync-letta`** | `/sync-letta` | Discovers a stateful Letta agent, extracts raw payloads, and requires an agent-guided grooming pass before MemFS import. |
 | **`update`** | `/update` | Automated in-place plugin updater: Pulls latest release, preserves all stored MemFS data, and updates hooks/skills. |
 
 ---
 
-## 4. Codebase Scanner Engine (`scripts/init-project-memory.js`)
+## 4. Codebase Scanner Engine (`scripts/init-project-memory.ts`)
 
 The scanner inspects the active workspace heuristics:
 1. **Manifest Detectors**:
@@ -159,11 +173,11 @@ The scanner inspects the active workspace heuristics:
 - [x] **Milestone 1**: Scaffolding & Manifest (`plugin.json`, `rules/AGENTS.md`)
 - [x] **Milestone 2**: Ingestion & Persistence Hooks (`hook-inject-memory.sh`, `hook-auto-commit.sh`, `hooks.json`)
 - [x] **Milestone 3**: Core Skills Suite (`/memory`, `/remember`, `/dream`, `/doctor`, `/palace`)
-- [x] **Milestone 4**: Palace Visualizer UI (`palace-server.sh` & `palace-generator.js` HTML dashboard with 1200px centered card, Git Diff bar, and real disk paths)
+- [x] **Milestone 4**: Palace Visualizer UI (`palace-server.sh` & `palace-generator.ts` HTML dashboard with 1200px centered card, Git Diff bar, and real disk paths)
 - [x] **Milestone 5**: Tamper-Proof Backup & Restore Utility (`tools/memory-backup.ts` with SHA-256 verification)
-- [x] **Milestone 6**: End-to-End Test Suite (11/11 Automated Suites passing in < 2.5s)
-- [x] **Milestone 7**: Codebase Scanner & Day 1 Onboarding (`/init` Skill & `scripts/init-project-memory.js`)
-- [x] **Milestone 8**: Historical Memory Search Engine (`/memory search` & `scripts/memory-search.js`)
+- [x] **Milestone 6**: End-to-End Test Suite (11/11 integration scenarios plus 15 focused unit cases)
+- [x] **Milestone 7**: Codebase Scanner & Day 1 Onboarding (`/init` Skill & `scripts/init-project-memory.ts`)
+- [x] **Milestone 8**: Historical Memory Search Engine (`/memory search` & `scripts/memory-search.ts`)
 - [x] **Milestone 9**: Remote Git Synchronization (`/sync` & `scripts/sync-memory.sh`)
 - [x] **Milestone 10**: Universal One-Liner Installer (`curl | bash`), `/update` Subsystem & v1.1.0 GitHub Release
 
@@ -171,7 +185,8 @@ The scanner inspects the active workspace heuristics:
 
 ## 6. Official Release & Distribution Contract
 
-- **Release Tag**: `v1.1.0`
+- **Current Package Version**: `1.12.1` (unreleased repair)
+- **Latest Release Tag**: `v1.12.0`
 - **GitHub Repository**: `https://github.com/mahirocoko/agy-memory-layer`
 - **Zero-Clone Quickstart**:
   ```bash

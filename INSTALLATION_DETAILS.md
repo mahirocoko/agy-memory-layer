@@ -17,7 +17,7 @@
 │       ├── prompts/                 [Prompt Warehouse (system, persona, subagents)]
 │       ├── rules/AGENTS.md
 │       ├── skills/*/SKILL.md
-│       └── scripts/*.js / *.sh
+│       └── scripts/*.ts / *.sh
 │
 ├── 2. Antigravity Plugins Directory (ระดับ Global)
 │   └── ~/.gemini/antigravity-cli/plugins/

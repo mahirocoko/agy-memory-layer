@@ -237,7 +237,7 @@ ${
 
 ## 3. Durable Memory Lessons & Key Takeaways
 - **Session Continuity**: Conversation \`${conv.id}\` completed successfully with ${conv.steps} execution turns.
-- **Autonomous Recall**: Searchable via \`recall-engine.js search "${conv.shortId}"\`.
+- **Autonomous Recall**: Searchable via \`node --experimental-strip-types recall-engine.ts search "${conv.shortId}"\`.
 - **Knowledge Synapse**: [[projects/${slug}/project.md]] · [[projects/${slug}/rules.md]]
 `
 
@@ -306,8 +306,9 @@ export function runAutoDream(
         )
       }
     }
-  } catch (err: any) {
-    console.error('⚠️ Git commit warning:', err?.message)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('⚠️ Git commit warning:', message)
   }
 
   return processed
@@ -364,7 +365,7 @@ export function printStatus(slug: string = getProjectSlug()): void {
   }
 }
 
-if (process.argv[1] && process.argv[1].endsWith('dream-daemon.ts')) {
+if (process.argv[1]?.endsWith('dream-daemon.ts')) {
   const args = process.argv.slice(2)
   const cmd = args[0] || '--status'
 
@@ -377,7 +378,7 @@ if (process.argv[1] && process.argv[1].endsWith('dream-daemon.ts')) {
     runAutoDream(getProjectSlug(), { force, idleMinutes: 0 })
   } else if (cmd === '--install-cron') {
     try {
-      const scriptPath = path.resolve(__filename)
+      const scriptPath = path.resolve(import.meta.filename)
       const cronCmd = `0 */2 * * * ${process.execPath} --experimental-strip-types ${scriptPath} --run-now >/dev/null 2>&1`
       let currentCrontab = ''
       try {
@@ -390,8 +391,9 @@ if (process.argv[1] && process.argv[1].endsWith('dream-daemon.ts')) {
         execSync(`echo "${newCrontab.replace(/"/g, '\\"')}" | crontab -`)
         console.log('✓ Auto-Dream cron job installed successfully (runs every 2 hours)!')
       }
-    } catch (e: any) {
-      console.error('❌ Failed to install cron:', e?.message)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('❌ Failed to install cron:', message)
     }
   } else if (cmd === '--uninstall-cron') {
     try {
@@ -405,8 +407,9 @@ if (process.argv[1] && process.argv[1].endsWith('dream-daemon.ts')) {
         .join('\n')
       execSync(`echo "${filtered.replace(/"/g, '\\"')}" | crontab -`)
       console.log('✓ Auto-Dream cron job removed successfully.')
-    } catch (e: any) {
-      console.error('❌ Failed to remove cron:', e?.message)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      console.error('❌ Failed to remove cron:', message)
     }
   } else {
     printStatus()

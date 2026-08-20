@@ -2,7 +2,7 @@
 
 /**
  * In-Memory TypeScript Language Inspector for agy-memory-layer
- * Provides sub-50ms AST diagnostics, hover type signatures, and definition resolution
+ * Provides in-process AST diagnostics, hover type signatures, and definition resolution
  * without spawning slow external compiler processes.
  */
 
@@ -71,8 +71,9 @@ export function createTsInspector(workspaceDir: string = process.cwd()): TsInspe
       return filesMap.get(fileName)?.version.toString() || '1'
     },
     getScriptSnapshot: (fileName) => {
-      if (filesMap.has(fileName)) {
-        return ts.ScriptSnapshot.fromString(filesMap.get(fileName)!.content)
+      const inMemoryFile = filesMap.get(fileName)
+      if (inMemoryFile) {
+        return ts.ScriptSnapshot.fromString(inMemoryFile.content)
       }
       if (fs.existsSync(fileName)) {
         return ts.ScriptSnapshot.fromString(fs.readFileSync(fileName, 'utf-8'))
@@ -261,7 +262,7 @@ if (process.argv[1]?.endsWith('ts-inspector.ts')) {
     }
   } else if (cmd === 'type' || cmd === 'hover') {
     const loc = args[1]
-    if (!loc || !loc.includes(':')) {
+    if (!loc?.includes(':')) {
       console.error('Usage: ts-inspector.ts type <file>:<line>:<col>')
       process.exit(1)
     }
@@ -283,7 +284,7 @@ if (process.argv[1]?.endsWith('ts-inspector.ts')) {
     }
   } else if (cmd === 'def' || cmd === 'definition') {
     const loc = args[1]
-    if (!loc || !loc.includes(':')) {
+    if (!loc?.includes(':')) {
       console.error('Usage: ts-inspector.ts def <file>:<line>:<col>')
       process.exit(1)
     }

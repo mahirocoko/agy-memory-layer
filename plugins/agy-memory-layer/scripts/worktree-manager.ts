@@ -76,8 +76,9 @@ export function createIsolatedWorktree(
       cwd: gitRoot,
       stdio: 'pipe',
     })
-  } catch (err: any) {
-    throw new Error(`Failed to create Git worktree at ${worktreePath}: ${err?.message || err}`)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    throw new Error(`Failed to create Git worktree at ${worktreePath}: ${message}`)
   }
 
   return {
@@ -155,11 +156,12 @@ export function applyWorktreeChanges(
     }
 
     return { applied: true, filesModified: diff.files }
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
     return {
       applied: false,
       filesModified: [],
-      error: `Patch application failed: ${err?.message || err}`,
+      error: `Patch application failed: ${message}`,
     }
   }
 }

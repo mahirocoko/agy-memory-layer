@@ -8,11 +8,13 @@
 import * as assert from 'node:assert'
 import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '..')
 const TOOLS_DIR = path.join(ROOT_DIR, 'tools')
 const BACKUP_TOOL_TS = path.join(TOOLS_DIR, 'memory-backup.ts')
+const { computeSha256, importMemoryBundle } = await import(BACKUP_TOOL_TS)
 
 export type TestResult = {
   suite: string
@@ -25,7 +27,7 @@ export type TestResult = {
 
 const results: TestResult[] = []
 
-function runTest(suite: string, name: string, testFn: () => string | void): void {
+function runTest(suite: string, name: string, testFn: () => string | undefined): void {
   const startTime = Date.now()
   console.log(`▶ [${suite}] ${name}...`)
   try {
@@ -40,17 +42,18 @@ function runTest(suite: string, name: string, testFn: () => string | void): void
       error: null,
     })
     console.log(`  ✔ PASSED (${duration}ms)`)
-  } catch (err: any) {
+  } catch (err: unknown) {
     const duration = Date.now() - startTime
+    const message = err instanceof Error ? err.message : String(err)
     results.push({
       suite,
       name,
       status: 'FAILED',
       duration,
       detail: null,
-      error: err?.message || String(err),
+      error: message,
     })
-    console.error(`  ✖ FAILED (${duration}ms): ${err?.message || err}`)
+    console.error(`  ✖ FAILED (${duration}ms): ${message}`)
   }
 }
 
@@ -58,8 +61,10 @@ console.log('==================================================')
 console.log('🧪 Running tools/memory-backup.ts Unit Tests')
 console.log('==================================================')
 
-const SANDBOX_DIR = path.join('/tmp', 'agy-memory-test-sandbox')
-const TEST_BUNDLE_PATH = path.join('/tmp', 'test-memfs-bundle.json')
+const BACKUP_TEST_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'agy-memory-backup-tests-'))
+const SANDBOX_DIR = path.join(BACKUP_TEST_ROOT, 'sandbox')
+const TEST_BUNDLE_PATH = path.join(BACKUP_TEST_ROOT, 'memfs-bundle.json')
+const OUTSIDE_ESCAPE_PATH = `${BACKUP_TEST_ROOT}-escape.md`
 
 function setupSandbox() {
   if (fs.existsSync(SANDBOX_DIR)) {
@@ -105,12 +110,8 @@ function setupSandbox() {
 }
 
 function cleanupSandbox() {
-  if (fs.existsSync(SANDBOX_DIR)) {
-    fs.rmSync(SANDBOX_DIR, { recursive: true, force: true })
-  }
-  if (fs.existsSync(TEST_BUNDLE_PATH)) {
-    fs.unlinkSync(TEST_BUNDLE_PATH)
-  }
+  fs.rmSync(BACKUP_TEST_ROOT, { recursive: true, force: true })
+  fs.rmSync(OUTSIDE_ESCAPE_PATH, { force: true })
 }
 
 // 1. Export Bundle Verification
@@ -181,7 +182,7 @@ runTest('Tamper Detection', 'Detects corrupted or modified payload', () => {
   )
   humanFile.content = '# HACKED PREFERENCES\nMalicious injected content!'
 
-  const tamperedPath = '/tmp/test-tampered-bundle.json'
+  const tamperedPath = path.join(BACKUP_TEST_ROOT, 'tampered-bundle.json')
   fs.writeFileSync(tamperedPath, JSON.stringify(bundle, null, 2), 'utf-8')
 
   const verifyProc = spawnSync(
@@ -230,7 +231,7 @@ runTest('Import Dry-Run', 'Simulates restore without writing files to disk', () 
 
 // 5. Full Restore to Empty Directory
 runTest('Import Real', 'Restores entire MemFS tree to empty target', () => {
-  const RESTORE_TARGET = path.join('/tmp', 'agy-memory-test-restore-destination')
+  const RESTORE_TARGET = path.join(BACKUP_TEST_ROOT, 'restore-destination')
   if (fs.existsSync(RESTORE_TARGET)) {
     fs.rmSync(RESTORE_TARGET, { recursive: true, force: true })
   }
@@ -281,7 +282,7 @@ runTest(
   'Project Filter',
   'Exports only specific project while including global preferences',
   () => {
-    const filteredBundlePath = '/tmp/test-filtered-bundle.json'
+    const filteredBundlePath = path.join(BACKUP_TEST_ROOT, 'filtered-bundle.json')
     const filterProc = spawnSync(
       'node',
       [
@@ -314,6 +315,41 @@ runTest(
     return `Filtered bundle contains ${bundle.manifest.fileCount} files (proj-alpha included, proj-beta excluded).`
   },
 )
+
+// 7. Import Path Containment Test
+runTest('Import Security', 'Rejects checksum-valid paths that escape or bypass the target', () => {
+  const originalBundle = JSON.parse(fs.readFileSync(TEST_BUNDLE_PATH, 'utf-8'))
+  const targetDir = path.join(BACKUP_TEST_ROOT, 'path-containment-target')
+  const unsafePaths = [
+    '../escape.md',
+    OUTSIDE_ESCAPE_PATH,
+    'C:\\escape.md',
+    'global\\human.md',
+    'global/./human.md',
+  ]
+
+  for (const unsafePath of unsafePaths) {
+    const maliciousBundle = structuredClone(originalBundle)
+    maliciousBundle.manifest.files[0].relativePath = unsafePath
+    maliciousBundle.payloadChecksum = computeSha256(JSON.stringify(maliciousBundle.manifest))
+
+    assert.throws(
+      () =>
+        importMemoryBundle({
+          bundleData: maliciousBundle,
+          targetDir,
+          dryRun: true,
+          ignoreTamperWarning: true,
+        }),
+      /Unsafe bundle path/,
+      `Expected unsafe bundle path to be rejected: ${unsafePath}`,
+    )
+  }
+
+  assert.strictEqual(fs.existsSync(OUTSIDE_ESCAPE_PATH), false)
+  fs.rmSync(targetDir, { recursive: true, force: true })
+  return `Rejected ${unsafePaths.length} unsafe portable path variants before restore.`
+})
 
 // Clean up test sandbox
 cleanupSandbox()

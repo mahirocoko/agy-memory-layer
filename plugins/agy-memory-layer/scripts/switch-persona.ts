@@ -145,7 +145,7 @@ export function switchPersona(presetKey: string): {
   return { success: true, preset }
 }
 
-if (process.argv[1] && process.argv[1].endsWith('switch-persona.ts')) {
+if (process.argv[1]?.endsWith('switch-persona.ts')) {
   const args = process.argv.slice(2)
   const cmd = args[0] || 'status'
 

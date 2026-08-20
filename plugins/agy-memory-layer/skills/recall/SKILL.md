@@ -21,5 +21,5 @@ Search and retrieve past discussions, user instructions, bug fixes, and architec
 ## Execution
 ```bash
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../../scripts"
-node "$SCRIPT_DIR/recall-engine.js" "$@"
+node --experimental-strip-types "$SCRIPT_DIR/recall-engine.ts" "$@"
 ```

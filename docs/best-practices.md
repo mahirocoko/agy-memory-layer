@@ -7,10 +7,10 @@ This guide outlines core development patterns, performance constraints, and memo
 ## 1. Non-Blocking Lifecycle Hooks
 
 - Antigravity lifecycle hooks (`PreInvocation`, `Stop`) must execute within strict latency boundaries.
-- **PreInvocation Hook** must complete in `< 100ms` (pure file read and token count).
-- **Stop Hook** must perform Git commits instantly and spawn heavy daemon tasks (`dream-daemon.js`) asynchronously via background subshell:
+- **PreInvocation Hook** must stay within its registered five-second host timeout and avoid network or heavy compute; current work should remain local file reads, Git metadata, and token estimation.
+- **Stop Hook** must commit promptly within its host timeout and spawn heavy daemon tasks (`dream-daemon.ts`) asynchronously via a detached Node process:
   ```bash
-  (node "$DAEMON_SCRIPT" --auto-check >/dev/null 2>&1 &) || true
+  node --experimental-strip-types "$DAEMON_SCRIPT" --auto-check
   ```
 - Never perform synchronous network requests or heavy embedding recalculations inside synchronous hook scripts.
 
@@ -20,7 +20,7 @@ This guide outlines core development patterns, performance constraints, and memo
 
 - **Compact Signal**: Memory blocks injected into the prompt must be dense, clear, and high-signal Markdown.
 - Avoid dumping multi-megabyte log files or large code snippets into `human.md` or `project.md`.
-- Use the **Budget Notice** threshold (`> 4,000 tokens`) to prompt dreaming or pruning via `/dream` or `/doctor`.
+- The active TypeScript hook emits a **Budget Notice** above approximately `1,400` estimated tokens; consolidate via `/dream` or `/doctor` when it appears.
 
 ---
 

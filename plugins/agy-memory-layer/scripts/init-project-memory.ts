@@ -307,7 +307,7 @@ export function initProjectMemory(
   }
 }
 
-if (process.argv[1] && process.argv[1].endsWith('init-project-memory.ts')) {
+if (process.argv[1]?.endsWith('init-project-memory.ts')) {
   const args = process.argv.slice(2)
   const force = args.includes('--force')
   const dryRun = args.includes('--dry-run')

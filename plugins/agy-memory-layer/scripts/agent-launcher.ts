@@ -75,7 +75,7 @@ export function getSubagent(name: string): ResolvedSubagent | null {
   )
 }
 
-if (process.argv[1] && process.argv[1].endsWith('agent-launcher.ts')) {
+if (process.argv[1]?.endsWith('agent-launcher.ts')) {
   const args = process.argv.slice(2)
   const cmd = args[0] || 'list'
 

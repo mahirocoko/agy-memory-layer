@@ -30,7 +30,7 @@ Antigravity CLI Execution Runtime
   │
   └── 3. Stop Hook (scripts/hook-auto-commit.sh)
          ├── Commits dirty changes in ~/.gemini/memory/
-         └── Checks step-count (>= 20) ➜ Fires dream-daemon.js asynchronously in background
+         └── Checks step-count (>= 20) ➜ Fires dream-daemon.ts asynchronously in background
 ```
 
 ---
@@ -41,7 +41,7 @@ Antigravity CLI Execution Runtime
 | :--- | :--- | :--- |
 | **Hook Ingestion** | `scripts/hook-inject-memory.sh` | Emits `ephemeralMessage` JSON schema before turns |
 | **Auto-Commit Hook** | `scripts/hook-auto-commit.sh` | Auto-commits MemFS snapshots & triggers background daemon |
-| **Auto-Dream Daemon** | `scripts/dream-daemon.js` | 20-step trigger, transcript scanner, synthesis & cron |
-| **Hybrid Recall Engine** | `scripts/recall-engine.js` | BM25 + Subword N-gram Vector Cosine Similarity |
-| **Subagent Launcher** | `scripts/agent-launcher.js` | Dynamic manifest resolution and system prompt binding |
-| **Memory Palace Visualizer**| `scripts/palace-generator.js` | Generates interactive HTML dashboard with anti-cache headers |
+| **Auto-Dream Daemon** | `scripts/dream-daemon.ts` | 20-step trigger, transcript scanner, synthesis & cron |
+| **Hybrid Recall Engine** | `scripts/recall-engine.ts` | BM25 + Subword N-gram Vector Cosine Similarity |
+| **Subagent Launcher** | `scripts/agent-launcher.ts` | Dynamic manifest resolution and system prompt binding |
+| **Memory Palace Visualizer**| `scripts/palace-generator.ts` | Generates interactive HTML dashboard with anti-cache headers |
