@@ -10,7 +10,7 @@
             │
             ├── Resolve and validate project identity
             ├── Read global/project files from Git HEAD
-            ├── Read at most two committed learning excerpts
+            ├── Read at most one committed, explicitly active learning excerpt
             ├── Report dirty/conflict state without injecting it
             └── Estimate prompt budget
             │
@@ -25,6 +25,10 @@
 The shell wrapper has one TypeScript implementation path and fails clearly when
 Node 22+ or the source file is unavailable. It does not contain a weaker fallback
 that reads the working tree.
+
+Workspace identity is shared with onboarding and Dream. Existing committed child
+scopes win; otherwise Git-root identity prevents generic nested paths such as
+`apps/web` from silently becoming project memory.
 
 ## 2. Non-Mutating Stop
 

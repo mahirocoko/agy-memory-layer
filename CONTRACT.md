@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.12.1`
+**Package version:** `1.13.0`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.12.1` on 2026-08-20
+**Release state:** Released as `v1.13.0` on 2026-08-24
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -26,6 +26,7 @@ The Agy storage model remains one user-owned Git repository:
     ├── project.md
     ├── rules.md
     └── learnings/*.md
+└── archives/                 # Git-backed recall-only material; never injected
 ```
 
 Transient proposal and Dream cursor state lives beside that repository at
@@ -42,8 +43,15 @@ into MemFS commits.
 - Working-tree edits are never injected as active memory.
 - Dirty, conflict, error, and uninitialized states are surfaced as status
   notices without activating their content.
-- The Agy adaptation injects global files, current-project files, and at most two
-  committed recent-learning excerpts.
+- The Agy adaptation injects global files, current-project files, and at most one
+  committed recent-learning excerpt carrying `memory_status: active` frontmatter.
+- Archive paths, legacy uncurated learnings, and deterministic session-continuity
+  boilerplate are never active prompt memory. They remain searchable through
+  `/memory search` when retained as Markdown under `archives/`.
+- The strict offline health threshold is 1,400 estimated tokens. PreInvocation
+  remains advisory above that threshold and continues to inject a budget notice
+  before every invocation; it does not truncate rules or suppress calls without
+  an Agy host persistence contract.
 
 ### 2. Explicit, targeted persistence
 
@@ -91,8 +99,13 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
 ### 5. Project identity
 
 - Project slugs are lowercase `a-z`, digits, and hyphens, up to 100 characters.
-- PreInvocation preserves an existing committed basename identity, then checks
-  for an existing committed owner/repository identity.
+- Project identity preserves an existing committed workspace-basename scope,
+  then an existing Git-root scope, then an existing owner/repository scope.
+- Without an existing scope, Git workspaces fall back to the normalized Git-root
+  basename; non-Git workspaces fall back to the normalized workspace basename.
+- Initializer, Dream, and PreInvocation share the same resolver. This keeps an
+  explicitly initialized monorepo child scope while preventing generic nested
+  paths such as `apps/web` from replacing the repository identity by default.
 - User-supplied and imported slugs must pass the same validator.
 - Two repositories with the same basename remain a known identity limitation
   until an explicit project registry is introduced.
@@ -105,8 +118,12 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
 - `memory-compactor.ts` is a read-only Markdown maintenance analyzer, not Letta
   context compaction. It reports candidate replacements and archives but does
   not edit MemFS.
-- `dream-daemon.ts` creates deterministic transcript learning notes. It is not
-  equivalent to Letta's model-backed reflection worktree lifecycle.
+- `dream-daemon.ts` resolves conversations through local Agy workspace history,
+  fails closed when ownership is absent, and writes a deterministic note only
+  when the user expressed explicit durable-memory intent. Other sessions update
+  external cursor state as skipped rather than creating UUID/turn-count prose.
+- Deterministic Dream is not equivalent to Letta's model-backed reflection
+  worktree lifecycle.
 - Dream is manual or an explicitly installed cron surface. Stop does not invoke
   it.
 
@@ -181,14 +198,15 @@ Current direct regression coverage includes:
 - all tests run with disposable HOME and MemFS roots.
 
 `TEST_REPORT.md` is generated evidence for the 11 integration scenarios. The
-Node test runner currently reports 18 focused cases, including a disposable-HOME
+Node test runner currently reports 23 passing tests, including a disposable-HOME
 install/refresh/uninstall/purge lifecycle. Remote sync is exercised against a
 disposable local bare repository. Neither report proves cron, external network,
 or AGY host-enforcement behavior.
 
-Final measured coverage for the `v1.12.1` release candidate is **77.55%
-lines**, **58.46% branches**, and **78.14% functions**. Coverage is evidence, not
-a substitute for the behavioral negative controls above.
+Released `v1.13.0` coverage is **79.31% lines**, **60.73% branches**, and
+**81.18% functions**. The released `v1.12.1` candidate measured **77.55%
+lines**, **58.46% branches**, and **78.14% functions**. Coverage is evidence,
+not a substitute for the behavioral negative controls above.
 
 The real AGY `1.1.16` host E2E also passed committed injection, `/memory`,
 targeted `/remember`, scoped `/init`, non-mutating Stop, fresh-session
@@ -204,9 +222,9 @@ See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 3. Built JavaScript artifacts or installed runtime dependencies for remote
    TypeScript-dependent utilities.
 4. Host-level proof or narrower claims for subagent tool restrictions.
-5. An automated release workflow remains deferred. `v1.12.1` uses the existing
+5. An automated release workflow remains deferred. `v1.13.0` uses the existing
    manual tag/GitHub Release path with exact notes and evidence in
-   [`docs/releases/v1.12.1.md`](./docs/releases/v1.12.1.md).
+   [`docs/releases/v1.13.0.md`](./docs/releases/v1.13.0.md).
 
 ## Distribution
 

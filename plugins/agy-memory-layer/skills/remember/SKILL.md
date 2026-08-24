@@ -25,11 +25,13 @@ Determine where the new knowledge belongs:
 
 1. **Resolve Paths**:
    ```bash
-   WORKSPACE_DIR="$(pwd)"
-   PROJECT_SLUG=$(basename "$WORKSPACE_DIR" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-   MEMORY_ROOT="${HOME}/.gemini/memory"
-   mkdir -p "${MEMORY_ROOT}/global" "${MEMORY_ROOT}/projects/${PROJECT_SLUG}"
+   node --experimental-strip-types tools/memory-health.ts \
+     --memory "${HOME}/.gemini/memory" \
+     --workspace "$(pwd)"
    ```
+   Use the reported `projectSlug`. Do not derive a slug from the current
+   directory basename because initialized monorepo child scopes and Git-root
+   scopes intentionally follow the shared resolver.
 
 2. **Prepare Complete Target Content**:
    - Read the committed target, avoid duplicate or contradictory entries, and prepare the complete proposed replacement in a temporary file.

@@ -15,14 +15,24 @@ const { initProjectMemory, scanCodebase } = await import(
 )
 const { searchMemory } = await import(path.join(SCRIPTS_DIR, 'memory-search.ts'))
 const { runCli } = await import(path.join(ROOT_DIR, 'tools', 'memory-backup.ts'))
+const { inspectMemoryHealth } = await import(path.join(ROOT_DIR, 'tools', 'memory-health.ts'))
 const { PERSONA_PRESETS, getActivePersona, switchPersona } = await import(
   path.join(SCRIPTS_DIR, 'switch-persona.ts')
 )
 const { cosineSimilarity, buildVectorProfile, scanAllConversations, searchRecall } = await import(
   path.join(SCRIPTS_DIR, 'recall-engine.ts')
 )
-const { scanPendingConversations, synthesizeConversationLearning, printStatus } = await import(
-  path.join(SCRIPTS_DIR, 'dream-daemon.ts')
+const {
+  extractExplicitDurableLessons,
+  scanPendingConversations,
+  synthesizeConversationLearning,
+  printStatus,
+} = await import(path.join(SCRIPTS_DIR, 'dream-daemon.ts'))
+const { generatePreInvocationContext, getRecentLearningsSnippet } = await import(
+  path.join(SCRIPTS_DIR, 'hook-inject-memory.ts')
+)
+const { getWorkspaceRootSlug, readConversationWorkspaceMap, resolveProjectSlug } = await import(
+  path.join(SCRIPTS_DIR, 'workspace-identity.ts')
 )
 const { listSubagents, getSubagent } = await import(path.join(SCRIPTS_DIR, 'agent-launcher.ts'))
 const { createIsolatedWorktree, getWorktreeDiff, cleanupWorktree, listActiveWorktrees } =
@@ -107,6 +117,9 @@ describe('Unit Coverage Extensions', () => {
   })
 
   it('tests memory-backup CLI runner functions directly', () => {
+    const trackedTmpPath = path.join(MEMORY_ROOT, 'global', 'tracked-test-evidence.tmp')
+    fs.writeFileSync(trackedTmpPath, 'tracked transient evidence')
+
     // Test help command
     let helpOutput = ''
     const origLog = console.log
@@ -124,6 +137,14 @@ describe('Unit Coverage Extensions', () => {
     const tempBundle = path.join(TEST_TEMP_ROOT, 'test-cli-bundle.json')
     runCli(['export', '-o', tempBundle, '--json'])
     assert.strictEqual(fs.existsSync(tempBundle), true)
+    const bundle = JSON.parse(fs.readFileSync(tempBundle, 'utf-8'))
+    assert.strictEqual(
+      bundle.manifest.files.some(
+        (entry: { relativePath: string }) =>
+          entry.relativePath === 'global/tracked-test-evidence.tmp',
+      ),
+      true,
+    )
 
     // Test verify command CLI
     runCli(['verify', '-i', tempBundle, '--json'])
@@ -131,7 +152,25 @@ describe('Unit Coverage Extensions', () => {
     // Test import command CLI (dry run)
     runCli(['import', '-i', tempBundle, '--dry-run', '--json'])
 
+    // Exercise human-readable output in-process so aggregate coverage does not
+    // depend on whether Node collects the spawned integration fixture's report.
+    let detailOutput = ''
+    console.log = (...messages: unknown[]) => {
+      detailOutput += `${messages.join(' ')}\n`
+    }
+    try {
+      runCli(['export', '-o', tempBundle])
+      runCli(['verify', '-i', tempBundle])
+      runCli(['import', '-i', tempBundle, '--dry-run'])
+    } finally {
+      console.log = origLog
+    }
+    assert.strictEqual(detailOutput.includes('Memory Blocks Export Complete'), true)
+    assert.strictEqual(detailOutput.includes('Memory Bundle Integrity Verification'), true)
+    assert.strictEqual(detailOutput.includes('Memory Bundle Import & Restore'), true)
+
     fs.unlinkSync(tempBundle)
+    fs.unlinkSync(trackedTmpPath)
   })
 
   it('tests switch-persona script functionality and presets', () => {
@@ -161,6 +200,201 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(Array.isArray(parsed.injectSteps), true)
     assert.strictEqual(parsed.injectSteps.length > 0, true)
     assert.strictEqual(parsed.injectSteps[0].ephemeralMessage.includes('MemFS Active Memory'), true)
+  })
+
+  it('resolves nested workspaces to one Git-root project identity', () => {
+    const workspaceRoot = path.join(TEST_TEMP_ROOT, 'workspace-identity-root')
+    const nestedWorkspace = path.join(workspaceRoot, 'apps', 'web')
+    const projectPath = path.join(MEMORY_ROOT, 'projects', 'workspace-identity-root', 'project.md')
+    fs.mkdirSync(nestedWorkspace, { recursive: true })
+    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: workspaceRoot })
+    fs.mkdirSync(path.dirname(projectPath), { recursive: true })
+    fs.writeFileSync(projectPath, '# Workspace Identity Root\n')
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: ['projects/workspace-identity-root/project.md'],
+      reason: 'test: seed workspace identity fixture',
+    })
+
+    assert.strictEqual(getWorkspaceRootSlug(nestedWorkspace), 'workspace-identity-root')
+    assert.strictEqual(resolveProjectSlug(nestedWorkspace, MEMORY_ROOT), 'workspace-identity-root')
+
+    const nestedScopePath = path.join(MEMORY_ROOT, 'projects', 'web', 'project.md')
+    fs.mkdirSync(path.dirname(nestedScopePath), { recursive: true })
+    fs.writeFileSync(nestedScopePath, '# Explicit Nested Workspace\n')
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: ['projects/web/project.md'],
+      reason: 'test: seed explicit nested workspace identity',
+    })
+    assert.strictEqual(resolveProjectSlug(nestedWorkspace, MEMORY_ROOT), 'web')
+
+    const historyFile = path.join(TEST_TEMP_ROOT, 'workspace-history.jsonl')
+    fs.writeFileSync(
+      historyFile,
+      [
+        JSON.stringify({
+          conversationId: 'conv-identity',
+          timestamp: 1,
+          workspace: workspaceRoot,
+        }),
+        JSON.stringify({
+          conversationId: 'conv-identity',
+          timestamp: 2,
+          workspace: nestedWorkspace,
+        }),
+        '{invalid-json',
+      ].join('\n'),
+    )
+    assert.strictEqual(
+      readConversationWorkspaceMap(historyFile).get('conv-identity'),
+      nestedWorkspace,
+    )
+
+    fs.rmSync(path.join(MEMORY_ROOT, 'projects', 'workspace-identity-root'), {
+      recursive: true,
+      force: true,
+    })
+    fs.rmSync(path.join(MEMORY_ROOT, 'projects', 'web'), { recursive: true, force: true })
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: ['projects/workspace-identity-root/project.md', 'projects/web/project.md'],
+      reason: 'test: remove workspace identity fixture',
+    })
+    fs.rmSync(workspaceRoot, { recursive: true, force: true })
+    fs.unlinkSync(historyFile)
+  })
+
+  it('injects only explicitly active durable learning excerpts', () => {
+    const slug = 'learning-filter'
+    const projectDir = path.join(MEMORY_ROOT, 'projects', slug)
+    const learningDir = path.join(projectDir, 'learnings')
+    fs.mkdirSync(learningDir, { recursive: true })
+    fs.writeFileSync(path.join(projectDir, 'project.md'), '# Learning Filter\n')
+    fs.writeFileSync(
+      path.join(learningDir, 'archive_9999-01.md'),
+      '---\nmemory_status: active\n---\n- Must inject archived poison.\n',
+    )
+    fs.writeFileSync(
+      path.join(learningDir, '9999-02_legacy.md'),
+      '# Legacy\n- Must inject uncurated legacy prose.\n',
+    )
+    fs.writeFileSync(
+      path.join(learningDir, '2026-08-24_active.md'),
+      '---\nmemory_status: active\nmemory_kind: durable-learning\n---\n# Active\n- Must preserve project isolation.\n',
+    )
+    const relativePaths = [
+      `projects/${slug}/project.md`,
+      `projects/${slug}/learnings/archive_9999-01.md`,
+      `projects/${slug}/learnings/9999-02_legacy.md`,
+      `projects/${slug}/learnings/2026-08-24_active.md`,
+    ]
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths,
+      reason: 'test: seed active learning filter fixtures',
+    })
+
+    const snippet = getRecentLearningsSnippet(slug, MEMORY_ROOT, 1)
+    assert.strictEqual(snippet.includes('Must preserve project isolation.'), true)
+    assert.strictEqual(snippet.includes('archived poison'), false)
+    assert.strictEqual(snippet.includes('uncurated legacy'), false)
+
+    const generated = generatePreInvocationContext(
+      JSON.stringify({ workspacePaths: [path.join(TEST_TEMP_ROOT, slug)] }),
+    )
+    const message = generated.injectSteps[0]?.ephemeralMessage || ''
+    assert.strictEqual(message.includes('Must preserve project isolation.'), true)
+
+    fs.rmSync(projectDir, { recursive: true, force: true })
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths,
+      reason: 'test: remove active learning filter fixtures',
+    })
+  })
+
+  it('reports deterministic active-memory health gates', () => {
+    const slug = 'health-project'
+    const projectDir = path.join(MEMORY_ROOT, 'projects', slug)
+    const relativePaths = [`projects/${slug}/project.md`, `projects/${slug}/rules.md`]
+    fs.mkdirSync(projectDir, { recursive: true })
+    fs.writeFileSync(path.join(projectDir, 'project.md'), '# Health Project\n- Compact context.\n')
+    fs.writeFileSync(path.join(projectDir, 'rules.md'), '# Rules\n- Must stay scoped.\n')
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths,
+      reason: 'test: seed health report fixture',
+    })
+
+    const workspace = path.join(TEST_TEMP_ROOT, slug)
+    const healthy = inspectMemoryHealth(MEMORY_ROOT, [workspace])
+    assert.strictEqual(healthy.healthy, true)
+    assert.strictEqual(healthy.workspaces[0]?.projectSlug, slug)
+    assert.strictEqual(healthy.workspaces[0]?.withinBudget, true)
+
+    const transientPath = path.join(MEMORY_ROOT, 'global', 'tracked-health.tmp')
+    fs.writeFileSync(transientPath, 'transient fixture')
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: ['global/tracked-health.tmp'],
+      reason: 'test: seed tracked transient fixture',
+    })
+    const unhealthy = inspectMemoryHealth(MEMORY_ROOT, [workspace])
+    assert.strictEqual(unhealthy.healthy, false)
+    assert.deepStrictEqual(unhealthy.trackedTransientPaths, ['global/tracked-health.tmp'])
+
+    fs.rmSync(projectDir, { recursive: true, force: true })
+    fs.unlinkSync(transientPath)
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [...relativePaths, 'global/tracked-health.tmp'],
+      reason: 'test: remove health report fixtures',
+    })
+  })
+
+  it('re-resolves project memory when one conversation changes workspaces', () => {
+    const slugs = ['switch-alpha', 'switch-beta']
+    const relativePaths: string[] = []
+    for (const slug of slugs) {
+      const projectDir = path.join(MEMORY_ROOT, 'projects', slug)
+      fs.mkdirSync(projectDir, { recursive: true })
+      fs.writeFileSync(path.join(projectDir, 'project.md'), `# ${slug}\n- Marker: ${slug}.\n`)
+      fs.writeFileSync(path.join(projectDir, 'rules.md'), '# Rules\n- Must remain isolated.\n')
+      relativePaths.push(`projects/${slug}/project.md`, `projects/${slug}/rules.md`)
+    }
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths,
+      reason: 'test: seed workspace switch fixtures',
+    })
+
+    const conversationId = 'same-conversation-workspace-switch'
+    const alpha = generatePreInvocationContext(
+      JSON.stringify({
+        conversationId,
+        workspacePaths: [path.join(TEST_TEMP_ROOT, 'switch-alpha')],
+      }),
+    ).injectSteps[0]?.ephemeralMessage
+    const beta = generatePreInvocationContext(
+      JSON.stringify({
+        conversationId,
+        workspacePaths: [path.join(TEST_TEMP_ROOT, 'switch-beta')],
+      }),
+    ).injectSteps[0]?.ephemeralMessage
+    assert.strictEqual(alpha?.includes('Marker: switch-alpha.'), true)
+    assert.strictEqual(alpha?.includes('Marker: switch-beta.'), false)
+    assert.strictEqual(beta?.includes('Marker: switch-beta.'), true)
+    assert.strictEqual(beta?.includes('Marker: switch-alpha.'), false)
+
+    for (const slug of slugs) {
+      fs.rmSync(path.join(MEMORY_ROOT, 'projects', slug), { recursive: true, force: true })
+    }
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths,
+      reason: 'test: remove workspace switch fixtures',
+    })
   })
 
   it('tests committed projection, contained paths, and targeted commits', () => {
@@ -288,14 +522,88 @@ describe('Unit Coverage Extensions', () => {
       assert.strictEqual(typeof sample.shortId, 'string')
 
       const doc = synthesizeConversationLearning(sample, 'learn-letta-code')
-      assert.strictEqual(typeof doc, 'string')
-      assert.strictEqual(doc.includes('Auto-Dream Learning'), true)
-      assert.strictEqual(doc.includes(sample.id), true)
+      assert.strictEqual(doc === null || typeof doc === 'string', true)
     }
 
     assert.doesNotThrow(() => {
       printStatus('learn-letta-code')
     })
+  })
+
+  it('routes Dream by local Agy workspace history and skips non-durable sessions', () => {
+    const brainRoot = path.join(TEST_ENVIRONMENT.homeDir, '.gemini', 'antigravity-cli', 'brain')
+    const historyFile = path.join(
+      TEST_ENVIRONMENT.homeDir,
+      '.gemini',
+      'antigravity-cli',
+      'history.jsonl',
+    )
+    const alphaWorkspace = path.join(TEST_TEMP_ROOT, 'dream-alpha')
+    const betaWorkspace = path.join(TEST_TEMP_ROOT, 'dream-beta')
+    const alphaId = '11111111-1111-4111-8111-111111111111'
+    const betaId = '22222222-2222-4222-8222-222222222222'
+    const writeConversation = (conversationId: string, content: string): string => {
+      const logDir = path.join(brainRoot, conversationId, '.system_generated', 'logs')
+      fs.mkdirSync(logDir, { recursive: true })
+      const logPath = path.join(logDir, 'transcript.jsonl')
+      fs.writeFileSync(
+        logPath,
+        `${JSON.stringify({ type: 'USER_INPUT', content: `<USER_REQUEST>${content}</USER_REQUEST>` })}\n`,
+      )
+      return logPath
+    }
+
+    fs.mkdirSync(path.dirname(historyFile), { recursive: true })
+    fs.mkdirSync(alphaWorkspace, { recursive: true })
+    fs.mkdirSync(betaWorkspace, { recursive: true })
+    const alphaLog = writeConversation(alphaId, 'จำไว้ ครั้งต่อไปต้องใช้ project scope ที่ตรงกัน')
+    writeConversation(betaId, 'Inspect this session without creating durable memory.')
+    fs.writeFileSync(
+      historyFile,
+      [
+        JSON.stringify({ conversationId: alphaId, timestamp: 1, workspace: alphaWorkspace }),
+        JSON.stringify({ conversationId: betaId, timestamp: 2, workspace: betaWorkspace }),
+      ].join('\n'),
+    )
+
+    const pendingAlpha = scanPendingConversations('dream-alpha', {
+      force: true,
+      minSteps: 1,
+      idleMinutes: 0,
+    })
+    assert.deepStrictEqual(
+      pendingAlpha.map((conversation: { id: string }) => conversation.id),
+      [alphaId],
+    )
+    assert.strictEqual(pendingAlpha[0]?.projectSlug, 'dream-alpha')
+    assert.strictEqual(extractExplicitDurableLessons(alphaLog).length, 1)
+    const vagueLog = writeConversation(
+      '33333333-3333-4333-8333-333333333333',
+      'Please remember this.',
+    )
+    assert.deepStrictEqual(extractExplicitDurableLessons(vagueLog), [])
+    const normalizedLog = writeConversation(
+      '44444444-4444-4444-8444-444444444444',
+      'Please remember this: always use pnpm for this project.',
+    )
+    assert.deepStrictEqual(extractExplicitDurableLessons(normalizedLog), [
+      'always use pnpm for this project.',
+    ])
+    const doc = synthesizeConversationLearning(pendingAlpha[0], 'dream-alpha')
+    assert.strictEqual(doc?.includes('memory_status: active'), true)
+    assert.strictEqual(doc?.includes('Session Continuity'), false)
+
+    const pendingBeta = scanPendingConversations('dream-beta', {
+      force: true,
+      minSteps: 1,
+      idleMinutes: 0,
+    })
+    assert.strictEqual(synthesizeConversationLearning(pendingBeta[0], 'dream-beta'), null)
+
+    fs.rmSync(brainRoot, { recursive: true, force: true })
+    fs.rmSync(alphaWorkspace, { recursive: true, force: true })
+    fs.rmSync(betaWorkspace, { recursive: true, force: true })
+    fs.unlinkSync(historyFile)
   })
 
   it('tests agent-launcher subagent manifests and prompt resolution', () => {

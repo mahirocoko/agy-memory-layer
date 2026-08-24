@@ -45,7 +45,7 @@ Run the complete test suite:
 pnpm test
 ```
 
-You should see all 11 integration scenarios and 18 Node test-runner tests pass.
+You should see all 11 integration scenarios and 23 Node test-runner tests pass.
 
 ---
 

@@ -6,15 +6,14 @@
  * then generates project.md and rules.md in ~/.gemini/memory/projects/<slug>/
  */
 
-import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import {
   assertMemoryRepositoryCleanForWrite,
   commitMemoryPaths,
-  validateProjectSlug,
   writeMemoryFile,
 } from './memory-repository.ts'
+import { resolveProjectSlug } from './workspace-identity.ts'
 
 export type CodebaseScanResult = {
   slug: string
@@ -50,21 +49,7 @@ const memoryRoot =
   process.env.AGY_MEMORY_DIR || path.join(process.env.HOME || '', '.gemini', 'memory')
 
 export function getProjectSlug(workspaceDir: string = process.cwd()): string {
-  let source = path.basename(workspaceDir)
-  try {
-    const gitRoot = execSync('git rev-parse --show-toplevel 2>/dev/null', {
-      cwd: workspaceDir,
-      encoding: 'utf-8',
-    }).trim()
-    if (gitRoot) source = path.basename(gitRoot)
-  } catch {}
-
-  const normalized = source
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 100)
-  return validateProjectSlug(normalized || 'workspace')
+  return resolveProjectSlug(workspaceDir, memoryRoot)
 }
 
 export function scanCodebase(workspaceDir: string = process.cwd()): CodebaseScanResult {

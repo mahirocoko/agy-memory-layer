@@ -6,17 +6,15 @@
  * Fully cross-platform (Node.js/TypeScript) and limited to local filesystem/Git metadata reads.
  */
 
-import { execFileSync } from 'node:child_process'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import {
-  committedMemoryPathExists,
   getMemoryRepositoryStatus,
   listCommittedMemoryFiles,
   readCommittedMemoryFile,
-  validateProjectSlug,
 } from './memory-repository.ts'
+import { resolveProjectSlug } from './workspace-identity.ts'
 
 export type PreInvocationPayload = {
   workspacePaths?: string[]
@@ -33,81 +31,51 @@ export type PreInvocationOutput = {
   injectSteps: InjectStep[]
 }
 
-const toProjectSlug = (value: string): string => {
-  const candidate = value
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 100)
-  return validateProjectSlug(candidate || 'workspace')
+export const ACTIVE_MEMORY_BUDGET_TOKENS = 1400
+
+export { resolveProjectSlug }
+
+const hasActiveLearningFrontmatter = (content: string): boolean => {
+  const frontmatter = content.match(/^---\n([\s\S]*?)\n---(?:\n|$)/)?.[1]
+  return Boolean(frontmatter?.match(/^memory_status:\s*active\s*$/m))
 }
 
-export function resolveProjectSlug(wsPath: string, memRoot: string): string {
-  const basenameSlug = toProjectSlug(path.basename(wsPath))
-
-  // 1. Preserve an existing committed project identity.
-  if (
-    committedMemoryPathExists(memRoot, `projects/${basenameSlug}/project.md`) ||
-    committedMemoryPathExists(memRoot, `projects/${basenameSlug}/rules.md`)
-  ) {
-    return basenameSlug
-  }
-
-  // 2. Try resolving Git remote canonical slug
-  try {
-    const remote = execFileSync('git', ['config', '--get', 'remote.origin.url'], {
-      cwd: wsPath,
-      encoding: 'utf-8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-    }).trim()
-    if (remote) {
-      const match = remote.match(/[:/]([^/:]+)\/([^/:]+?)(?:\.git)?$/)
-      if (match) {
-        const canonical = toProjectSlug(`${match[1]}-${match[2]}`)
-        if (
-          committedMemoryPathExists(memRoot, `projects/${canonical}/project.md`) ||
-          committedMemoryPathExists(memRoot, `projects/${canonical}/rules.md`)
-        ) {
-          return canonical
-        }
-      }
-    }
-  } catch {}
-
-  return basenameSlug
+const extractDurableLearningBullets = (content: string): string[] => {
+  const directive =
+    /\b(?:always|avoid|do not|must|never|prefer|require|should)\b|(?:ห้าม|ต้อง|อย่า|ควร)/i
+  const bullets = content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^[-*]\s+/.test(line))
+    .map((line) => line.replace(/^[-*]\s+/, '').trim())
+    .filter((line) => line.length > 0)
+  const actionable = bullets.filter((line) => directive.test(line))
+  return (actionable.length > 0 ? actionable : bullets).slice(0, 2)
 }
 
 export function getRecentLearningsSnippet(
   projectSlug: string,
   memRoot: string,
-  maxItems: number = 2,
+  maxItems: number = 1,
 ): string {
   try {
     const files = listCommittedMemoryFiles(memRoot, `projects/${projectSlug}/learnings`)
       .filter((file) => file.endsWith('.md') && !path.basename(file).startsWith('.'))
+      .filter((file) => !path.basename(file).startsWith('archive_'))
       .sort((a, b) => b.localeCompare(a))
-      .slice(0, maxItems)
 
     if (files.length === 0) return ''
 
     const snippets: string[] = []
     for (const file of files) {
+      if (snippets.length >= maxItems) break
       try {
         const content = readCommittedMemoryFile(memRoot, file)
-        if (!content) continue
-        // Extract takeaways or primary objective
-        const lines = content.split('\n').filter(Boolean)
-        const durableHeaderIdx = lines.findIndex(
-          (l) => l.includes('Key Takeaways') || l.includes('Durable Memory Lessons'),
-        )
-        let excerpt = ''
-        if (durableHeaderIdx !== -1) {
-          excerpt = lines.slice(durableHeaderIdx + 1, durableHeaderIdx + 4).join('\n')
-        } else {
-          excerpt = lines.slice(0, 3).join('\n')
-        }
-        if (excerpt.trim()) {
-          snippets.push(`- **${path.basename(file, '.md')}**:\n${excerpt.trim()}`)
+        if (!content || !hasActiveLearningFrontmatter(content)) continue
+        const bullets = extractDurableLearningBullets(content)
+        if (bullets.length > 0) {
+          const excerpt = bullets.map((bullet) => `  - ${bullet}`).join('\n')
+          snippets.push(`- **${path.basename(file, '.md')}**:\n${excerpt}`)
         }
       } catch {}
     }
@@ -119,7 +87,10 @@ export function getRecentLearningsSnippet(
   }
 }
 
-export function generatePreInvocationContext(inputJson: string): PreInvocationOutput {
+export function generatePreInvocationContext(
+  inputJson: string,
+  memoryRootOverride?: string,
+): PreInvocationOutput {
   let payload: PreInvocationPayload = {}
   try {
     if (inputJson?.trim()) {
@@ -132,7 +103,8 @@ export function generatePreInvocationContext(inputJson: string): PreInvocationOu
       ? payload.workspacePaths[0]
       : process.cwd()
 
-  const memRoot = process.env.AGY_MEMORY_DIR || path.join(os.homedir(), '.gemini', 'memory')
+  const memRoot =
+    memoryRootOverride || process.env.AGY_MEMORY_DIR || path.join(os.homedir(), '.gemini', 'memory')
   const projectSlug = resolveProjectSlug(wsPath, memRoot)
 
   let contextText = ''
@@ -161,7 +133,7 @@ export function generatePreInvocationContext(inputJson: string): PreInvocationOu
   }
 
   // Inject recent durable learnings proactively
-  const learningsText = getRecentLearningsSnippet(projectSlug, memRoot, 2)
+  const learningsText = getRecentLearningsSnippet(projectSlug, memRoot, 1)
   if (learningsText) {
     contextText += learningsText
   }
@@ -179,7 +151,7 @@ export function generatePreInvocationContext(inputJson: string): PreInvocationOu
 
   const estTokens = Math.ceil(contextText.length / 4)
   let reminder = ''
-  if (estTokens > 1400) {
+  if (estTokens > ACTIVE_MEMORY_BUDGET_TOKENS) {
     reminder = `\n> 💡 *[MemFS Budget Notice: Injected memory is ~${estTokens} tokens. Run /dream or /doctor to consolidate if needed.]*\n`
   }
 

@@ -16,6 +16,7 @@ import {
   validateProjectSlug,
   writeMemoryFile,
 } from './memory-repository.ts'
+import { readConversationWorkspaceMap, resolveProjectSlug } from './workspace-identity.ts'
 
 export type DreamState = {
   lastRun: string | null
@@ -31,6 +32,8 @@ export type PendingConversation = {
   steps: number
   firstPrompt: string
   logPath: string
+  workspacePath: string
+  projectSlug: string
 }
 
 export type ScanOptions = {
@@ -43,7 +46,8 @@ export type ScanOptions = {
 export type ProcessedDreamResult = {
   convId: string
   shortId: string
-  file: string
+  status: 'written' | 'skipped'
+  file?: string
 }
 
 export const DEFAULT_STEP_COUNT = 20
@@ -54,21 +58,7 @@ const memoryStateRoot = process.env.AGY_MEMORY_STATE_DIR || `${memoryRoot}.state
 const stateFile = path.join(memoryStateRoot, 'dream-state.json')
 
 export function getProjectSlug(workspaceDir: string = process.cwd()): string {
-  let source = path.basename(workspaceDir)
-  try {
-    const gitRoot = execSync('git rev-parse --show-toplevel 2>/dev/null', {
-      cwd: workspaceDir,
-      encoding: 'utf-8',
-    }).trim()
-    if (gitRoot) source = path.basename(gitRoot)
-  } catch {}
-
-  const normalized = source
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 100)
-  return validateProjectSlug(normalized || 'workspace')
+  return resolveProjectSlug(workspaceDir, memoryRoot)
 }
 
 export function getDreamState(): DreamState {
@@ -134,6 +124,8 @@ export function scanPendingConversations(
   const minSteps = options.minSteps || 8
   const idleMinutes = options.idleMinutes || 15
   const dreamedIds = getDreamedConversationIds(slug)
+  const dreamState = getDreamState()
+  const conversationWorkspaces = readConversationWorkspaceMap()
 
   const entries = fs.readdirSync(brainDir, { withFileTypes: true })
   const pending: PendingConversation[] = []
@@ -142,6 +134,11 @@ export function scanPendingConversations(
     if (!entry.isDirectory() || entry.name.startsWith('.')) continue
     const convId = entry.name
     const shortId = convId.slice(0, 8).toLowerCase()
+    const workspacePath = conversationWorkspaces.get(convId)
+    if (!workspacePath) continue
+
+    const projectSlug = resolveProjectSlug(workspacePath, memoryRoot)
+    if (projectSlug !== slug) continue
 
     if (dreamedIds.has(convId.toLowerCase()) || dreamedIds.has(shortId)) {
       continue
@@ -157,6 +154,7 @@ export function scanPendingConversations(
       const content = fs.readFileSync(logPath, 'utf-8').trim()
       const lines = content.split('\n').filter(Boolean)
       if (lines.length < minSteps) continue
+      if ((dreamState.lastDreamedSteps[convId] || 0) >= lines.length) continue
 
       if (ageMinutes < idleMinutes && !options.force) {
         continue
@@ -176,6 +174,8 @@ export function scanPendingConversations(
         steps: lines.length,
         firstPrompt,
         logPath,
+        workspacePath,
+        projectSlug,
       })
     } catch {}
   }
@@ -184,13 +184,13 @@ export function scanPendingConversations(
   return pending
 }
 
-export function synthesizeConversationLearning(conv: PendingConversation, slug: string): string {
-  const logPath = conv.logPath
+export function extractExplicitDurableLessons(logPath: string): string[] {
   const lines = fs.readFileSync(logPath, 'utf-8').trim().split('\n').filter(Boolean)
-
-  const userPrompts: string[] = []
-  const toolActions: string[] = []
-  const errorsResolved: string[] = []
+  const durableIntent =
+    /\b(?:always remember|from now on|please remember|remember (?:this|that))\b|(?:จำไว้|ช่วยจำ|อย่าลืม|ต่อจากนี้|ครั้งต่อไป)/i
+  const actionableSignal =
+    /\b(?:always|avoid|do not|don't|must|never|prefer|require|should|use|uses|own|owns|mean|means|store|stores|keep|keeps)\b|(?:ห้าม|ต้อง|อย่า|ควร|ใช้|คือ|เป็น|เก็บ|เจ้าของ|ไม่ต้อง)/i
+  const lessons: string[] = []
 
   for (const line of lines) {
     try {
@@ -198,58 +198,56 @@ export function synthesizeConversationLearning(conv: PendingConversation, slug: 
       const content = step.content || ''
 
       if (step.type === 'USER_INPUT') {
-        const clean = content.replace(/<USER_REQUEST>([\s\S]*?)<\/USER_REQUEST>/, '$1').trim()
-        if (clean.length > 0 && !clean.includes('CHECKPOINT')) {
-          userPrompts.push(clean.slice(0, 200).replace(/\n/g, ' '))
-        }
-      } else if (step.tool_calls && Array.isArray(step.tool_calls)) {
-        step.tool_calls.forEach((tc: { name?: string }) => {
-          if (tc.name) toolActions.push(tc.name)
-        })
-      }
-
-      if (content.toLowerCase().includes('error') || content.toLowerCase().includes('fail')) {
-        const errMatch = content.slice(0, 160).replace(/\n/g, ' ')
-        if (!errorsResolved.includes(errMatch)) {
-          errorsResolved.push(errMatch)
+        const clean = content
+          .replace(/<USER_REQUEST>([\s\S]*?)<\/USER_REQUEST>/, '$1')
+          .replace(/\s+/g, ' ')
+          .trim()
+        if (clean.length > 0 && durableIntent.test(clean)) {
+          const lesson = clean
+            .replace(
+              /^(?:always remember(?: (?:this|that))?|from now on|please remember(?: (?:this|that))?|remember (?:this|that))\s*[:：,-]?\s*/i,
+              '',
+            )
+            .replace(/^(?:จำไว้(?:ว่า)?|ช่วยจำ(?:ว่า)?|อย่าลืม(?:ว่า)?|ต่อจากนี้)\s*[:：,-]?\s*/i, '')
+            .trim()
+            .slice(0, 400)
+          if (lesson.length >= 12 && actionableSignal.test(lesson) && !lessons.includes(lesson)) {
+            lessons.push(lesson)
+          }
         }
       }
     } catch {}
   }
 
-  const today = new Date().toISOString().split('T')[0]
-  const uniqueTools = Array.from(new Set(toolActions)).slice(0, 6)
-  const samplePrompts = userPrompts.slice(0, 5)
-
-  const markdown = `# Auto-Dream Learning: Session conv-${conv.shortId}
-
-**Date**: ${today}  
-**Conversation ID**: \`[conv-${conv.id}](conversation://${conv.id})\`  
-**Workspace**: \`${slug}\`  
-**Total Steps**: ${conv.steps}  
-**Source**: Auto-Dream Background Daemon (Step-Count Trigger)  
-
----
-
-## 1. Primary Objectives & Workflow
-${
-  samplePrompts.length > 0
-    ? samplePrompts.map((p, i) => `${i + 1}. ${p}`).join('\n')
-    : '- General development & pair programming.'
+  return lessons.slice(0, 5)
 }
 
+export function synthesizeConversationLearning(
+  conv: PendingConversation,
+  slug: string,
+): string | null {
+  const lessons = extractExplicitDurableLessons(conv.logPath)
+  if (lessons.length === 0) return null
+
+  const today = new Date().toISOString().split('T')[0]
+  const markdown = `---
+memory_status: active
+memory_kind: durable-learning
+source_conversation: ${conv.id}
+workspace: ${slug}
+---
+# Durable Learning: Session conv-${conv.shortId}
+
+**Date**: ${today}
+**Conversation ID**: \`[conv-${conv.id}](conversation://${conv.id})\`
+**Workspace**: \`${slug}\`
+**Total Steps**: ${conv.steps}
+**Source**: Explicit durable-memory intent in the user conversation
+
 ---
 
-## 2. Tools & Systems Touched
-- Tools used: ${uniqueTools.length > 0 ? uniqueTools.map((t) => `\`${t}\``).join(', ') : 'Standard editor & search tools'}
-- Session duration / Age: ${conv.ageMinutes} minutes ago
-
----
-
-## 3. Durable Memory Lessons & Key Takeaways
-- **Session Continuity**: Conversation \`${conv.id}\` completed successfully with ${conv.steps} execution turns.
-- **Autonomous Recall**: Searchable via \`node --experimental-strip-types recall-engine.ts search "${conv.shortId}"\`.
-- **Knowledge Synapse**: [[projects/${slug}/project.md]] · [[projects/${slug}/rules.md]]
+## Durable Memory Lessons
+${lessons.map((lesson) => `- ${lesson}`).join('\n')}
 `
 
   return markdown
@@ -281,27 +279,42 @@ export function runAutoDream(
       `  ⏳ Synthesizing conv-${conv.shortId} (${conv.steps} steps, ${conv.ageMinutes}m ago)...`,
     )
     const doc = synthesizeConversationLearning(conv, slug)
+    state.lastDreamedSteps[conv.id] = conv.steps
+    if (!doc) {
+      processed.push({
+        convId: conv.id,
+        shortId: conv.shortId,
+        status: 'skipped',
+      })
+      console.log('     ↳ Skipped: no explicit durable-memory intent found.')
+      continue
+    }
+
     const relativePath = `projects/${slug}/learnings/${today}_auto_dream_${conv.shortId}.md`
     const targetFile = writeMemoryFile(memoryRoot, relativePath, doc).absolutePath
 
-    state.lastDreamedSteps[conv.id] = conv.steps
     changedPaths.push(relativePath)
     processed.push({
       convId: conv.id,
       shortId: conv.shortId,
+      status: 'written',
       file: targetFile,
     })
     console.log(`     ↳ Saved to ${path.relative(memoryRoot, targetFile)}`)
   }
 
-  commitMemoryPaths({
-    memoryRoot,
-    relativePaths: changedPaths,
-    reason: `chore(dream): consolidate ${processed.length} conversation sessions`,
-  })
+  if (changedPaths.length > 0) {
+    commitMemoryPaths({
+      memoryRoot,
+      relativePaths: changedPaths,
+      reason: `chore(dream): consolidate ${changedPaths.length} explicit durable lessons`,
+    })
+  }
   state.lastRun = new Date().toISOString()
   saveDreamState(state)
-  console.log(`\n✓ Committed ${processed.length} dream logs into the MemFS repository.`)
+  console.log(
+    `\n✓ Dream scan complete: ${changedPaths.length} written, ${processed.length - changedPaths.length} skipped.`,
+  )
 
   return processed
 }
@@ -324,7 +337,12 @@ export function checkAndAutoDreamOnStepCount(
     console.log(
       `🌙 Step-Count Trigger Fired: ${toProcess.length} conversations reached >= ${threshold} steps since last reflection.`,
     )
-    return runAutoDream(slug, { force: true, idleMinutes: 0 })
+    return runAutoDream(slug, {
+      force: true,
+      minSteps: threshold,
+      idleMinutes: 0,
+      stepCount: threshold,
+    })
   }
   return []
 }

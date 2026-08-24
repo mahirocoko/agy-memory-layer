@@ -9,7 +9,7 @@ This reference documents all testing, verification, script runners, and daemon c
 Run the primary Node.js test runner suite:
 
 ```bash
-# Run 11 integration scenarios plus 18 focused unit cases
+# Run integration scenarios plus focused unit cases
 pnpm test
 
 # Run tests directly with Node 22+ type stripping
@@ -20,13 +20,13 @@ node --experimental-strip-types --test --test-concurrency=1 tests/run-test-suite
 
 ## 🌙 Deterministic Dream Note Utility
 
-`dream-daemon.ts` scans Antigravity transcripts and writes deterministic learning notes. It is separate from Stop and does not provide Letta's model-backed isolated reflection worktree.
+`dream-daemon.ts` maps transcripts through local Agy workspace history and writes a deterministic active note only when explicit durable-memory intent contains an actionable rule or fact. Unknown ownership, vague intent, and no-signal sessions skip. It is separate from Stop and does not provide Letta's model-backed isolated reflection worktree.
 
 ```bash
 # Check status of pending undreamed sessions and step count threshold
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --status
 
-# Process and consolidate all pending sessions immediately
+# Process pending sessions; only explicit durable intent creates a note
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now
 
 # Force immediate synthesis regardless of session age
@@ -43,6 +43,16 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts
 ```
 
 Cron installation is an explicit user choice. Treat it as an Agy utility, not as proven Letta reflection parity.
+
+## 🩺 Deterministic Memory Health
+
+```bash
+pnpm memory:health -- --workspace "$(pwd)"
+```
+
+Pass additional `--workspace <path>` arguments to audit multiple active scopes.
+The strict command checks clean Git state, complete project scopes, the 1,400-token
+projection budget, tracked transient residue, and archive/session-boilerplate injection.
 
 ---
 

@@ -20,11 +20,12 @@ The project targets **contract parity**, not architecture parity:
 | --- | --- | --- |
 | Memory path containment and Git state | `scripts/memory-repository.ts` | lifecycle tests |
 | Active prompt projection | `scripts/hook-inject-memory.ts` | `hooks.json` |
+| Workspace/project identity | `scripts/workspace-identity.ts` | PreInvocation, `/init`, Dream |
 | Stop behavior | `scripts/hook-memory-status.ts` | `hooks.json` |
 | Explicit memory review | `scripts/memory-approval.ts` | `/remember` |
 | Project initialization | `scripts/init-project-memory.ts` | `/init` |
 | Letta import | `scripts/letta-sync.ts` | `/sync-letta` |
-| Deterministic transcript-note generation | `scripts/dream-daemon.ts` | `/dream` |
+| Explicit-intent transcript-note generation | `scripts/dream-daemon.ts` | `/dream` |
 | Package/version intent | `package.json` | `plugin.json`, `CONTRACT.md` |
 
 ## Behavior Matrix
@@ -38,7 +39,7 @@ The project targets **contract parity**, not architecture parity:
 | Post-turn sync never legitimizes arbitrary dirt | Stop reports state and never stages, commits, deletes Git locks, or launches Dream | **Implemented** |
 | Recall history is distinct from editable memory | `recall-engine.ts` searches Antigravity brain transcripts; `/memory search` searches Markdown | **Implemented adaptation** |
 | Context compaction is distinct from memory maintenance | `memory-compactor.ts` is read-only Markdown maintenance analysis | **Implemented boundary** |
-| Reflection uses conversation cursors, one-active-run reservation, isolated worktree, merge policy, and post-merge activation | Deterministic Dream writes targeted learning commits; Stop no longer launches it | **Partial — isolated reflection integration deferred** |
+| Reflection uses conversation cursors, one-active-run reservation, isolated worktree, merge policy, and post-merge activation | Deterministic Dream maps local Agy workspace history, writes only actionable explicit durable intent, skips unknown/vague/no-signal sessions, and remains separate from Stop | **Partial — isolated model reflection integration deferred** |
 | Subagent tools and memory scope are enforced at launch | JSON manifests currently resolve declarative role/capability intent | **Not established by this repository** |
 | Installed package updater checks and acquires a newer release | `/update` refreshes the active link from the current source only | **Acquisition updater deferred** |
 | Release artifact contains runtime dependencies | Direct TypeScript execution requires Node 22+ and a developer dependency install for `ts-inspector.ts` | **Packaging gap remains** |
@@ -47,8 +48,8 @@ The project targets **contract parity**, not architecture parity:
 
 ### PreInvocation
 
-1. Resolve the configured MemFS root and a stable project slug.
-2. Read global, project, and recent-learning content from committed Git `HEAD`.
+1. Resolve the configured MemFS root and shared child/root/remote project identity.
+2. Read compact global/project content plus at most one explicitly active learning from committed Git `HEAD`.
 3. Never inject an uncommitted edit.
 4. Add a status notice when the repo is dirty, conflicted, unavailable, or
    uninitialized.
@@ -81,7 +82,7 @@ The following are useful Agy features, not proof of Letta parity:
 - local BM25 + n-gram Antigravity transcript recall;
 - Memory Palace;
 - read-only Markdown maintenance and archival analysis;
-- deterministic Dream transcript notes;
+- explicit-intent deterministic Dream notes;
 - skill candidate synthesis;
 - Letta-to-Agy import.
 
@@ -94,9 +95,9 @@ equivalent Letta subsystem when the semantics differ.
 
 ## Deferred Parity Work
 
-1. Replace deterministic Dream integration with project/conversation ownership,
-   transcript cursors, one-active-run locking, a clean memory worktree, merge
-   handling, and activation only after successful integration.
+1. Add one-active-run locking, a clean memory worktree, model-backed synthesis,
+   merge handling, and activation only after successful integration. Current
+   deterministic Dream already fails closed on unknown conversation ownership.
 2. Implement a source-aware release updater with temporary acquisition,
    validation, atomic link switching, and rollback. Local source checkouts must
    remain user-updated.
@@ -107,7 +108,7 @@ equivalent Letta subsystem when the semantics differ.
 
 ## Evidence
 
-- `pnpm test`: 11 integration scenarios and 18 Node test-runner tests.
+- `pnpm test`: integration scenarios plus focused Node test-runner regressions.
 - Direct negative controls cover uncommitted projection exclusion, non-mutating
   Stop, path traversal, unrelated dirty paths, targeted commits, and Letta
   project-slug rejection.

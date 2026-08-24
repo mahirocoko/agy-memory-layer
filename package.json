@@ -1,6 +1,6 @@
 {
   "name": "agy-memory-layer",
-  "version": "1.12.1",
+  "version": "1.13.0",
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=22"
@@ -14,7 +14,8 @@
     "check": "tsc --noEmit && biome check .",
     "lint": "biome lint .",
     "format": "biome format --write .",
-    "fix": "biome check --write ."
+    "fix": "biome check --write .",
+    "memory:health": "node --experimental-strip-types tools/memory-health.ts --strict"
   },
   "keywords": [
     "antigravity",

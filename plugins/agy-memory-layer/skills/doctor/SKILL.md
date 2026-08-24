@@ -29,21 +29,16 @@ Audits the consistency, validity, and Git health of MemFS against the active wor
 ## Execution
 
 ```bash
-WORKSPACE_DIR="$(pwd)"
-PROJECT_SLUG=$(basename "$WORKSPACE_DIR" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
-MEMORY_ROOT="${HOME}/.gemini/memory"
-
-echo "=== MemFS Health Check ==="
-echo "Workspace: $WORKSPACE_DIR"
-echo "Project Slug: $PROJECT_SLUG"
-
-if [ -d "$MEMORY_ROOT/.git" ]; then
-  echo "✓ Git Repository: OK"
-  git -C "$MEMORY_ROOT" status --short
-else
-  echo "⚠️ Git Repository: Missing! Run install.sh to initialize."
-fi
+node --experimental-strip-types tools/memory-health.ts \
+  --memory "${HOME}/.gemini/memory" \
+  --workspace "$(pwd)" \
+  --strict
 ```
+
+The deterministic command checks repository state, shared project resolution,
+complete project scope, active projection budget, tracked transient residue,
+and low-signal learning injection. Follow it with a repo-reality review for
+semantic contradictions that a deterministic checker cannot infer safely.
 
 ## Report Format
 Present findings as:

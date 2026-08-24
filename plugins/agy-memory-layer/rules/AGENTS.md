@@ -33,7 +33,7 @@ You MUST proactively consult and maintain memory without waiting for a slash com
 
 ### D. Proactive Reflection & Dreaming (`/dream`)
 - When concluding a complex debugging session, refactor, or multi-step feature implementation:
-  - **Action**: Recommend or invoke `/dream` explicitly. The Stop hook does not launch reflection work. The deterministic daemon remains a separate manual or explicitly installed cron surface until isolated reflection integration is implemented.
+  - **Action**: Recommend or invoke `/dream` explicitly. The Stop hook does not launch reflection work. Deterministic Dream resolves local Agy workspace history and writes only actionable explicit durable-memory intent; unknown ownership, vague intent, and no-signal sessions skip. It remains a separate manual or explicitly installed cron surface until isolated model reflection is implemented.
 
 ### E. Memory Inspection, Search & Palace (`/memory`, `/palace`)
 - When the user asks "What do you remember about me?", "What are our project rules?", or asks to search past lessons:
@@ -41,7 +41,7 @@ You MUST proactively consult and maintain memory without waiting for a slash com
 
 ### F. Health & Drift Auditing (`/doctor`)
 - If you suspect codebase drift or contradiction with existing rules:
-  - **Action**: Invoke `/doctor` to audit consistency between Git MemFS and actual workspace state.
+  - **Action**: Invoke `/doctor` to run deterministic scope/budget/residue checks, then audit semantic consistency between Git MemFS and actual workspace state.
 
 ### G. Autonomous Episodic Recall (`recall`)
 - **Strict Invariant**: Whenever the user asks "What did we talk about previously regarding X?", "How did we solve bug Y in the earlier session?", mentions past mistakes/failures ("พลาด", "พัง", "เคย"), or when analyzing system behavior/architecture across multiple sessions:
@@ -67,6 +67,7 @@ You MUST proactively consult and maintain memory without waiting for a slash com
         ├── project.md           # Architecture, domain concepts, tech stack, key files
         ├── rules.md             # Codebase rules, linters, testing constraints
         └── learnings/           # Dated learning logs (YYYY-MM-DD_<topic>.md)
+└── archives/                    # Recall-only Markdown; never prompt-injected
 ```
 
 ---

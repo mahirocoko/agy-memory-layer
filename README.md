@@ -1,6 +1,7 @@
 # 🧠 agy-memory-layer
 
-[![Tests](https://img.shields.io/badge/Tests-18%2F18%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
+[![Coverage](https://img.shields.io/badge/Coverage-79.31%25-green.svg)](./CONTRACT.md)
+[![Tests](https://img.shields.io/badge/Tests-23%2F23%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -28,13 +29,13 @@
 ## 🧠 Hybrid Semantic Recall & Explicit Dream Notes
 
 - **Vector Semantic Search**: Subword n-gram vector embeddings + BM25 keyword matching with cosine similarity scoring.
-- **Explicit Dream Notes**: `dream-daemon.ts` can scan Antigravity transcripts and create deterministic learning notes when run manually or through an explicitly installed cron. It is not launched by Stop and is not yet equivalent to Letta's isolated reflection worktree.
+- **Explicit Dream Notes**: `dream-daemon.ts` uses local Agy workspace history, fails closed on unknown ownership, and creates a deterministic active note only when explicit durable-memory intent contains an actionable rule or fact. It is not launched by Stop and is not yet equivalent to Letta's isolated reflection worktree.
 
 ---
 
 ## ✨ Features
 
-- 👤 **Committed In-Context Memory**: Injects committed `HEAD` versions of `human.md`, `persona.md`, project architecture, rules, and recent learnings before every invocation; uncommitted content is never activated.
+- 👤 **Committed In-Context Memory**: Injects committed `HEAD` versions of compact global/project blocks plus at most one explicitly active durable learning before every invocation; uncommitted, archived, and uncurated content is never activated.
 - 📦 **Git-Backed MemFS (`~/.gemini/memory/`)**: Decoupled from project source code; tracks all knowledge snapshots in an independent Git repository.
 - ⚡ **Zero-Friction Lifecycle Hooks**:
   - `PreInvocation`: Reads committed Git memory into `ephemeralMessage` and discloses dirty/conflict state separately.
@@ -114,6 +115,7 @@ Memory files are stored outside the active workspace under `~/.gemini/memory/`:
         ├── project.md           # Architecture decisions & domain context
         ├── rules.md             # Project-specific coding rules
         └── learnings/           # Dated learning logs (YYYY-MM-DD_topic.md)
+└── archives/                    # Recall-only Markdown; never prompt-injected
 ```
 
 ---
@@ -195,7 +197,7 @@ Purge is not part of normal uninstall. It requires the second confirmation flag,
 ### Running Tests Locally
 
 ```bash
-# Run 11 integration scenarios plus 18 focused unit cases
+# Run 11 integration scenarios plus current focused regressions
 pnpm test
 
 # Run test suite with V8 code coverage report
@@ -204,13 +206,22 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-Run `pnpm test:coverage` for the current Node/V8 report. Per-file percentages are intentionally not copied into this README because they become stale after source changes.
+| Metric | v1.13.0 |
+| :--- | ---: |
+| Lines | **79.31%** |
+| Branches | **60.73%** |
+| Functions | **81.18%** |
+
+This is the aggregate Node/V8 snapshot from the `v1.13.0` release verification.
+Run `pnpm test:coverage` after source changes and update this snapshot in the
+same release commit; per-file percentages remain in command output rather than
+being copied into this README.
 
 > 📋 **Detailed integration evidence**: See [TEST_REPORT.md](./TEST_REPORT.md) for the latest isolated scenario results and measured timings.
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
-> 🚀 **Release notes**: [`v1.12.1`](./docs/releases/v1.12.1.md) records the safety-contract migration, verification evidence, upgrade path, and deferred boundaries.
+> 🚀 **Release notes**: [`v1.13.0`](./docs/releases/v1.13.0.md) records the scoped-memory health repair, verification evidence, upgrade path, and deferred boundaries.
 
 ---
 

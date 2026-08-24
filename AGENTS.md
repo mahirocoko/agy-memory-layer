@@ -69,7 +69,7 @@ Always run the full test suite before concluding changes:
 pnpm test
 ```
 
-Expected output: **11/11 integration scenarios** in `TEST_REPORT.md` and **18/18 Node test-runner tests** passing.
+Expected output: **11/11 integration scenarios** in `TEST_REPORT.md` and **23/23 Node test-runner tests** passing.
 - PreInvocation hook schema validation
 - Committed-HEAD projection and non-mutating Stop status
 - Contained paths and targeted memory commits

@@ -10,9 +10,14 @@ Antigravity conversations.
 
 ## Current Reality
 
-`dream-daemon.ts` scans available `transcript.jsonl` files, generates dated
-deterministic learning notes, and commits only those note paths through the
-shared memory repository boundary.
+`dream-daemon.ts` maps conversation IDs through local Agy `history.jsonl`, filters to
+the resolved current project, and fails closed when workspace ownership is
+unknown. It creates a dated active note only when a user prompt contains
+explicit durable-memory intent containing an actionable rule or fact, such as
+“remember that this project uses Yarn 4”, “จำไว้ว่าต้องใช้ pnpm”, or “ครั้งต่อไป
+อย่าเขียน native dialog”. A bare “remember this” is vague and skips.
+Other scanned sessions are marked skipped in external cursor state instead of
+producing session-continuity boilerplate.
 
 ```bash
 # Inspect pending transcript notes
@@ -22,15 +27,17 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now
 ```
 
-The command requires a clean MemFS repository. Dream cursor state is updated
-outside the repository only after the learning commit succeeds.
+The command requires a clean MemFS repository. External Dream cursor state
+records both successfully committed notes and intentionally skipped sessions
+after the run; a failed learning commit does not advance that session.
 
 ## Review Contract
 
 After execution:
 
-1. report which conversation IDs produced which learning files;
-2. distinguish deterministic transcript metadata from agent-reviewed insight;
+1. report which conversation IDs produced files and which were skipped;
+2. verify every written note has explicit durable-memory intent and the correct
+   workspace/project scope;
 3. route any proposed `project.md` or `rules.md` rewrite through
    `memory-approval.ts propose` and explicit approval;
 4. never use `git add -A` or treat Stop as the approval boundary.

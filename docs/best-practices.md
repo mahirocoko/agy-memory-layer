@@ -17,7 +17,8 @@ This guide outlines core development patterns, performance constraints, and memo
 
 - **Compact Signal**: Memory blocks injected into the prompt must be dense, clear, and high-signal Markdown.
 - Avoid dumping multi-megabyte log files or large code snippets into `human.md` or `project.md`.
-- The active TypeScript hook emits a **Budget Notice** above approximately `1,200` estimated tokens; consolidate through an explicit maintenance or review flow when it appears.
+- The active TypeScript hook emits a **Budget Notice** above `1,400` estimated tokens but does not truncate memory. `memory-health.ts --strict` owns the failing offline gate; curate global/project blocks when it fails.
+- A learning is prompt-active only when its frontmatter contains `memory_status: active`. Keep uncurated, superseded, and historical material under `archives/`, where `/memory search` can still retrieve it.
 - Uncommitted Markdown is not active prompt state. Fix or commit it through the shared writer instead of relying on the hook to legitimize it.
 
 ---
@@ -25,7 +26,7 @@ This guide outlines core development patterns, performance constraints, and memo
 ## 3. Zero Workspace Pollution
 
 - Never write `.md` notes or `.gemini/` folders directly into user projects.
-- Memory storage is strictly externalized at `~/.gemini/memory/` and keyed by workspace slug (`getProjectSlug()`).
+- Memory storage is strictly externalized at `~/.gemini/memory/` and keyed by the shared workspace resolver. Existing child scopes are preserved; otherwise Git-root identity wins over a generic nested basename.
 - All user/imported paths must pass `memory-repository.ts` containment and slug validation. Absolute paths, `..`, control characters, and symlink escapes fail closed.
 - In non-Git workspaces, the project identity falls back to a normalized basename.
 

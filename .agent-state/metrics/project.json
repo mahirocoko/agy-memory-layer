@@ -1,12 +1,12 @@
 {
-  "generatedAt": "2026-08-20T17:08:16",
+  "generatedAt": "2026-08-24T15:07:43",
   "source": "rrr-derived",
-  "totalSessions": 29,
-  "todaySessions": 2,
-  "activeDays": 2,
-  "avgSessionsPerActiveDay": 14.5,
+  "totalSessions": 30,
+  "todaySessions": 1,
+  "activeDays": 3,
+  "avgSessionsPerActiveDay": 10.0,
   "sizes": {
-    "today": "medium",
+    "today": "small",
     "thresholds": {
       "smallMax": 1,
       "mediumMax": 3,
@@ -16,7 +16,7 @@
   "branches": {
     "current": {
       "name": "main",
-      "recentCommits30d": 39
+      "recentCommits30d": 43
     }
   }
 }

@@ -25,7 +25,8 @@ learn-letta-code/
 │   ├── onboarding.md                        # Day 1 setup and verification
 │   ├── project-overview.md                  # Architecture and subsystem overview
 │   ├── letta-parity.md                      # Canonical Letta behavior/adaptation/status matrix
-│   ├── releases/v1.12.1.md                  # Release notes and exact verification evidence
+│   ├── releases/v1.12.1.md                  # Historical v1.12.1 evidence
+│   ├── releases/v1.13.0.md                  # Current release notes and exact verification evidence
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene
@@ -76,6 +77,7 @@ learn-letta-code/
 │       ├── hook-memory-status.sh             # Strict Stop wrapper
 │       ├── hook-memory-status.ts             # Non-mutating Stop status owner
 │       ├── memory-repository.ts              # Containment, Git state, atomic write, targeted commit
+│       ├── workspace-identity.ts             # Shared project scope and conversation workspace resolution
 │       ├── dream-daemon.ts                  # Manual/optional-cron deterministic Dream notes
 │       ├── recall-engine.ts                 # Subword N-Gram Vector & BM25 hybrid recall
 │       ├── memory-search.ts                 # MemFS status and ranked text search
@@ -92,6 +94,10 @@ learn-letta-code/
 │       ├── worktree-manager.ts              # Isolated worktree utilities
 │       ├── install.sh                       # Installer script
 │       └── uninstall.sh                     # Uninstaller script
+│
+├── tools/
+│   ├── memory-backup.ts                     # Complete verified backup/restore bundle
+│   └── memory-health.ts                     # Deterministic active-memory health gate
 │
 └── tests/                                   # Automated test harness
     ├── test-environment.ts                  # Disposable HOME/MemFS fixture

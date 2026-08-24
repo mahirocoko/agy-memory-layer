@@ -180,8 +180,9 @@ export const scanMemoryDirectory = (dirPath: string, rootDir: string = dirPath):
     const fullPath = path.join(dirPath, entry.name)
     const relPath = path.relative(rootDir, fullPath)
 
-    // Skip .git directory and temporary swap files
-    if (entry.name === '.git' || entry.name.endsWith('.tmp') || entry.name.endsWith('.swp')) {
+    // Preserve every memory file, including tracked test/transient evidence. Only editor swap
+    // files are excluded because they are incomplete process artifacts.
+    if (entry.name === '.git' || entry.name.endsWith('.swp')) {
       continue
     }
 
