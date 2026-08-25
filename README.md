@@ -214,13 +214,13 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.14.0 candidate |
+| Metric | v1.14.0 release |
 | :--- | ---: |
 | Lines | **80.68%** |
 | Branches | **62.15%** |
 | Functions | **83.03%** |
 
-This is the aggregate Node/V8 snapshot from the unreleased `v1.14.0` source candidate.
+This is the aggregate Node/V8 snapshot for the released `v1.14.0` source.
 Run `pnpm test:coverage` after source changes and update this snapshot in the
 same release commit; per-file percentages remain in command output rather than
 being copied into this README.
@@ -229,7 +229,7 @@ being copied into this README.
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
-> 🧪 **Source candidate**: [`v1.14.0`](./docs/releases/v1.14.0.md) records the Evidence Controller and working-hypothesis migration. It is not released yet. The latest released contract remains [`v1.13.0`](./docs/releases/v1.13.0.md).
+> ✅ **Latest release**: [`v1.14.0`](./docs/releases/v1.14.0.md) records the Evidence Controller, multi-scenario host evidence, and approved working-hypothesis migration. [`v1.13.0`](./docs/releases/v1.13.0.md) remains the prior scoped-health release.
 
 ---
 

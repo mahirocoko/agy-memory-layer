@@ -4,7 +4,7 @@
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Source candidate; not released
+**Release state:** Released as `v1.14.0` on 2026-08-25
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -216,8 +216,8 @@ Current direct regression coverage includes:
 - all tests run with disposable HOME and MemFS roots.
 
 `TEST_REPORT.md` is generated evidence for the 11 integration scenarios. The
-source-candidate Node test count and coverage must be refreshed by the full
-verification run before release. Remote sync is exercised against a disposable
+current Node test count and coverage must be refreshed by the full verification
+run before each release. Remote sync is exercised against a disposable
 local bare repository. Neither report alone proves cron, external network,
 automatic model routing, or AGY host-enforcement behavior.
 
@@ -237,12 +237,12 @@ writer/reviewer case passed its route, mutation, checks, and parent callback but
 retained incomplete child-log corroboration. This remains bounded
 model/version/environment evidence, not a deterministic scheduler guarantee.
 
-Released `v1.13.0` coverage is **79.31% lines**, **60.73% branches**, and
+Prior `v1.13.0` coverage is **79.31% lines**, **60.73% branches**, and
 **81.18% functions**. The released `v1.12.1` candidate measured **77.55%
 lines**, **58.46% branches**, and **78.14% functions**. Coverage is evidence,
 not a substitute for the behavioral negative controls above.
 
-The unreleased `v1.14.0` source candidate measures **80.68% lines**, **62.15%
+Released `v1.14.0` measures **80.68% lines**, **62.15%
 branches**, and **83.03% functions**, with 11/11 integration scenarios and
 25/25 total Node test-runner tests (1 integration runner plus 24 focused unit
 cases) passing on Agy `1.1.20`, Node `v26.5.1`, and pnpm `10.33.0`.

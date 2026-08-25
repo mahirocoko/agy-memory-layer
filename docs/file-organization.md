@@ -26,8 +26,8 @@ learn-letta-code/
 │   ├── project-overview.md                  # Architecture and subsystem overview
 │   ├── letta-parity.md                      # Canonical Letta behavior/adaptation/status matrix
 │   ├── releases/v1.12.1.md                  # Historical v1.12.1 evidence
-│   ├── releases/v1.13.0.md                  # Current release notes and exact verification evidence
-│   ├── releases/v1.14.0.md                  # Unreleased Evidence Controller source candidate
+│   ├── releases/v1.13.0.md                  # Prior scoped-health release evidence
+│   ├── releases/v1.14.0.md                  # Current Evidence Controller release evidence
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene
