@@ -9,7 +9,7 @@
 
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { isDirectCliInvocation } from './cli-entrypoint.ts'
 import { getMemoryRepositoryStatus } from './memory-repository.ts'
 
 export type StopOutput = {
@@ -32,7 +32,7 @@ export function runStopHook(
   return { decision: 'stop' }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectCliInvocation(import.meta.url)) {
   process.stdin.resume()
   process.stdin.on('end', () => {
     process.stdout.write(JSON.stringify(runStopHook()))

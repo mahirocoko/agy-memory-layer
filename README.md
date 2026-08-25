@@ -1,6 +1,6 @@
 # 🧠 agy-memory-layer
 
-[![Coverage](https://img.shields.io/badge/Coverage-80.68%25-green.svg)](./CONTRACT.md)
+[![Coverage](https://img.shields.io/badge/Coverage-80.42%25-green.svg)](./CONTRACT.md)
 [![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
@@ -214,13 +214,13 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.14.0 release |
+| Metric | v1.14.1 release |
 | :--- | ---: |
-| Lines | **80.68%** |
-| Branches | **62.15%** |
-| Functions | **83.03%** |
+| Lines | **80.42%** |
+| Branches | **62.04%** |
+| Functions | **83.09%** |
 
-This is the aggregate Node/V8 snapshot for the released `v1.14.0` source.
+This is the aggregate Node/V8 snapshot for the released `v1.14.1` source.
 Run `pnpm test:coverage` after source changes and update this snapshot in the
 same release commit; per-file percentages remain in command output rather than
 being copied into this README.
@@ -229,7 +229,7 @@ being copied into this README.
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
-> ✅ **Latest release**: [`v1.14.0`](./docs/releases/v1.14.0.md) records the Evidence Controller, multi-scenario host evidence, and approved working-hypothesis migration. [`v1.13.0`](./docs/releases/v1.13.0.md) remains the prior scoped-health release.
+> ✅ **Latest release**: [`v1.14.1`](./docs/releases/v1.14.1.md) repairs installed-symlink hook execution and makes lifecycle validation fail on empty output. [`v1.14.0`](./docs/releases/v1.14.0.md) records the Evidence Controller and live migration but is superseded by this runtime patch.
 
 ---
 

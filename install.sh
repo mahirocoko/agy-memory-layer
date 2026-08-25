@@ -144,10 +144,12 @@ if command -v agy >/dev/null 2>&1; then
   agy plugin install "${SOURCE_DIR}" >/dev/null 2>&1 || true
 fi
 
-# 5. Verify hooks
+# 5. Verify hooks through the installed symlink
 echo "🔍 Validating hook scripts..."
-echo '{"workspacePaths":["'$(pwd)'"]}' | "$SOURCE_DIR/scripts/hook-inject-memory.sh" >/dev/null
-echo '{"decision":"stop"}' | "$SOURCE_DIR/scripts/hook-memory-status.sh" >/dev/null
+INJECT_OUTPUT="$(printf '{"workspacePaths":["%s"]}' "$(pwd)" | "$INSTALL_DIR/scripts/hook-inject-memory.sh")"
+printf '%s' "$INJECT_OUTPUT" | node -e 'const fs=require("node:fs");const value=JSON.parse(fs.readFileSync(0,"utf8"));if(!Array.isArray(value.injectSteps)||value.injectSteps.length===0)process.exit(1)'
+STOP_OUTPUT="$(printf '{"decision":"stop"}' | "$INSTALL_DIR/scripts/hook-memory-status.sh")"
+printf '%s' "$STOP_OUTPUT" | node -e 'const fs=require("node:fs");const value=JSON.parse(fs.readFileSync(0,"utf8"));if(value.decision!=="stop")process.exit(1)'
 echo "✓ Hook validation passed."
 
 echo "=================================================="

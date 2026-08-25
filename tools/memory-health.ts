@@ -3,8 +3,8 @@
 import { execFileSync } from 'node:child_process'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { pathToFileURL } from 'node:url'
 import { inspectCommittedWorkingHypothesis } from '../plugins/agy-memory-layer/scripts/active-learning.ts'
+import { isDirectCliInvocation } from '../plugins/agy-memory-layer/scripts/cli-entrypoint.ts'
 import {
   ACTIVE_MEMORY_BUDGET_TOKENS,
   generatePreInvocationContext,
@@ -149,7 +149,7 @@ const parseArgs = (
   return { memoryRoot, workspaces: workspaces.length > 0 ? workspaces : [process.cwd()], strict }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectCliInvocation(import.meta.url)) {
   const options = parseArgs(process.argv.slice(2))
   const report = inspectMemoryHealth(options.memoryRoot, options.workspaces)
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)

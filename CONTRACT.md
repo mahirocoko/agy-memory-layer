@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.14.0`
+**Package version:** `1.14.1`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.14.0` on 2026-08-25
+**Release state:** Released as `v1.14.1` on 2026-08-25
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -237,15 +237,12 @@ writer/reviewer case passed its route, mutation, checks, and parent callback but
 retained incomplete child-log corroboration. This remains bounded
 model/version/environment evidence, not a deterministic scheduler guarantee.
 
-Prior `v1.13.0` coverage is **79.31% lines**, **60.73% branches**, and
-**81.18% functions**. The released `v1.12.1` candidate measured **77.55%
-lines**, **58.46% branches**, and **78.14% functions**. Coverage is evidence,
-not a substitute for the behavioral negative controls above.
-
-Released `v1.14.0` measures **80.68% lines**, **62.15%
-branches**, and **83.03% functions**, with 11/11 integration scenarios and
+Prior `v1.14.0` coverage is **80.68% lines**, **62.15% branches**, and
+**83.03% functions**. Released `v1.14.1` measures **80.42% lines**, **62.04%
+branches**, and **83.09% functions**, with 11/11 integration scenarios and
 25/25 total Node test-runner tests (1 integration runner plus 24 focused unit
-cases) passing on Agy `1.1.20`, Node `v26.5.1`, and pnpm `10.33.0`.
+cases) passing on Agy `1.1.20`, Node `v26.5.1`, and pnpm `10.33.0`. Coverage is
+evidence, not a substitute for the behavioral negative controls above.
 
 The real AGY `1.1.16` host E2E also passed committed injection, `/memory`,
 targeted `/remember`, scoped `/init`, non-mutating Stop, fresh-session
@@ -261,10 +258,10 @@ See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 3. Built JavaScript artifacts or installed runtime dependencies for remote
    TypeScript-dependent utilities.
 4. Host-level proof or narrower claims for subagent tool restrictions.
-5. An automated release workflow remains deferred. The `v1.14.0` candidate must
-   use the existing manual tag/GitHub Release path only after source, host, and
-   human gates pass; candidate notes live in
-   [`docs/releases/v1.14.0.md`](./docs/releases/v1.14.0.md).
+5. An automated release workflow remains deferred. Releases use the existing
+   manual tag/GitHub Release path only after source, host, and human gates pass;
+   current patch evidence lives in
+   [`docs/releases/v1.14.1.md`](./docs/releases/v1.14.1.md).
 
 ## Distribution
 

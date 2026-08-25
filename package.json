@@ -1,6 +1,6 @@
 {
   "name": "agy-memory-layer",
-  "version": "1.14.0",
+  "version": "1.14.1",
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=22"

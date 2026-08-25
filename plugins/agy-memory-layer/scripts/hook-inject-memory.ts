@@ -8,11 +8,11 @@
 
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { pathToFileURL } from 'node:url'
 import {
   extractWorkingHypothesisBullets,
   inspectCommittedWorkingHypothesis,
 } from './active-learning.ts'
+import { isDirectCliInvocation } from './cli-entrypoint.ts'
 import { getMemoryRepositoryStatus, readCommittedMemoryFile } from './memory-repository.ts'
 import { resolveProjectSlug } from './workspace-identity.ts'
 
@@ -152,7 +152,7 @@ export function generatePreInvocationContext(
 }
 
 // CLI Execution Handler
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectCliInvocation(import.meta.url)) {
   let stdinData = ''
   process.stdin.setEncoding('utf-8')
 

@@ -111,10 +111,12 @@ mkdir -p "$(dirname "$CONFIG_LINK")"
 replace_owned_symlink "$CONFIG_LINK" "$PLUGIN_ROOT"
 echo "✓ Plugin config linked to ${CONFIG_LINK}"
 
-# 4. Verify hooks
+# 4. Verify hooks through the installed symlink
 echo "🔍 Validating hook scripts..."
-echo '{"workspacePaths":["'$(pwd)'"]}' | "${PLUGIN_ROOT}/scripts/hook-inject-memory.sh" >/dev/null
-echo '{"decision":"stop"}' | "${PLUGIN_ROOT}/scripts/hook-memory-status.sh" >/dev/null
+INJECT_OUTPUT="$(printf '{"workspacePaths":["%s"]}' "$(pwd)" | "$TARGET_LINK/scripts/hook-inject-memory.sh")"
+printf '%s' "$INJECT_OUTPUT" | node -e 'const fs=require("node:fs");const value=JSON.parse(fs.readFileSync(0,"utf8"));if(!Array.isArray(value.injectSteps)||value.injectSteps.length===0)process.exit(1)'
+STOP_OUTPUT="$(printf '{"decision":"stop"}' | "$TARGET_LINK/scripts/hook-memory-status.sh")"
+printf '%s' "$STOP_OUTPUT" | node -e 'const fs=require("node:fs");const value=JSON.parse(fs.readFileSync(0,"utf8"));if(value.decision!=="stop")process.exit(1)'
 echo "✓ Hook validation passed."
 
 echo "--------------------------------------------------"

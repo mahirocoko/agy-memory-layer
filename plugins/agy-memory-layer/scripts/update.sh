@@ -54,10 +54,12 @@ mkdir -p "$(dirname "$CONFIG_LINK")"
 replace_owned_symlink "$CONFIG_LINK" "$PLUGIN_ROOT"
 echo "✓ Config symlink refreshed at ${CONFIG_LINK}"
 
-# 3. Validate Hooks
+# 3. Validate Hooks through the installed symlink
 echo "🔍 Validating hook contracts..."
-echo '{"workspacePaths":["'$(pwd)'"]}' | "${PLUGIN_ROOT}/scripts/hook-inject-memory.sh" >/dev/null
-echo '{"decision":"stop"}' | "${PLUGIN_ROOT}/scripts/hook-memory-status.sh" >/dev/null
+INJECT_OUTPUT="$(printf '{"workspacePaths":["%s"]}' "$(pwd)" | "$TARGET_LINK/scripts/hook-inject-memory.sh")"
+printf '%s' "$INJECT_OUTPUT" | node -e 'const fs=require("node:fs");const value=JSON.parse(fs.readFileSync(0,"utf8"));if(!Array.isArray(value.injectSteps)||value.injectSteps.length===0)process.exit(1)'
+STOP_OUTPUT="$(printf '{"decision":"stop"}' | "$TARGET_LINK/scripts/hook-memory-status.sh")"
+printf '%s' "$STOP_OUTPUT" | node -e 'const fs=require("node:fs");const value=JSON.parse(fs.readFileSync(0,"utf8"));if(value.decision!=="stop")process.exit(1)'
 if command -v agy >/dev/null 2>&1; then
   agy plugin validate "$PLUGIN_ROOT" >/dev/null
   echo "✓ Plugin schema validated with agy."

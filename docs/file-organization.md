@@ -27,7 +27,8 @@ learn-letta-code/
 │   ├── letta-parity.md                      # Canonical Letta behavior/adaptation/status matrix
 │   ├── releases/v1.12.1.md                  # Historical v1.12.1 evidence
 │   ├── releases/v1.13.0.md                  # Prior scoped-health release evidence
-│   ├── releases/v1.14.0.md                  # Current Evidence Controller release evidence
+│   ├── releases/v1.14.0.md                  # Superseded Evidence Controller release evidence
+│   ├── releases/v1.14.1.md                  # Current installed-hook runtime patch evidence
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene

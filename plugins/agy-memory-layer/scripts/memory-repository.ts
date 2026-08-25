@@ -10,7 +10,7 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { isDirectCliInvocation } from './cli-entrypoint.ts'
 
 export type MemoryRepositoryState = 'uninitialized' | 'clean' | 'dirty' | 'conflict' | 'error'
 
@@ -366,7 +366,7 @@ const runCli = (): void => {
   throw new Error(`Unknown memory repository command: ${command}`)
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectCliInvocation(import.meta.url)) {
   try {
     runCli()
   } catch (error) {

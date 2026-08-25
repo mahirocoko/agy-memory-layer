@@ -913,6 +913,34 @@ describe('Unit Coverage Extensions', () => {
     )
     assert.strictEqual(refresh.status, 0, refresh.stderr)
 
+    const linkedInject = spawnSync(
+      '/bin/bash',
+      [path.join(targetLink, 'scripts', 'hook-inject-memory.sh')],
+      {
+        cwd: ROOT_DIR,
+        env,
+        encoding: 'utf-8',
+        input: JSON.stringify({ workspacePaths: [ROOT_DIR] }),
+      },
+    )
+    assert.strictEqual(linkedInject.status, 0, linkedInject.stderr)
+    const linkedInjectOutput = JSON.parse(linkedInject.stdout)
+    assert.strictEqual(Array.isArray(linkedInjectOutput.injectSteps), true)
+    assert.strictEqual(linkedInjectOutput.injectSteps.length > 0, true)
+
+    const linkedStop = spawnSync(
+      '/bin/bash',
+      [path.join(targetLink, 'scripts', 'hook-memory-status.sh')],
+      {
+        cwd: ROOT_DIR,
+        env,
+        encoding: 'utf-8',
+        input: JSON.stringify({ decision: 'stop' }),
+      },
+    )
+    assert.strictEqual(linkedStop.status, 0, linkedStop.stderr)
+    assert.deepStrictEqual(JSON.parse(linkedStop.stdout), { decision: 'stop' })
+
     const uninstallScript = path.join(
       ROOT_DIR,
       'plugins',
