@@ -20,13 +20,13 @@ node --experimental-strip-types --test --test-concurrency=1 tests/run-test-suite
 
 ## 🌙 Deterministic Dream Note Utility
 
-`dream-daemon.ts` maps transcripts through local Agy workspace history and writes a deterministic active note only when explicit durable-memory intent contains an actionable rule or fact. Unknown ownership, vague intent, and no-signal sessions skip. It is separate from Stop and does not provide Letta's model-backed isolated reflection worktree.
+`dream-daemon.ts` maps transcripts through local Agy workspace history and writes deterministic recall-only correction evidence only when explicit durable-memory intent contains an actionable rule or fact. Unknown ownership, vague intent, and no-signal sessions skip. It never activates the protected working hypothesis, remains separate from Stop, and does not provide Letta's model-backed isolated reflection worktree.
 
 ```bash
 # Check status of pending undreamed sessions and step count threshold
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --status
 
-# Process pending sessions; only explicit durable intent creates a note
+# Process pending sessions; only explicit durable intent creates archive evidence
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now
 
 # Force immediate synthesis regardless of session age

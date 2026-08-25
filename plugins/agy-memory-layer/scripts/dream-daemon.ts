@@ -3,7 +3,7 @@
 /**
  * Auto-Dream Background Daemon for agy-memory-layer
  * Scans historical and recent conversations in ~/.gemini/antigravity-cli/brain/
- * Automatically synthesizes undreamed sessions into ~/.gemini/memory/projects/<slug>/learnings/
+ * Synthesizes explicit durable corrections into recall-only project archives.
  * Inspired by Letta Code sleep-time reflection architecture & Step-Count triggers (DEFAULT_STEP_COUNT = 20)
  */
 
@@ -91,26 +91,31 @@ export function shouldFireStepCountTrigger(
 
 export function getDreamedConversationIds(slug: string): Set<string> {
   const dreamedIds = new Set<string>()
-  const learningsDir = path.join(memoryRoot, 'projects', slug, 'learnings')
-  if (!fs.existsSync(learningsDir)) return dreamedIds
+  const evidenceDirectories = [
+    path.join(memoryRoot, 'projects', slug, 'learnings'),
+    path.join(memoryRoot, 'archives', 'projects', slug, 'learnings'),
+  ]
 
-  const files = fs.readdirSync(learningsDir).filter((f) => f.endsWith('.md'))
-  for (const f of files) {
-    try {
-      const content = fs.readFileSync(path.join(learningsDir, f), 'utf-8')
-      const matches = content.match(
-        /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi,
-      )
-      if (matches) {
-        matches.forEach((id) => {
-          dreamedIds.add(id.toLowerCase())
-        })
-      }
-      const nameMatch = f.match(/auto_dream_([0-9a-f]{8})/i)
-      if (nameMatch) {
-        dreamedIds.add(nameMatch[1].toLowerCase())
-      }
-    } catch {}
+  for (const evidenceDirectory of evidenceDirectories) {
+    if (!fs.existsSync(evidenceDirectory)) continue
+    const files = fs.readdirSync(evidenceDirectory).filter((file) => file.endsWith('.md'))
+    for (const file of files) {
+      try {
+        const content = fs.readFileSync(path.join(evidenceDirectory, file), 'utf-8')
+        const matches = content.match(
+          /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi,
+        )
+        if (matches) {
+          matches.forEach((id) => {
+            dreamedIds.add(id.toLowerCase())
+          })
+        }
+        const nameMatch = file.match(/auto_dream_([0-9a-f]{8})/i)
+        if (nameMatch) {
+          dreamedIds.add(nameMatch[1].toLowerCase())
+        }
+      } catch {}
+    }
   }
 
   return dreamedIds
@@ -231,12 +236,12 @@ export function synthesizeConversationLearning(
 
   const today = new Date().toISOString().split('T')[0]
   const markdown = `---
-memory_status: active
-memory_kind: durable-learning
+memory_status: archived
+memory_kind: correction-evidence
 source_conversation: ${conv.id}
 workspace: ${slug}
 ---
-# Durable Learning: Session conv-${conv.shortId}
+# Correction Evidence: Session conv-${conv.shortId}
 
 **Date**: ${today}
 **Conversation ID**: \`[conv-${conv.id}](conversation://${conv.id})\`
@@ -246,7 +251,7 @@ workspace: ${slug}
 
 ---
 
-## Durable Memory Lessons
+## Explicit Actionable Corrections
 ${lessons.map((lesson) => `- ${lesson}`).join('\n')}
 `
 
@@ -263,7 +268,7 @@ export function runAutoDream(
   console.log(`   Found ${pending.length} pending conversations to process.\n`)
 
   if (pending.length === 0) {
-    console.log('✓ All conversations have already been dreamed and consolidated into MemFS.\n')
+    console.log('✓ All conversations have already been reviewed for correction evidence.\n')
     return []
   }
 
@@ -290,7 +295,7 @@ export function runAutoDream(
       continue
     }
 
-    const relativePath = `projects/${slug}/learnings/${today}_auto_dream_${conv.shortId}.md`
+    const relativePath = `archives/projects/${slug}/learnings/${today}_auto_dream_${conv.shortId}.md`
     const targetFile = writeMemoryFile(memoryRoot, relativePath, doc).absolutePath
 
     changedPaths.push(relativePath)
@@ -307,7 +312,7 @@ export function runAutoDream(
     commitMemoryPaths({
       memoryRoot,
       relativePaths: changedPaths,
-      reason: `chore(dream): consolidate ${changedPaths.length} explicit durable lessons`,
+      reason: `chore(dream): archive ${changedPaths.length} explicit correction evidence note(s)`,
     })
   }
   state.lastRun = new Date().toISOString()

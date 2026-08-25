@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { inspectCommittedWorkingHypothesis } from '../plugins/agy-memory-layer/scripts/active-learning.ts'
 import {
   ACTIVE_MEMORY_BUDGET_TOKENS,
   generatePreInvocationContext,
@@ -23,6 +24,9 @@ export type WorkspaceHealth = {
   hasProjectRules: boolean
   injectsArchive: boolean
   injectsSessionBoilerplate: boolean
+  workingHypothesisState: 'none' | 'selected' | 'conflict'
+  workingHypothesisPath?: string
+  workingHypothesisDiagnostics: string[]
 }
 
 export type MemoryHealthReport = {
@@ -65,6 +69,7 @@ export const inspectMemoryHealth = (
     )
     const message = output.injectSteps[0]?.ephemeralMessage || ''
     const estimatedTokens = Math.ceil(message.length / 4)
+    const workingHypothesis = inspectCommittedWorkingHypothesis(projectSlug, memoryRoot)
 
     return {
       workspace,
@@ -79,6 +84,9 @@ export const inspectMemoryHealth = (
       injectsArchive: message.includes('archive_'),
       injectsSessionBoilerplate:
         message.includes('Session Continuity') || message.includes('Autonomous Recall'),
+      workingHypothesisState: workingHypothesis.state,
+      workingHypothesisPath: workingHypothesis.selectedPath,
+      workingHypothesisDiagnostics: workingHypothesis.diagnostics,
     }
   })
 
@@ -100,6 +108,9 @@ export const inspectMemoryHealth = (
     }
     if (workspace.injectsArchive || workspace.injectsSessionBoilerplate) {
       issues.push(`Low-signal learning injection: ${workspace.projectSlug}`)
+    }
+    for (const diagnostic of workspace.workingHypothesisDiagnostics) {
+      issues.push(`Working hypothesis conflict (${workspace.projectSlug}): ${diagnostic}`)
     }
   }
 

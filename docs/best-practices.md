@@ -18,7 +18,7 @@ This guide outlines core development patterns, performance constraints, and memo
 - **Compact Signal**: Memory blocks injected into the prompt must be dense, clear, and high-signal Markdown.
 - Avoid dumping multi-megabyte log files or large code snippets into `human.md` or `project.md`.
 - The active TypeScript hook emits a **Budget Notice** above `1,400` estimated tokens but does not truncate memory. `memory-health.ts --strict` owns the failing offline gate; curate global/project blocks when it fails.
-- A learning is prompt-active only when its frontmatter contains `memory_status: active`. Keep uncurated, superseded, and historical material under `archives/`, where `/memory search` can still retrieve it.
+- Only `projects/<slug>/learnings/working-hypothesis.md` can be prompt-active, and it must declare both `memory_status: active` and `memory_kind: working-hypothesis`. The exact path requires explicit approval. Any active marker outside it fails closed. Keep uncurated, superseded, Dream, and historical material under `archives/`, where `/memory search` can still retrieve it.
 - Uncommitted Markdown is not active prompt state. Fix or commit it through the shared writer instead of relying on the hook to legitimize it.
 
 ---
@@ -37,6 +37,7 @@ This guide outlines core development patterns, performance constraints, and memo
 - JSON manifests express intended capabilities for roles such as `recall_agent` and `dream_agent`.
 - `agent-launcher.ts` resolves those manifests; it does not prove process isolation or host-enforced tool denial.
 - Describe a role as sandboxed only after the Agy host execution path has been verified independently.
+- Evidence Controller delegation uses native Agy child conversations. Keep one writer, make the reviewer fresh and read-only, disable nested delegation by default, and treat child agreement as evidence input rather than proof.
 
 ## 5. Memory Writer Contract
 

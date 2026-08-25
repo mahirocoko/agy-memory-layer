@@ -27,6 +27,7 @@ learn-letta-code/
 │   ├── letta-parity.md                      # Canonical Letta behavior/adaptation/status matrix
 │   ├── releases/v1.12.1.md                  # Historical v1.12.1 evidence
 │   ├── releases/v1.13.0.md                  # Current release notes and exact verification evidence
+│   ├── releases/v1.14.0.md                  # Unreleased Evidence Controller source candidate
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene
@@ -41,7 +42,8 @@ learn-letta-code/
 ├── plugins/agy-memory-layer/                # Core Antigravity Plugin bundle
 │   ├── plugin.json                          # Plugin manifest and metadata
 │   ├── hooks.json                           # Lifecycle hook registration (PreInvocation, Stop)
-│   ├── agents/                              # Declarative Subagent Role Manifests (6 JSON specs)
+│   ├── agents/                              # Declarative Subagent Role Manifests (7 JSON specs)
+│   │   ├── evidence_reviewer_agent.json
 │   │   ├── dream_agent.json
 │   │   ├── recall_agent.json
 │   │   ├── onboarding_agent.json
@@ -53,12 +55,13 @@ learn-letta-code/
 │   │   ├── system/                          # Benchmarks & core system prompts
 │   │   ├── persona/                         # 6 personality presets (memo, linus, tutor, architect, kawaii, blank)
 │   │   ├── human/                           # User profile templates
-│   │   └── subagents/                       # System prompts for all 6 subagents
+│   │   └── subagents/                       # System prompts for all 7 subagents
 │   │
 │   ├── rules/
 │   │   └── AGENTS.md                        # In-Context autonomous memory directives
 │   │
-│   ├── skills/                              # 11 Slash command skill definitions
+│   ├── skills/                              # 12 Slash command skill definitions
+│   │   ├── evidence-controller/SKILL.md
 │   │   ├── init/SKILL.md
 │   │   ├── memory/SKILL.md
 │   │   ├── recall/SKILL.md
@@ -76,9 +79,10 @@ learn-letta-code/
 │       ├── hook-inject-memory.ts            # Committed-HEAD projection owner
 │       ├── hook-memory-status.sh             # Strict Stop wrapper
 │       ├── hook-memory-status.ts             # Non-mutating Stop status owner
+│       ├── active-learning.ts                 # Canonical committed working-hypothesis selector
 │       ├── memory-repository.ts              # Containment, Git state, atomic write, targeted commit
 │       ├── workspace-identity.ts             # Shared project scope and conversation workspace resolution
-│       ├── dream-daemon.ts                  # Manual/optional-cron deterministic Dream notes
+│       ├── dream-daemon.ts                  # Manual/optional-cron correction evidence archive
 │       ├── recall-engine.ts                 # Subword N-Gram Vector & BM25 hybrid recall
 │       ├── memory-search.ts                 # MemFS status and ranked text search
 │       ├── init-project-memory.ts           # Codebase onboarding and memory seeding

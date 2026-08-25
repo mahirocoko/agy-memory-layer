@@ -1,12 +1,12 @@
 {
   "name": "agy-memory-layer",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=22"
   },
   "type": "module",
-  "description": "Committed Git-backed MemFS, explicit Dream notes, codebase onboarding, and Memory Palace for Antigravity CLI",
+  "description": "Evidence-controlled Agy delegation with committed Git-backed MemFS and scoped correction recall",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "tsc --noEmit && node --experimental-strip-types --test --test-concurrency=1 tests/run-test-suite.ts tests/unit-coverage.test.ts",

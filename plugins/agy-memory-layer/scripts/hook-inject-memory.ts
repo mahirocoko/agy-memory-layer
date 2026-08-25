@@ -10,10 +10,10 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import {
-  getMemoryRepositoryStatus,
-  listCommittedMemoryFiles,
-  readCommittedMemoryFile,
-} from './memory-repository.ts'
+  extractWorkingHypothesisBullets,
+  inspectCommittedWorkingHypothesis,
+} from './active-learning.ts'
+import { getMemoryRepositoryStatus, readCommittedMemoryFile } from './memory-repository.ts'
 import { resolveProjectSlug } from './workspace-identity.ts'
 
 export type PreInvocationPayload = {
@@ -35,53 +35,19 @@ export const ACTIVE_MEMORY_BUDGET_TOKENS = 1400
 
 export { resolveProjectSlug }
 
-const hasActiveLearningFrontmatter = (content: string): boolean => {
-  const frontmatter = content.match(/^---\n([\s\S]*?)\n---(?:\n|$)/)?.[1]
-  return Boolean(frontmatter?.match(/^memory_status:\s*active\s*$/m))
-}
-
-const extractDurableLearningBullets = (content: string): string[] => {
-  const directive =
-    /\b(?:always|avoid|do not|must|never|prefer|require|should)\b|(?:ห้าม|ต้อง|อย่า|ควร)/i
-  const bullets = content
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => /^[-*]\s+/.test(line))
-    .map((line) => line.replace(/^[-*]\s+/, '').trim())
-    .filter((line) => line.length > 0)
-  const actionable = bullets.filter((line) => directive.test(line))
-  return (actionable.length > 0 ? actionable : bullets).slice(0, 2)
-}
-
 export function getRecentLearningsSnippet(
   projectSlug: string,
   memRoot: string,
   maxItems: number = 1,
 ): string {
   try {
-    const files = listCommittedMemoryFiles(memRoot, `projects/${projectSlug}/learnings`)
-      .filter((file) => file.endsWith('.md') && !path.basename(file).startsWith('.'))
-      .filter((file) => !path.basename(file).startsWith('archive_'))
-      .sort((a, b) => b.localeCompare(a))
-
-    if (files.length === 0) return ''
-
-    const snippets: string[] = []
-    for (const file of files) {
-      if (snippets.length >= maxItems) break
-      try {
-        const content = readCommittedMemoryFile(memRoot, file)
-        if (!content || !hasActiveLearningFrontmatter(content)) continue
-        const bullets = extractDurableLearningBullets(content)
-        if (bullets.length > 0) {
-          const excerpt = bullets.map((bullet) => `  - ${bullet}`).join('\n')
-          snippets.push(`- **${path.basename(file, '.md')}**:\n${excerpt}`)
-        }
-      } catch {}
-    }
-
-    if (snippets.length === 0) return ''
-    return `### 💡 Recent Project Learnings & Durable Lessons (${projectSlug})\n${snippets.join('\n\n')}\n\n`
+    if (maxItems <= 0) return ''
+    const selection = inspectCommittedWorkingHypothesis(projectSlug, memRoot)
+    if (selection.state !== 'selected' || !selection.content || !selection.selectedPath) return ''
+    const bullets = extractWorkingHypothesisBullets(selection.content)
+    if (bullets.length === 0) return ''
+    const excerpt = bullets.map((bullet) => `  - ${bullet}`).join('\n')
+    return `### 🧪 Current Working Hypothesis (${projectSlug})\n- **${path.basename(selection.selectedPath, '.md')}**:\n${excerpt}\n\n`
   } catch {
     return ''
   }
@@ -91,12 +57,26 @@ export function generatePreInvocationContext(
   inputJson: string,
   memoryRootOverride?: string,
 ): PreInvocationOutput {
-  let payload: PreInvocationPayload = {}
+  let payload: PreInvocationPayload
   try {
-    if (inputJson?.trim()) {
-      payload = JSON.parse(inputJson)
+    const parsed: unknown = JSON.parse(inputJson?.trim() || '{}')
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { injectSteps: [] }
     }
-  } catch {}
+    const candidate = parsed as Record<string, unknown>
+    if (
+      candidate.workspacePaths !== undefined &&
+      (!Array.isArray(candidate.workspacePaths) ||
+        candidate.workspacePaths.some(
+          (workspace) => typeof workspace !== 'string' || workspace.length === 0,
+        ))
+    ) {
+      return { injectSteps: [] }
+    }
+    payload = candidate as PreInvocationPayload
+  } catch {
+    return { injectSteps: [] }
+  }
 
   const wsPath =
     payload.workspacePaths && payload.workspacePaths.length > 0
@@ -132,10 +112,15 @@ export function generatePreInvocationContext(
     contextText += `### 📋 Project Rules (${projectSlug}/rules.md)\n${projectRules}\n\n`
   }
 
-  // Inject recent durable learnings proactively
+  // Inject at most one committed, canonical working hypothesis.
   const learningsText = getRecentLearningsSnippet(projectSlug, memRoot, 1)
   if (learningsText) {
     contextText += learningsText
+  }
+
+  const hypothesisSelection = inspectCommittedWorkingHypothesis(projectSlug, memRoot)
+  if (hypothesisSelection.state === 'conflict') {
+    contextText += `### ⚠️ Working Hypothesis Conflict\n${hypothesisSelection.diagnostics.slice(0, 4).join('\n')}\nNo working hypothesis was activated. Resolve the committed metadata through the protected proposal workflow.\n\n`
   }
 
   const repositoryStatus = getMemoryRepositoryStatus(memRoot)
@@ -149,13 +134,14 @@ export function generatePreInvocationContext(
     return { injectSteps: [] }
   }
 
-  const estTokens = Math.ceil(contextText.length / 4)
+  const baseMessage = `🧠 **[MemFS Active Memory]**\n\n${contextText}`
+  const estTokens = Math.ceil(baseMessage.length / 4)
   let reminder = ''
   if (estTokens > ACTIVE_MEMORY_BUDGET_TOKENS) {
     reminder = `\n> 💡 *[MemFS Budget Notice: Injected memory is ~${estTokens} tokens. Run /dream or /doctor to consolidate if needed.]*\n`
   }
 
-  const message = `🧠 **[MemFS Active Memory]**\n\n${contextText}${reminder}`
+  const message = `${baseMessage}${reminder}`
   return {
     injectSteps: [
       {

@@ -18,7 +18,9 @@ canonical boundary is [`letta-parity.md`](./letta-parity.md).
    or starting background work.
 5. **Separate recall** — `/recall` searches Antigravity transcripts, while
    `/memory search` searches Markdown memory.
-6. **Agy extensions** — Memory Palace, explicit-intent Dream notes, project
+6. **Evidence-controlled execution** — Agy separates claim classes, chooses
+   direct or bounded native-subagent routes, and preserves human-owned gates.
+7. **Agy extensions** — Memory Palace, archived correction evidence, project
    onboarding, Letta import, persona presets, backup/restore, and read-only
    Markdown maintenance analysis.
 
@@ -32,8 +34,9 @@ Antigravity CLI
   │           └── read committed HEAD through memory-repository.ts
   │
   ├── Active conversation / explicit skills
+  │     ├── Evidence Controller direct/delegated routing
   │     ├── contained targeted memory writers
-  │     ├── 6 declarative subagent role manifests
+  │     ├── 7 declarative subagent role manifests
   │     └── recall / palace / doctor / sync utilities
   │
   └── Stop
@@ -46,13 +49,15 @@ Antigravity CLI
 | Subsystem | Primary owner | Current boundary |
 | --- | --- | --- |
 | Committed prompt projection | `scripts/hook-inject-memory.ts` | Reads `HEAD`; dirty content is not active |
+| Working hypothesis | `scripts/active-learning.ts` | One canonical protected hypothesis; malformed/stray active state fails closed |
+| Evidence Controller | `skills/evidence-controller/SKILL.md` | Agy-native claim, delegation, retry, and human-gate procedure |
 | Memory repository contract | `scripts/memory-repository.ts` | Containment, status, atomic writes, targeted commits |
 | Workspace identity | `scripts/workspace-identity.ts` | Shared child/root/remote scope resolution and history mapping |
 | Stop status | `scripts/hook-memory-status.ts` | Observational only |
 | Project initialization | `scripts/init-project-memory.ts` | Scoped scan and two-file commit |
 | Approval | `scripts/memory-approval.ts` | Auto global policy; explicit project/rules policy |
 | Transcript recall | `scripts/recall-engine.ts` | Local BM25 + n-gram search |
-| Deterministic Dream notes | `scripts/dream-daemon.ts` | Local Agy workspace history plus actionable durable intent; unknown/vague input skips |
+| Dream correction archive | `scripts/dream-daemon.ts` | Local Agy workspace history plus actionable durable intent; writes recall-only evidence and skips unknown/vague input |
 | Memory health | `tools/memory-health.ts` | Deterministic budget, scope, residue, and low-signal checks |
 | Letta import | `scripts/letta-sync.ts` | Explicit agent selection and targeted import |
 | Memory Palace | `scripts/palace-generator.ts` | Read-only visualization |

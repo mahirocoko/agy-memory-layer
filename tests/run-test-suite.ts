@@ -338,7 +338,7 @@ await runTest('AGY Plugin Schema', "Plugin passes 'agy plugin validate' with zer
     throw new Error(`Validation output did not show success: ${output}`)
   }
 
-  return 'Native AGY plugin validation: 11 skills, 6 agents, 2 hooks processed with 0 errors.'
+  return 'Native AGY plugin validation: 12 skills, 7 agents, 2 hooks processed with 0 errors.'
 })
 
 // -----------------------------------------------------------------------------
@@ -356,6 +356,9 @@ await runTest(
     const content = fs.readFileSync(agentsMdPath, 'utf-8')
     const requiredKeywords = [
       'Proactive Memory Directives',
+      'Evidence Controller & Model-Guided Delegation',
+      'Observed',
+      'WRITER_REVIEWER',
       'Proactive Codebase Onboarding',
       'Proactive User Learning',
       'Proactive Project Architecture',
@@ -604,12 +607,13 @@ const failedTests = results.filter((r) => r.status === 'FAILED').length
 const totalDuration = results.reduce((acc, r) => acc + r.duration, 0)
 const agyVersion = getCommandVersion('agy', ['--version'])
 
-const markdown = `# 🧪 Comprehensive Test & Verification Report: \`agy-memory-layer\`
+const markdown = `# 🧪 Integration Scenario Report: \`agy-memory-layer\`
 
 **Date**: ${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC
 **Environment**: macOS (Darwin) · Antigravity CLI ${agyVersion} · Node ${process.version}
 **Storage Target**: disposable test HOME (isolated from the user's real \`~/.gemini/memory/\`)
-**Overall Result**: ${failedTests === 0 ? '🟢 **ALL TESTS PASSED (100%)**' : '🔴 **SOME TESTS FAILED**'}
+**Scope**: Integration scenarios only; aggregate Node test count and coverage come from \`pnpm test\` / \`pnpm test:coverage\` and release evidence.
+**Overall Result**: ${failedTests === 0 ? '🟢 **ALL INTEGRATION SCENARIOS PASSED (100%)**' : '🔴 **SOME INTEGRATION SCENARIOS FAILED**'}
 
 ---
 
@@ -650,7 +654,7 @@ ${results.map((r) => `| **${r.suite}** | ${r.name} | ${r.status === 'PASSED' ? '
    - Targeted writers reject unrelated dirty paths; Stop preserves both \`HEAD\` and dirty working-tree content while reporting status.
 
 6. **Native Tooling Compatibility**:
-   - Verified with \`agy plugin validate\` (11 skills, 6 declarative agent roles, 2 hooks active).
+   - Verified with \`agy plugin validate\` (12 skills, 7 declarative agent roles, 2 hooks active).
 `
 
 fs.writeFileSync(TEST_REPORT_FILE, markdown, 'utf-8')

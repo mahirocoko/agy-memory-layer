@@ -49,6 +49,8 @@ export type ReviewResult = {
   message: string
 }
 
+export const PROTECTED_WORKING_HYPOTHESIS_PATTERN = 'projects/*/learnings/working-hypothesis.md'
+
 const memoryRoot =
   process.env.AGY_MEMORY_DIR || path.join(process.env.HOME || '', '.gemini', 'memory')
 const memoryStateRoot = process.env.AGY_MEMORY_STATE_DIR || `${memoryRoot}.state`
@@ -58,6 +60,7 @@ const pendingDir = path.join(memoryStateRoot, 'pending-approvals')
 export const DEFAULT_APPROVAL_POLICY: ApprovalPolicy = {
   defaultMode: 'auto',
   patterns: {
+    [PROTECTED_WORKING_HYPOTHESIS_PATTERN]: 'explicit',
     'projects/*/project.md': 'explicit',
     'projects/*/rules.md': 'explicit',
     'global/human.md': 'auto',
@@ -88,6 +91,10 @@ export function matchPattern(relPath: string, pattern: string): boolean {
 export function getApprovalModeForFile(relPath: string): ApprovalMode {
   const policy = getApprovalPolicy()
   const normalized = normalizeMemoryRelativePath(relPath)
+
+  if (matchPattern(normalized, PROTECTED_WORKING_HYPOTHESIS_PATTERN)) {
+    return 'explicit'
+  }
 
   for (const [pattern, mode] of Object.entries(policy.patterns)) {
     if (matchPattern(normalized, pattern)) {

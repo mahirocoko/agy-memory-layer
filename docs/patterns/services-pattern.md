@@ -10,7 +10,8 @@
             │
             ├── Resolve and validate project identity
             ├── Read global/project files from Git HEAD
-            ├── Read at most one committed, explicitly active learning excerpt
+            ├── Select one canonical committed working hypothesis
+            ├── Fail closed on malformed or stray active learning metadata
             ├── Report dirty/conflict state without injecting it
             └── Estimate prompt budget
             │
@@ -81,3 +82,23 @@ repository, not inside it.
 
 The returned object is a specification. The resolver does not establish an OS
 sandbox or prove that the Agy host denies undeclared tools.
+
+## 5. Evidence Controller Delegation
+
+```text
+[Material Agy task]
+        │
+        ▼
+[skills/evidence-controller/SKILL.md]
+        │
+        ├── Classify Observed / Inferred / Unverified
+        ├── Keep one falsifiable hypothesis
+        ├── Choose DIRECT / ONE_LANE / WRITER_REVIEWER / PARALLEL_READONLY
+        ├── Use native Agy child conversations when justified
+        └── Close with deterministic checks and human-owned gates
+```
+
+This is a model-guided procedure, not a deterministic scheduler. Native child
+conversation evidence proves delegation capability; it does not make two-agent
+agreement proof or authorize provider retry, spend, commit, release, or human
+acceptance.

@@ -20,6 +20,8 @@ The project targets **contract parity**, not architecture parity:
 | --- | --- | --- |
 | Memory path containment and Git state | `scripts/memory-repository.ts` | lifecycle tests |
 | Active prompt projection | `scripts/hook-inject-memory.ts` | `hooks.json` |
+| Working-hypothesis selection | `scripts/active-learning.ts` | PreInvocation, strict health |
+| Agy evidence/delegation procedure | `skills/evidence-controller/SKILL.md` | plugin rules, native Agy subagent tools |
 | Workspace/project identity | `scripts/workspace-identity.ts` | PreInvocation, `/init`, Dream |
 | Stop behavior | `scripts/hook-memory-status.ts` | `hooks.json` |
 | Explicit memory review | `scripts/memory-approval.ts` | `/remember` |
@@ -40,6 +42,7 @@ The project targets **contract parity**, not architecture parity:
 | Recall history is distinct from editable memory | `recall-engine.ts` searches Antigravity brain transcripts; `/memory search` searches Markdown | **Implemented adaptation** |
 | Context compaction is distinct from memory maintenance | `memory-compactor.ts` is read-only Markdown maintenance analysis | **Implemented boundary** |
 | Reflection uses conversation cursors, one-active-run reservation, isolated worktree, merge policy, and post-merge activation | Deterministic Dream maps local Agy workspace history, writes only actionable explicit durable intent, skips unknown/vague/no-signal sessions, and remains separate from Stop | **Partial — isolated model reflection integration deferred** |
+| A main agent can delegate bounded work and freshly verify claims | Evidence Controller guides Agy-native direct, specialist, writer/reviewer, and parallel-read-only routes; one pane-first hard-trigger sandbox automatically selected writer/reviewer and completed a fresh child audit, while routing remains model-guided | **Implemented procedure; bounded host evidence** |
 | Subagent tools and memory scope are enforced at launch | JSON manifests currently resolve declarative role/capability intent | **Not established by this repository** |
 | Installed package updater checks and acquires a newer release | `/update` refreshes the active link from the current source only | **Acquisition updater deferred** |
 | Release artifact contains runtime dependencies | Direct TypeScript execution requires Node 22+ and a developer dependency install for `ts-inspector.ts` | **Packaging gap remains** |
@@ -49,9 +52,10 @@ The project targets **contract parity**, not architecture parity:
 ### PreInvocation
 
 1. Resolve the configured MemFS root and shared child/root/remote project identity.
-2. Read compact global/project content plus at most one explicitly active learning from committed Git `HEAD`.
-3. Never inject an uncommitted edit.
-4. Add a status notice when the repo is dirty, conflicted, unavailable, or
+2. Read compact global/project content plus at most one canonical protected working hypothesis from committed Git `HEAD`.
+3. Fail closed on malformed canonical metadata or active markers outside the canonical path.
+4. Never inject an uncommitted edit.
+5. Add a status notice when the repo is dirty, conflicted, unavailable, or
    uninitialized.
 
 ### Memory write
@@ -82,7 +86,8 @@ The following are useful Agy features, not proof of Letta parity:
 - local BM25 + n-gram Antigravity transcript recall;
 - Memory Palace;
 - read-only Markdown maintenance and archival analysis;
-- explicit-intent deterministic Dream notes;
+- Evidence Controller routing and scoped closeout;
+- explicit-intent deterministic Dream correction archives;
 - skill candidate synthesis;
 - Letta-to-Agy import.
 

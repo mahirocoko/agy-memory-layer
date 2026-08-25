@@ -24,12 +24,17 @@ const { cosineSimilarity, buildVectorProfile, scanAllConversations, searchRecall
 )
 const {
   extractExplicitDurableLessons,
+  getDreamedConversationIds,
+  runAutoDream,
   scanPendingConversations,
   synthesizeConversationLearning,
   printStatus,
 } = await import(path.join(SCRIPTS_DIR, 'dream-daemon.ts'))
 const { generatePreInvocationContext, getRecentLearningsSnippet } = await import(
   path.join(SCRIPTS_DIR, 'hook-inject-memory.ts')
+)
+const { getWorkingHypothesisPath, inspectCommittedWorkingHypothesis } = await import(
+  path.join(SCRIPTS_DIR, 'active-learning.ts')
 )
 const { getWorkspaceRootSlug, readConversationWorkspaceMap, resolveProjectSlug } = await import(
   path.join(SCRIPTS_DIR, 'workspace-identity.ts')
@@ -40,6 +45,7 @@ const { createIsolatedWorktree, getWorktreeDiff, cleanupWorktree, listActiveWork
 const {
   getApprovalPolicy,
   getApprovalModeForFile,
+  saveApprovalPolicy,
   proposeMemoryUpdate,
   listPendingProposals,
   getPendingProposal,
@@ -200,6 +206,15 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(Array.isArray(parsed.injectSteps), true)
     assert.strictEqual(parsed.injectSteps.length > 0, true)
     assert.strictEqual(parsed.injectSteps[0].ephemeralMessage.includes('MemFS Active Memory'), true)
+
+    for (const malformedInput of ['{"workspacePaths":', 'null', '{"workspacePaths":"bad"}']) {
+      const malformedResult = spawnSync('bash', [hookScript], {
+        input: malformedInput,
+        encoding: 'utf-8',
+      })
+      assert.strictEqual(malformedResult.status, 0)
+      assert.deepStrictEqual(JSON.parse(malformedResult.stdout), { injectSteps: [] })
+    }
   })
 
   it('resolves nested workspaces to one Git-root project identity', () => {
@@ -265,52 +280,117 @@ describe('Unit Coverage Extensions', () => {
     fs.unlinkSync(historyFile)
   })
 
-  it('injects only explicitly active durable learning excerpts', () => {
+  it('injects only one canonical committed working hypothesis and fails closed on conflict', () => {
     const slug = 'learning-filter'
     const projectDir = path.join(MEMORY_ROOT, 'projects', slug)
     const learningDir = path.join(projectDir, 'learnings')
     fs.mkdirSync(learningDir, { recursive: true })
     fs.writeFileSync(path.join(projectDir, 'project.md'), '# Learning Filter\n')
+    fs.writeFileSync(path.join(projectDir, 'rules.md'), '# Rules\n- Keep hypotheses scoped.\n')
     fs.writeFileSync(
-      path.join(learningDir, 'archive_9999-01.md'),
-      '---\nmemory_status: active\n---\n- Must inject archived poison.\n',
+      path.join(learningDir, 'working-hypothesis.md'),
+      '---\nmemory_status: active\nmemory_kind: working-hypothesis\n---\n# Working Hypothesis\n- Hypothesis: canonical committed evidence is injected.\n- Cheapest check: inspect the generated context.\n',
     )
     fs.writeFileSync(
-      path.join(learningDir, '9999-02_legacy.md'),
-      '# Legacy\n- Must inject uncurated legacy prose.\n',
-    )
-    fs.writeFileSync(
-      path.join(learningDir, '2026-08-24_active.md'),
-      '---\nmemory_status: active\nmemory_kind: durable-learning\n---\n# Active\n- Must preserve project isolation.\n',
+      path.join(learningDir, 'stray-active.md'),
+      '---\nmemory_status: active\nmemory_kind: durable-learning\n---\n- Must not win by lexical order.\n',
     )
     const relativePaths = [
       `projects/${slug}/project.md`,
-      `projects/${slug}/learnings/archive_9999-01.md`,
-      `projects/${slug}/learnings/9999-02_legacy.md`,
-      `projects/${slug}/learnings/2026-08-24_active.md`,
+      `projects/${slug}/rules.md`,
+      `projects/${slug}/learnings/working-hypothesis.md`,
+      `projects/${slug}/learnings/stray-active.md`,
     ]
     commitMemoryPaths({
       memoryRoot: MEMORY_ROOT,
       relativePaths,
-      reason: 'test: seed active learning filter fixtures',
+      reason: 'test: seed working hypothesis conflict fixtures',
     })
 
-    const snippet = getRecentLearningsSnippet(slug, MEMORY_ROOT, 1)
-    assert.strictEqual(snippet.includes('Must preserve project isolation.'), true)
-    assert.strictEqual(snippet.includes('archived poison'), false)
-    assert.strictEqual(snippet.includes('uncurated legacy'), false)
+    const conflict = inspectCommittedWorkingHypothesis(slug, MEMORY_ROOT)
+    assert.strictEqual(conflict.state, 'conflict')
+    assert.strictEqual(
+      conflict.diagnostics.some((item: string) => item.includes('stray-active')),
+      true,
+    )
+    const conflictHealth = inspectMemoryHealth(MEMORY_ROOT, [path.join(TEST_TEMP_ROOT, slug)])
+    assert.strictEqual(conflictHealth.healthy, false)
+    assert.strictEqual(
+      conflictHealth.issues.some((issue: string) => issue.includes('Working hypothesis conflict')),
+      true,
+    )
 
-    const generated = generatePreInvocationContext(
+    const conflictedContext = generatePreInvocationContext(
       JSON.stringify({ workspacePaths: [path.join(TEST_TEMP_ROOT, slug)] }),
     )
-    const message = generated.injectSteps[0]?.ephemeralMessage || ''
-    assert.strictEqual(message.includes('Must preserve project isolation.'), true)
+    const conflictedMessage = conflictedContext.injectSteps[0]?.ephemeralMessage || ''
+    assert.strictEqual(conflictedMessage.includes('Working Hypothesis Conflict'), true)
+    assert.strictEqual(
+      conflictedMessage.includes('canonical committed evidence is injected'),
+      false,
+    )
+
+    fs.unlinkSync(path.join(learningDir, 'stray-active.md'))
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [`projects/${slug}/learnings/stray-active.md`],
+      reason: 'test: remove stray active learning',
+    })
+
+    fs.writeFileSync(
+      path.join(learningDir, 'legacy-example.md'),
+      '# Historical Example\nmemory_status: active\nThis body example is not frontmatter.\n',
+    )
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [`projects/${slug}/learnings/legacy-example.md`],
+      reason: 'test: seed non-metadata active marker example',
+    })
+
+    const selected = inspectCommittedWorkingHypothesis(slug, MEMORY_ROOT)
+    assert.strictEqual(selected.state, 'selected')
+    assert.strictEqual(selected.selectedPath, getWorkingHypothesisPath(slug))
+    const snippet = getRecentLearningsSnippet(slug, MEMORY_ROOT, 1)
+    assert.strictEqual(snippet.includes('canonical committed evidence is injected'), true)
+
+    fs.writeFileSync(
+      path.join(learningDir, 'working-hypothesis.md'),
+      '---\nmemory_status: active\nmemory_kind: working-hypothesis\n---\n- UNCOMMITTED_HYPOTHESIS_SENTINEL\n',
+    )
+    const dirtyContext = generatePreInvocationContext(
+      JSON.stringify({ workspacePaths: [path.join(TEST_TEMP_ROOT, slug)] }),
+    )
+    const dirtyMessage = dirtyContext.injectSteps[0]?.ephemeralMessage || ''
+    assert.strictEqual(dirtyMessage.includes('UNCOMMITTED_HYPOTHESIS_SENTINEL'), false)
+    assert.strictEqual(dirtyMessage.includes('canonical committed evidence is injected'), true)
+    assert.strictEqual(dirtyMessage.includes('Uncommitted memory is not active'), true)
+
+    fs.writeFileSync(
+      path.join(learningDir, 'working-hypothesis.md'),
+      '---\nmemory_status: active\nmemory_status: active\nmemory_kind: working-hypothesis\n---\n- Duplicate metadata must fail closed.\n',
+    )
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [`projects/${slug}/learnings/working-hypothesis.md`],
+      reason: 'test: seed malformed working hypothesis metadata',
+    })
+    const malformed = inspectCommittedWorkingHypothesis(slug, MEMORY_ROOT)
+    assert.strictEqual(malformed.state, 'conflict')
+    assert.strictEqual(
+      malformed.diagnostics.some((item: string) => item.includes('Duplicate frontmatter key')),
+      true,
+    )
 
     fs.rmSync(projectDir, { recursive: true, force: true })
     commitMemoryPaths({
       memoryRoot: MEMORY_ROOT,
-      relativePaths,
-      reason: 'test: remove active learning filter fixtures',
+      relativePaths: [
+        `projects/${slug}/project.md`,
+        `projects/${slug}/rules.md`,
+        `projects/${slug}/learnings/working-hypothesis.md`,
+        `projects/${slug}/learnings/legacy-example.md`,
+      ],
+      reason: 'test: remove working hypothesis fixtures',
     })
   })
 
@@ -350,6 +430,62 @@ describe('Unit Coverage Extensions', () => {
       memoryRoot: MEMORY_ROOT,
       relativePaths: [...relativePaths, 'global/tracked-health.tmp'],
       reason: 'test: remove health report fixtures',
+    })
+  })
+
+  it('keeps the strict active-memory budget healthy at 1,400 and failing above it', () => {
+    const slug = 'budget-boundary'
+    const projectDir = path.join(MEMORY_ROOT, 'projects', slug)
+    const projectPath = path.join(projectDir, 'project.md')
+    const rulesPath = path.join(projectDir, 'rules.md')
+    const relativePaths = [`projects/${slug}/project.md`, `projects/${slug}/rules.md`]
+    const workspace = path.join(TEST_TEMP_ROOT, slug)
+    fs.mkdirSync(projectDir, { recursive: true })
+    fs.writeFileSync(projectPath, '# Budget Boundary\n')
+    fs.writeFileSync(rulesPath, '# Rules\n')
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths,
+      reason: 'test: seed budget boundary fixture',
+    })
+
+    const baseline = generatePreInvocationContext(JSON.stringify({ workspacePaths: [workspace] }))
+      .injectSteps[0]?.ephemeralMessage
+    assert.ok(baseline)
+    const paddingLength = 1400 * 4 - baseline.length
+    assert.strictEqual(paddingLength > 0, true)
+    fs.writeFileSync(projectPath, `# Budget Boundary\n${'x'.repeat(paddingLength - 1)}`)
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [`projects/${slug}/project.md`],
+      reason: 'test: set exact budget boundary',
+    })
+
+    const exact = inspectMemoryHealth(MEMORY_ROOT, [workspace])
+    assert.strictEqual(exact.workspaces[0]?.estimatedTokens, 1400)
+    assert.strictEqual(exact.workspaces[0]?.withinBudget, true)
+
+    fs.appendFileSync(projectPath, 'x')
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [`projects/${slug}/project.md`],
+      reason: 'test: exceed exact budget boundary',
+    })
+    const over = inspectMemoryHealth(MEMORY_ROOT, [workspace])
+    assert.strictEqual(over.workspaces[0]?.estimatedTokens > 1400, true)
+    assert.strictEqual(over.workspaces[0]?.withinBudget, false)
+    assert.strictEqual(
+      generatePreInvocationContext(
+        JSON.stringify({ workspacePaths: [workspace] }),
+      ).injectSteps[0]?.ephemeralMessage.includes('MemFS Budget Notice'),
+      true,
+    )
+
+    fs.rmSync(projectDir, { recursive: true, force: true })
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths,
+      reason: 'test: remove budget boundary fixture',
     })
   })
 
@@ -590,8 +726,29 @@ describe('Unit Coverage Extensions', () => {
       'always use pnpm for this project.',
     ])
     const doc = synthesizeConversationLearning(pendingAlpha[0], 'dream-alpha')
-    assert.strictEqual(doc?.includes('memory_status: active'), true)
+    assert.strictEqual(doc?.includes('memory_status: archived'), true)
+    assert.strictEqual(doc?.includes('memory_kind: correction-evidence'), true)
+    assert.strictEqual(doc?.includes('memory_status: active'), false)
     assert.strictEqual(doc?.includes('Session Continuity'), false)
+
+    const dreamResults = runAutoDream('dream-alpha', {
+      force: true,
+      minSteps: 1,
+      idleMinutes: 0,
+    })
+    assert.strictEqual(dreamResults.length, 1)
+    assert.strictEqual(dreamResults[0]?.status, 'written')
+    assert.strictEqual(
+      dreamResults[0]?.file?.includes(
+        path.join('archives', 'projects', 'dream-alpha', 'learnings'),
+      ),
+      true,
+    )
+    assert.strictEqual(getDreamedConversationIds('dream-alpha').has(alphaId), true)
+    assert.strictEqual(
+      fs.existsSync(path.join(MEMORY_ROOT, 'projects', 'dream-alpha', 'learnings')),
+      false,
+    )
 
     const pendingBeta = scanPendingConversations('dream-beta', {
       force: true,
@@ -604,12 +761,23 @@ describe('Unit Coverage Extensions', () => {
     fs.rmSync(alphaWorkspace, { recursive: true, force: true })
     fs.rmSync(betaWorkspace, { recursive: true, force: true })
     fs.unlinkSync(historyFile)
+    fs.rmSync(path.join(MEMORY_ROOT, 'archives', 'projects', 'dream-alpha'), {
+      recursive: true,
+      force: true,
+    })
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [
+        `archives/projects/dream-alpha/learnings/${new Date().toISOString().split('T')[0]}_auto_dream_${alphaId.slice(0, 8)}.md`,
+      ],
+      reason: 'test: remove Dream archive fixture',
+    })
   })
 
   it('tests agent-launcher subagent manifests and prompt resolution', () => {
     const all = listSubagents()
     assert.strictEqual(Array.isArray(all), true)
-    assert.strictEqual(all.length >= 6, true)
+    assert.strictEqual(all.length >= 7, true)
 
     const dreamAgent = getSubagent('dream_agent')
     assert.strictEqual(Boolean(dreamAgent), true)
@@ -618,10 +786,50 @@ describe('Unit Coverage Extensions', () => {
 
     const recallAgent = getSubagent('recall_agent')
     assert.strictEqual(Boolean(recallAgent), true)
+
+    const evidenceReviewer = getSubagent('evidence_reviewer_agent')
+    assert.strictEqual(Boolean(evidenceReviewer), true)
+    assert.strictEqual(evidenceReviewer?.modelTier, 'flash')
+    assert.strictEqual(evidenceReviewer?.enableWriteTools, false)
+    assert.strictEqual(evidenceReviewer?.enableSubagentTools, false)
+    assert.strictEqual(evidenceReviewer?.systemPrompt.includes('Observed'), true)
     assert.strictEqual(recallAgent?.systemPrompt.length > 0, true)
 
     const nonExistent = getSubagent('non_existent_random_agent_xyz')
     assert.strictEqual(nonExistent, null)
+  })
+
+  it('keeps the Evidence Controller Agy-native, model-routed, and human-gated', () => {
+    const skillPath = path.join(PLUGIN_DIR, 'skills', 'evidence-controller', 'SKILL.md')
+    const content = fs.readFileSync(skillPath, 'utf-8')
+    const requiredContracts = [
+      'Observed',
+      'Inferred',
+      'Unverified',
+      '`DIRECT`',
+      '`ONE_LANE`',
+      '`WRITER_REVIEWER`',
+      '`PARALLEL_READONLY`',
+      'define_subagent',
+      'invoke_subagent',
+      'hard delegation triggers',
+      'as at least one fresh',
+      'evidence_reviewer_agent',
+      'stop before retry',
+      'Human-owned gates',
+      'Repo bootstrap mode',
+      'Memory is guidance, not enforcement',
+    ]
+    for (const contract of requiredContracts) {
+      assert.strictEqual(
+        content.includes(contract),
+        true,
+        `Missing controller contract: ${contract}`,
+      )
+    }
+    assert.strictEqual(content.includes('other agent platforms'), true)
+    assert.strictEqual(content.includes('one writer per mutable scope'), true)
+    assert.strictEqual(content.includes('nested delegation is disabled by default'), true)
   })
 
   it('tests worktree-manager isolation, diffing, patch apply, and cleanup', () => {
@@ -850,14 +1058,26 @@ describe('Unit Coverage Extensions', () => {
 
     // Mode check
     const learningMode = getApprovalModeForFile('projects/test/learnings/2026-08-18_note.md')
+    const hypothesisMode = getApprovalModeForFile('projects/test/learnings/working-hypothesis.md')
     const projectMode = getApprovalModeForFile('projects/test/project.md')
     const rulesMode = getApprovalModeForFile('projects/test/rules.md')
     const humanMode = getApprovalModeForFile('global/human.md')
 
     assert.strictEqual(learningMode, 'auto')
+    assert.strictEqual(hypothesisMode, 'explicit')
     assert.strictEqual(humanMode, 'auto')
     assert.strictEqual(projectMode, 'explicit')
     assert.strictEqual(rulesMode, 'explicit')
+
+    saveApprovalPolicy({
+      defaultMode: 'auto',
+      patterns: { 'projects/*/learnings/*': 'auto' },
+    })
+    assert.strictEqual(
+      getApprovalModeForFile('projects/test/learnings/working-hypothesis.md'),
+      'explicit',
+    )
+    saveApprovalPolicy(policy)
 
     // Test explicit mode -> creates proposal
     const propRes = proposeMemoryUpdate(

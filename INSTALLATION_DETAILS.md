@@ -13,7 +13,7 @@
 │   └── plugins/agy-memory-layer/
 │       ├── plugin.json
 │       ├── hooks.json
-│       ├── agents/                  [Declarative Subagent Role Manifests (6 Roles)]
+│       ├── agents/                  [Declarative Subagent Role Manifests (7 Roles)]
 │       ├── prompts/                 [Prompt Warehouse (system, persona, subagents)]
 │       ├── rules/AGENTS.md
 │       ├── skills/*/SKILL.md

@@ -13,10 +13,10 @@ Host Workspace (learn-letta-code)
   │
   ├── plugins/agy-memory-layer/ (Plugin Bundle symlinked to ~/.gemini/antigravity-cli/plugins/)
   │   ├── plugin.json & hooks.json
-  │   ├── agents/                  (6 declarative subagent role manifests)
+  │   ├── agents/                  (7 declarative subagent role manifests)
   │   ├── prompts/                 (Prompt Warehouse: system, persona, subagents)
   │   ├── rules/AGENTS.md          (In-Context Autonomous Directives)
-  │   ├── skills/*/SKILL.md        (11 Slash Command Skills)
+  │   ├── skills/*/SKILL.md        (12 Slash Command Skills)
   │   └── scripts/*.ts, *.sh       (Lifecycle Hooks, Daemon & Palace Generator)
   │
   └── ~/.gemini/memory/            (Independent Git MemFS Repository)
@@ -69,7 +69,7 @@ Always run the full test suite before concluding changes:
 pnpm test
 ```
 
-Expected output: **11/11 integration scenarios** in `TEST_REPORT.md` and **23/23 Node test-runner tests** passing.
+Expected output: **11/11 integration scenarios** in `TEST_REPORT.md` and **25/25 total Node test-runner tests** passing (1 integration runner + 24 focused unit cases).
 - PreInvocation hook schema validation
 - Committed-HEAD projection and non-mutating Stop status
 - Contained paths and targeted memory commits

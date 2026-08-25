@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.13.0`
+**Package version:** `1.14.0`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.13.0` on 2026-08-24
+**Release state:** Source candidate; not released
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -41,10 +41,16 @@ into MemFS commits.
 - The TypeScript owner, `hook-inject-memory.ts`, reads active content from Git
   `HEAD` through `memory-repository.ts`.
 - Working-tree edits are never injected as active memory.
+- Malformed PreInvocation JSON or invalid `workspacePaths` types return a
+  schema-valid no-op instead of falling back to the current directory.
 - Dirty, conflict, error, and uninitialized states are surfaced as status
   notices without activating their content.
 - The Agy adaptation injects global files, current-project files, and at most one
-  committed recent-learning excerpt carrying `memory_status: active` frontmatter.
+  committed canonical `working-hypothesis.md` carrying both
+  `memory_status: active` and `memory_kind: working-hypothesis` frontmatter.
+- A committed active marker outside that canonical path, malformed canonical
+  metadata, or conflicting candidates fail closed: no hypothesis is injected
+  and strict health reports the conflict.
 - Archive paths, legacy uncurated learnings, and deterministic session-continuity
   boilerplate are never active prompt memory. They remain searchable through
   `/memory search` when retained as Markdown under `archives/`.
@@ -83,8 +89,10 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
 
 ### 4. Review policy
 
-- Global `human.md`, `persona.md`, and dated learnings may use the configured
-  auto policy.
+- Global `human.md`, `persona.md`, and ordinary dated learnings may use the
+  configured auto policy.
+- `projects/*/learnings/working-hypothesis.md` requires explicit approval and
+  outranks the broad auto-learning policy.
 - `projects/*/project.md` and `projects/*/rules.md` require explicit approval.
 - A user-confirmed `/init` invocation passes `--confirm-init` and approves exactly
   the generated `project.md` and `rules.md` baseline. A live `/sync-letta` import requires an
@@ -119,9 +127,11 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
   context compaction. It reports candidate replacements and archives but does
   not edit MemFS.
 - `dream-daemon.ts` resolves conversations through local Agy workspace history,
-  fails closed when ownership is absent, and writes a deterministic note only
-  when the user expressed explicit durable-memory intent. Other sessions update
-  external cursor state as skipped rather than creating UUID/turn-count prose.
+  fails closed when ownership is absent, and archives deterministic correction
+  evidence only when the user expressed explicit durable-memory intent. Other
+  sessions update external cursor state as skipped rather than creating
+  UUID/turn-count prose. Dream never activates the protected working hypothesis
+  or bypasses explicit project/rules proposals.
 - Deterministic Dream is not equivalent to Letta's model-backed reflection
   worktree lifecycle.
 - Dream is manual or an explicitly installed cron surface. Stop does not invoke
@@ -146,13 +156,21 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
 
 The bundle currently contains:
 
-- 11 skills;
-- 6 declarative subagent role manifests;
+- 12 skills, including the Agy-native Evidence Controller;
+- 7 declarative subagent role manifests, including a fresh read-only evidence reviewer;
 - 2 lifecycle hooks (`PreInvocation`, `Stop`);
 - TypeScript source executed with Node 22+ type stripping;
-- Memory Palace, backup/restore, recall, Dream notes, project onboarding,
-  persona switching, remote Git helper, Letta import, and optional maintenance
-  utilities.
+- Evidence Controller routing, Memory Palace, backup/restore, recall, archived
+  Dream correction evidence, project onboarding, persona switching, remote Git
+  helper, Letta import, and optional maintenance utilities.
+
+The Evidence Controller is an Agy/Gemini procedure. It requires
+Observed/Inferred/Unverified reporting, scoped claims, one falsifiable
+hypothesis, cheapest disconfirming checks, stop-before-retry on ambiguous
+provider actions, and Mahiro-owned visual/product/audio-content/spend/release
+gates. It guides native `define_subagent`/`invoke_subagent` routing across
+`DIRECT`, `ONE_LANE`, `WRITER_REVIEWER`, and `PARALLEL_READONLY`; it is not a
+deterministic scheduler and does not make model consensus proof.
 
 The JSON subagent manifests express role and capability intent. This repository
 does not itself prove AGY process/tool confinement; documentation must not call
@@ -198,15 +216,36 @@ Current direct regression coverage includes:
 - all tests run with disposable HOME and MemFS roots.
 
 `TEST_REPORT.md` is generated evidence for the 11 integration scenarios. The
-Node test runner currently reports 23 passing tests, including a disposable-HOME
-install/refresh/uninstall/purge lifecycle. Remote sync is exercised against a
-disposable local bare repository. Neither report proves cron, external network,
-or AGY host-enforcement behavior.
+source-candidate Node test count and coverage must be refreshed by the full
+verification run before release. Remote sync is exercised against a disposable
+local bare repository. Neither report alone proves cron, external network,
+automatic model routing, or AGY host-enforcement behavior.
+
+One pane-first Agy `1.1.20` direct-CLI sandbox establishes a bounded automatic
+hard-trigger path: with static checks passing, runtime tests failing, and the
+same timeout hypothesis already failed twice, the controller selected
+`WRITER_REVIEWER`, repaired only the disposable sandbox, dynamically defined
+and invoked a fresh `evidence_reviewer_agent`, received an independent
+`SUPPORTED` result, and passed the deterministic regressions. This proves that
+one model-guided path, not reliable universal invocation, direct JSON-manifest
+consumption, or host-enforced confinement.
+
+A subsequent serialized eight-scenario direct-CLI matrix covered all four
+routes plus ambiguous-provider, human-visual-gate, and missing-owner negative
+controls. Seven cases passed without matrix-specific caveats; the second
+writer/reviewer case passed its route, mutation, checks, and parent callback but
+retained incomplete child-log corroboration. This remains bounded
+model/version/environment evidence, not a deterministic scheduler guarantee.
 
 Released `v1.13.0` coverage is **79.31% lines**, **60.73% branches**, and
 **81.18% functions**. The released `v1.12.1` candidate measured **77.55%
 lines**, **58.46% branches**, and **78.14% functions**. Coverage is evidence,
 not a substitute for the behavioral negative controls above.
+
+The unreleased `v1.14.0` source candidate measures **80.68% lines**, **62.15%
+branches**, and **83.03% functions**, with 11/11 integration scenarios and
+25/25 total Node test-runner tests (1 integration runner plus 24 focused unit
+cases) passing on Agy `1.1.20`, Node `v26.5.1`, and pnpm `10.33.0`.
 
 The real AGY `1.1.16` host E2E also passed committed injection, `/memory`,
 targeted `/remember`, scoped `/init`, non-mutating Stop, fresh-session
@@ -222,9 +261,10 @@ See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 3. Built JavaScript artifacts or installed runtime dependencies for remote
    TypeScript-dependent utilities.
 4. Host-level proof or narrower claims for subagent tool restrictions.
-5. An automated release workflow remains deferred. `v1.13.0` uses the existing
-   manual tag/GitHub Release path with exact notes and evidence in
-   [`docs/releases/v1.13.0.md`](./docs/releases/v1.13.0.md).
+5. An automated release workflow remains deferred. The `v1.14.0` candidate must
+   use the existing manual tag/GitHub Release path only after source, host, and
+   human gates pass; candidate notes live in
+   [`docs/releases/v1.14.0.md`](./docs/releases/v1.14.0.md).
 
 ## Distribution
 

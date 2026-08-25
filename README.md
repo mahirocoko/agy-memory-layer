@@ -1,22 +1,23 @@
 # 🧠 agy-memory-layer
 
-[![Coverage](https://img.shields.io/badge/Coverage-79.31%25-green.svg)](./CONTRACT.md)
-[![Tests](https://img.shields.io/badge/Tests-23%2F23%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
+[![Coverage](https://img.shields.io/badge/Coverage-80.68%25-green.svg)](./CONTRACT.md)
+[![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **Committed Git-Backed Memory, Explicit Dream Notes, Codebase Onboarding, and Memory Palace for Antigravity CLI (`agy`)**
+> **Evidence-Controlled Agy Delegation, Committed Git-Backed Memory, and Scoped Correction Recall for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
 
 ---
 
-## 🤖 Six Declarative Subagent Roles
+## 🤖 Seven Declarative Subagent Roles
 
-`agy-memory-layer` ships six Agy role manifests. They describe intended model and tool capabilities; this repository does not itself prove host-level process or tool confinement. See [`docs/letta-parity.md`](./docs/letta-parity.md) for the source-backed parity boundary.
+`agy-memory-layer` ships seven Agy role manifests. They describe intended model and tool capabilities; this repository does not itself prove host-level process or tool confinement. See [`docs/letta-parity.md`](./docs/letta-parity.md) for the source-backed parity boundary.
 
 | Subagent & Manifest | Role & Responsibilities | Model | Declared Capability Intent |
 | :--- | :--- | :---: | :---: |
+| **`evidence_reviewer_agent`**<br/>↳ [`evidence_reviewer.md`](./plugins/agy-memory-layer/prompts/subagents/evidence_reviewer.md) | **Fresh Evidence Falsification Reviewer**<br/>Independently tries to disprove consequential claims with scoped deterministic evidence. | `flash` | `Read-only` |
 | **`dream_agent`**<br/>↳ [`dream_subagent.md`](./plugins/agy-memory-layer/prompts/subagents/dream_subagent.md) | **Dream Reflection Subagent**<br/>Analyzes transcripts, captures user preferences (*The Annoyance Rule*), and updates MemFS. | `inherit` | `Write` (MemFS) |
 | **`recall_agent`**<br/>↳ [`recall_subagent.md`](./plugins/agy-memory-layer/prompts/subagents/recall_subagent.md) | **Episodic Recall Specialist**<br/>Searches available Antigravity transcripts via hybrid local similarity. | `flash` | `Read-only` |
 | **`onboarding_agent`**<br/>↳ [`onboarding.md`](./plugins/agy-memory-layer/prompts/subagents/onboarding.md) | **Codebase Onboarding Specialist**<br/>Explores repositories on Day 1 to bootstrap `project.md` and `rules.md`. | `flash` | `Write` (MemFS) |
@@ -26,22 +27,24 @@
 
 ---
 
-## 🧠 Hybrid Semantic Recall & Explicit Dream Notes
+## 🧭 Evidence Controller & Scoped Correction Recall
 
 - **Vector Semantic Search**: Subword n-gram vector embeddings + BM25 keyword matching with cosine similarity scoring.
-- **Explicit Dream Notes**: `dream-daemon.ts` uses local Agy workspace history, fails closed on unknown ownership, and creates a deterministic active note only when explicit durable-memory intent contains an actionable rule or fact. It is not launched by Stop and is not yet equivalent to Letta's isolated reflection worktree.
+- **Evidence Controller**: Requires Agy to separate Observed/Inferred/Unverified claims, choose direct or native-subagent execution, scope every PASS, stop before ambiguous provider retries, and preserve Mahiro-owned gates. Native child invocation remains model-guided rather than host-enforced.
+- **Archived Dream Evidence**: `dream-daemon.ts` uses local Agy workspace history, fails closed on unknown ownership, and archives only explicit actionable correction evidence. It never activates the protected working hypothesis and is not launched by Stop.
 
 ---
 
 ## ✨ Features
 
-- 👤 **Committed In-Context Memory**: Injects committed `HEAD` versions of compact global/project blocks plus at most one explicitly active durable learning before every invocation; uncommitted, archived, and uncurated content is never activated.
+- 🧭 **Agy Evidence Controller (`/evidence-controller`)**: Applies a fixed source-of-truth/hypothesis/check/closeout loop with model-guided `DIRECT`, `ONE_LANE`, `WRITER_REVIEWER`, or `PARALLEL_READONLY` routing.
+- 👤 **Committed In-Context Memory**: Injects committed `HEAD` versions of compact global/project blocks plus at most one canonical protected working hypothesis before every invocation; uncommitted, archived, malformed, conflicting, and uncurated content is never activated.
 - 📦 **Git-Backed MemFS (`~/.gemini/memory/`)**: Decoupled from project source code; tracks all knowledge snapshots in an independent Git repository.
 - ⚡ **Zero-Friction Lifecycle Hooks**:
   - `PreInvocation`: Reads committed Git memory into `ephemeralMessage` and discloses dirty/conflict state separately.
   - `Stop`: Reports MemFS status without staging, committing, deleting locks, or launching background work.
 - 🧠 **Hybrid Semantic Recall (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across available Antigravity conversation transcripts.
-- 🌙 **Dreaming (`/dream` & `dream-daemon.ts`)**: Explicit reflection guidance plus an optional deterministic transcript-note utility; isolated model-backed reflection remains deferred.
+- 🌙 **Dreaming (`/dream` & `dream-daemon.ts`)**: Explicit reflection guidance plus an optional deterministic correction-archive utility; isolated model-backed reflection remains deferred.
 - 🏛️ **Memory Palace (`/palace`)**: Interactive visual dashboard in your browser to inspect memory graphs, synapses, and Git commit timelines with anti-cache headers.
 - 🩺 **Memory Health Auditor (`/doctor`)**: Audits memory consistency and flags drift between memory rules and actual codebase state.
 - 🔌 **Plugin Lifecycle**: Installs via symlink and is toggleable with `agy plugin enable/disable`; normal uninstall preserves MemFS, while purge is explicitly destructive.
@@ -85,6 +88,7 @@ Once installed, the following commands are available directly inside Antigravity
 
 | Command | Description | Example Usage |
 | :--- | :--- | :--- |
+| **`/evidence-controller`** | Evidence-scoped execution, model-guided direct/delegated routing, fresh review, provider stop gates, and human-owned acceptance. | `/evidence-controller` or `/evidence-controller bootstrap` |
 | **`/init`** | **Day 1 Onboarding**: Scans codebase architecture, entry points, linters, and scripts to seed `project.md` and `rules.md` immediately. | `/init` or `/init --force` |
 | **`/memory`** | Inspect active memory blocks and recent Git snapshot history. | `/memory` |
 | **`/memory search`** | Fast ranked search across historical `learnings/` logs, project rules, and global memory. | `/memory search docker` |
@@ -114,7 +118,8 @@ Memory files are stored outside the active workspace under `~/.gemini/memory/`:
     └── <project-slug>/          # Project-specific memory (auto-resolved from workspace)
         ├── project.md           # Architecture decisions & domain context
         ├── rules.md             # Project-specific coding rules
-        └── learnings/           # Dated learning logs (YYYY-MM-DD_topic.md)
+        └── learnings/
+            └── working-hypothesis.md # Optional protected active hypothesis
 └── archives/                    # Recall-only Markdown; never prompt-injected
 ```
 
@@ -194,6 +199,9 @@ Purge is not part of normal uninstall. It requires the second confirmation flag,
 
 `agy-memory-layer` comes with a comprehensive multi-tier automated test suite verifying lifecycle hooks, memory isolation, rollback integrity, plugin schema validation, and Day 1 onboarding.
 
+The generated report covers 11 integration scenarios. The full Node runner adds
+24 focused unit cases, for 25/25 total tests in the current candidate.
+
 ### Running Tests Locally
 
 ```bash
@@ -206,13 +214,13 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.13.0 |
+| Metric | v1.14.0 candidate |
 | :--- | ---: |
-| Lines | **79.31%** |
-| Branches | **60.73%** |
-| Functions | **81.18%** |
+| Lines | **80.68%** |
+| Branches | **62.15%** |
+| Functions | **83.03%** |
 
-This is the aggregate Node/V8 snapshot from the `v1.13.0` release verification.
+This is the aggregate Node/V8 snapshot from the unreleased `v1.14.0` source candidate.
 Run `pnpm test:coverage` after source changes and update this snapshot in the
 same release commit; per-file percentages remain in command output rather than
 being copied into this README.
@@ -221,7 +229,7 @@ being copied into this README.
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
-> 🚀 **Release notes**: [`v1.13.0`](./docs/releases/v1.13.0.md) records the scoped-memory health repair, verification evidence, upgrade path, and deferred boundaries.
+> 🧪 **Source candidate**: [`v1.14.0`](./docs/releases/v1.14.0.md) records the Evidence Controller and working-hypothesis migration. It is not released yet. The latest released contract remains [`v1.13.0`](./docs/releases/v1.13.0.md).
 
 ---
 

@@ -11,6 +11,13 @@ When `agy-memory-layer` is active, you are not a stateless assistant—you are a
 
 You MUST proactively consult and maintain memory without waiting for a slash command, while respecting the configured approval and targeted-commit boundary:
 
+### 0. Evidence Controller & Model-Guided Delegation (`/evidence-controller`)
+- Before consequential, ambiguous, provider, migration, release, runtime, visual-review, or repeatedly failing work, automatically apply the Evidence Controller skill without waiting for a slash command.
+- Separate every material conclusion into **Observed**, **Inferred**, and **Unverified**. Scope every PASS to its direct evidence; never call work `100%`, `Solved`, `Perfect`, `Production-ready`, `Visual-ready`, or `Policy-safe` without matching proof.
+- Follow source of truth → one falsifiable hypothesis → cheapest disconfirming check → smallest scoped action → deterministic checks → evidence-scoped closeout.
+- Choose and report `DIRECT`, `ONE_LANE`, `WRITER_REVIEWER`, or `PARALLEL_READONLY` before acting. Keep small anchored work direct. If the same hypothesis failed twice or static checks pass while required runtime still fails, the required procedure is a fresh read-only `evidence_reviewer_agent` lane through native Agy subagent tools; do not silently downgrade to DIRECT. Because child execution is model-guided rather than host-enforced, report it as Unverified when no child invocation actually occurred. Keep one writer and disable nested delegation by default.
+- Stop before retry whenever a provider action may already have submitted or identity/receipt ownership is ambiguous. Visual/product/audio-content/spend/commit/push/release/destructive/design-direction gates remain Mahiro-owned.
+
 ### A. The Annoyance & Friction Rule
 - The threshold for recording a rule or preference into MemFS is **annoyance, friction, or repeated correction**.
 - When the user corrects your code, phrasing, framework usage, or package management:
