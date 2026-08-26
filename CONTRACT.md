@@ -1,10 +1,11 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.15.2`
+**Package version:** `1.15.3`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.15.2` on 2026-08-26
+**Release state:** `v1.15.3` source candidate; latest published release is
+`v1.15.2` from 2026-08-26
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -284,6 +285,19 @@ Released `v1.15.2` measures **80.83% lines**, **63.71% branches**, and **83.37%
 functions**, with 33/33 Node tests passing (one
 integration runner containing 11/11 scenarios plus 32 focused cases). These
 numbers describe the tagged source; exact migration evidence is linked above.
+
+The `v1.15.3` source candidate measures **81.18% lines**, **64.88% branches**,
+and **85.45% functions**, with 36/36 Node tests passing (one integration runner
+containing 11/11 scenarios plus 35 focused cases). Three focused Palace
+scenarios cover layered per-file topology/current-project isolation, legacy
+flat fallback, and mixed-layout refusal. Generated live HTML and serialized
+Chrome interaction additionally verify all seven Core nodes, per-node detail,
+nested indentation, narrow-width selection, and zero horizontal overflow.
+Fresh Agy `1.1.21` host probes with Gemini 3.7 Flash High additionally verify
+injected-only fact attribution across all seven active owners, cross-project
+routing from `learn-letta-code` to `earn-money`, index-only reference visibility,
+and bounded on-demand retrieval of two reference-only facts without mutation.
+This does not prove legacy-host or memory-write behavior.
 
 The real AGY `1.1.16` host E2E also passed committed injection, `/memory`,
 targeted `/remember`, scoped `/init`, non-mutating Stop, fresh-session

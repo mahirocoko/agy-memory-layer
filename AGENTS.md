@@ -71,8 +71,8 @@ Always run the full test suite before concluding changes:
 pnpm test
 ```
 
-Expected output for v1.15.0: **11/11 integration scenarios**
-in `TEST_REPORT.md` and **32 focused Node test-runner cases** passing. Refresh
+Expected output for the current source: **11/11 integration scenarios**
+in `TEST_REPORT.md` and **35 focused Node test-runner cases** passing. Refresh
 the exact count and coverage after the final full run; do not infer release or
 live-migration readiness from source tests alone.
 - PreInvocation hook schema validation
@@ -82,6 +82,24 @@ live-migration readiness from source tests alone.
 - Hybrid Semantic Recall engine (BM25 + Cosine Similarity)
 - Explicit/manual Dream daemon scanner and 20-step count logic
 - Agent launcher subagent manifest resolution
+
+Topology or schema changes that affect Memory Palace require consumer-level
+acceptance, not only source, projection, health, or file-generation checks.
+Before calling them complete, verify every supported layout with generated HTML
+and a real browser: layered child paths and counts, per-node content/metadata/Git
+detail, legacy flat fallback, mixed-layout fail-closed behavior, current-project
+scope, and click selection. A test that only proves the HTML file exists is not
+Palace topology coverage.
+
+Do not infer real Agy memory understanding from projection, hook, health,
+Palace, or browser checks. Before claiming a layered-memory change works
+end-to-end, run a fresh Agy host semantic matrix without repository/file tools:
+attribute one fact to every active owner, prove only the current project's
+system owners are active, and prove references expose path/description but not
+body. Then run one bounded on-demand Memory search for a reference-only fact,
+verify its exact source, and confirm no memory or source mutation. Keep legacy,
+mixed-layout, and write behavior scoped separately unless real host evidence
+also covers them.
 
 ---
 

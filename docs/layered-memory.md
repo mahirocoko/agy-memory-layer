@@ -77,6 +77,20 @@ are the shared owners for PreInvocation, strict health, and Memory Palace.
    protected learning path.
 7. Report the selected layout, paths, diagnostics, and estimated token count.
 
+Memory Palace renders that committed projection per document rather than
+joining a subtree into one wildcard card. Layered Core view preserves nested
+`system/human/**` folders and exact file paths; legacy Core view remains flat.
+Each selectable node owns its own body, frontmatter description, and Git
+detail. Mixed legacy/layered ownership refuses HTML generation.
+
+Those projection and Palace checks do not prove that a live model understood
+the boundaries. Host acceptance uses a fresh Agy session to attribute facts to
+each injected owner without tools, switch to another real project to verify
+current-project routing and reference index-only visibility, then retrieve one
+reference-only fact through the Memory search path. The host probe must remain
+read-only and must not be generalized to legacy or write behavior it did not
+exercise.
+
 The strict health budget remains 1,400 estimated tokens. Reference-index
 entries count toward that budget because they are injected; reference bodies do
 not. PreInvocation remains advisory over budget, while `/doctor --strict`

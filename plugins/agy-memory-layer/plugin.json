@@ -1,6 +1,6 @@
 {
   "name": "agy-memory-layer",
-  "version": "1.15.2",
+  "version": "1.15.3",
   "description": "Evidence-controlled Agy delegation with committed Git-backed MemFS and scoped correction recall",
   "author": "Mahiro",
   "license": "MIT"

@@ -1,5 +1,5 @@
 import * as assert from 'node:assert'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
@@ -67,6 +67,55 @@ const layered = (description: string, body: string): string =>
 
 const sha256 = (content: string): string =>
   crypto.createHash('sha256').update(content).digest('hex')
+
+type PalaceCoreFile = {
+  index: number
+  path: string
+  description: string
+  content: string
+  commit: { hash: string }
+}
+
+const generatePalace = (
+  memoryRoot: string,
+  projectSlug: string,
+): { html: string; outputPath: string; workspace: string; home: string } => {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agy-palace-fixture-'))
+  const home = path.join(fixtureRoot, 'home')
+  const workspace = path.join(fixtureRoot, projectSlug)
+  const outputPath = path.join(fixtureRoot, 'palace.html')
+  fs.mkdirSync(home, { recursive: true })
+  fs.mkdirSync(workspace, { recursive: true })
+  const generator = path.join(process.cwd(), 'plugins/agy-memory-layer/scripts/palace-generator.ts')
+  const result = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', generator, workspace, outputPath],
+    {
+      encoding: 'utf-8',
+      env: {
+        ...process.env,
+        HOME: home,
+        AGY_MEMORY_DIR: memoryRoot,
+        AGY_HISTORY_FILE: path.join(home, 'missing-history.jsonl'),
+      },
+    },
+  )
+  if (result.status !== 0) {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true })
+    throw new Error(`Palace generation failed: ${result.stderr}`)
+  }
+  return { html: fs.readFileSync(outputPath, 'utf-8'), outputPath, workspace, home }
+}
+
+const parsePalaceCoreFiles = (html: string): PalaceCoreFile[] => {
+  const startMarker = 'const CORE_FILES = '
+  const endMarker = ';\n    const EXT_FILES = '
+  const start = html.indexOf(startMarker)
+  const end = html.indexOf(endMarker, start)
+  assert.notStrictEqual(start, -1)
+  assert.notStrictEqual(end, -1)
+  return JSON.parse(html.slice(start + startMarker.length, end)) as PalaceCoreFile[]
+}
 
 describe('layered memory projection', () => {
   it('parses minimal frontmatter and rejects malformed or unknown metadata', () => {
@@ -218,6 +267,174 @@ describe('layered memory projection', () => {
       assert.deepStrictEqual(beta.globalSystem, [])
       assert.deepStrictEqual(beta.projectSystem, [])
       assert.match(renderCommittedMemoryProjection(root, beta), /Layered Memory Conflict/)
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('Memory Palace topology', () => {
+  it('renders every layered Human file as a selectable nested node for the current project', () => {
+    const root = createMemoryRepository()
+    try {
+      writeFilesAndCommit(root, {
+        'system/human/identity.md': layered('Stable identity.', '# Identity\nMahiro'),
+        'system/human/prefs/coding.md': layered('Coding defaults.', '# Coding\nTyped'),
+        'system/human/prefs/communication.md': layered(
+          'Communication defaults.',
+          '# Communication\nConcise Thai',
+        ),
+        'system/human/prefs/workflow.md': layered(
+          'Workflow defaults.',
+          '# Workflow\nVerify real artifacts',
+        ),
+        'system/persona.md': layered('Persistent persona.', '# Persona\nCompanion'),
+        'projects/alpha/system/conventions.md': layered(
+          'Alpha conventions.',
+          '# Alpha Rules\nCurrent only',
+        ),
+        'projects/alpha/system/overview.md': layered('Alpha overview.', '# Alpha\nCurrent project'),
+        'projects/beta/system/conventions.md': layered(
+          'Beta conventions.',
+          '# Beta Rules\nMust not enter Core',
+        ),
+        'projects/beta/system/overview.md': layered(
+          'Beta overview.',
+          '# Beta\nMust not enter Core',
+        ),
+        'reference/human/prefs/workflow-detailed.md': layered(
+          'Detailed workflow evidence.',
+          '# Reference\nMust remain external',
+        ),
+      })
+      writeFilesAndCommit(
+        root,
+        {
+          'system/human/identity.md': layered('Stable identity.', '# Identity\nMahiro updated'),
+        },
+        'test: update identity only',
+      )
+
+      const generated = generatePalace(root, 'alpha')
+      try {
+        const coreFiles = parsePalaceCoreFiles(generated.html)
+        assert.deepStrictEqual(
+          coreFiles.map((file) => file.path),
+          [
+            'system/human/identity.md',
+            'system/human/prefs/coding.md',
+            'system/human/prefs/communication.md',
+            'system/human/prefs/workflow.md',
+            'system/persona.md',
+            'projects/alpha/system/conventions.md',
+            'projects/alpha/system/overview.md',
+          ],
+        )
+        assert.match(generated.html, /data-core-folder="system\/human"/)
+        assert.match(generated.html, /data-core-folder="system\/human\/prefs"/)
+        assert.match(generated.html, /data-core-path="system\/human\/identity\.md"/)
+        assert.match(generated.html, /data-core-path="system\/human\/prefs\/workflow\.md"/)
+        assert.doesNotMatch(generated.html, /system\/human\/\*/)
+        assert.doesNotMatch(
+          coreFiles.map((file) => file.path).join('\n'),
+          /projects\/beta|reference\//,
+        )
+
+        const expectedDetails: Record<string, { description: string; content: string }> = {
+          'system/human/identity.md': {
+            description: 'Stable identity.',
+            content: '# Identity\nMahiro updated',
+          },
+          'system/human/prefs/coding.md': {
+            description: 'Coding defaults.',
+            content: '# Coding\nTyped',
+          },
+          'system/human/prefs/communication.md': {
+            description: 'Communication defaults.',
+            content: '# Communication\nConcise Thai',
+          },
+          'system/human/prefs/workflow.md': {
+            description: 'Workflow defaults.',
+            content: '# Workflow\nVerify real artifacts',
+          },
+          'system/persona.md': {
+            description: 'Persistent persona.',
+            content: '# Persona\nCompanion',
+          },
+          'projects/alpha/system/conventions.md': {
+            description: 'Alpha conventions.',
+            content: '# Alpha Rules\nCurrent only',
+          },
+          'projects/alpha/system/overview.md': {
+            description: 'Alpha overview.',
+            content: '# Alpha\nCurrent project',
+          },
+        }
+        for (const [index, file] of coreFiles.entries()) {
+          assert.strictEqual(file.index, index)
+          assert.deepStrictEqual(
+            { description: file.description, content: file.content },
+            expectedDetails[file.path],
+          )
+          assert.strictEqual(
+            file.commit.hash,
+            runGit(root, ['log', '-1', '--pretty=format:%h', '--', file.path]),
+          )
+        }
+        assert.match(generated.html, /id="core-file-path">system\/human\/identity\.md<\/span>/)
+        assert.match(generated.html, /id="core-file-desc">Stable identity\.<\/span>/)
+        assert.match(generated.html, /data-core-index="6"/)
+      } finally {
+        fs.rmSync(path.dirname(generated.outputPath), { recursive: true, force: true })
+      }
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('preserves the flat legacy Core tree without layered folders', () => {
+    const root = createMemoryRepository()
+    try {
+      writeFilesAndCommit(root, {
+        'global/human.md': '# Human\nLegacy preference',
+        'global/persona.md': '# Persona\nLegacy persona',
+        'projects/alpha/project.md': '# Alpha\nLegacy project',
+        'projects/alpha/rules.md': '# Alpha Rules\nLegacy rule',
+        'projects/beta/project.md': '# Beta\nMust not enter Core',
+      })
+      const generated = generatePalace(root, 'alpha')
+      try {
+        const coreFiles = parsePalaceCoreFiles(generated.html)
+        assert.deepStrictEqual(
+          coreFiles.map((file) => file.path),
+          [
+            'global/human.md',
+            'global/persona.md',
+            'projects/alpha/project.md',
+            'projects/alpha/rules.md',
+          ],
+        )
+        assert.match(generated.html, /data-core-group="global"/)
+        assert.match(generated.html, /data-core-group="projects\/alpha"/)
+        assert.match(generated.html, /data-core-path="global\/human\.md"/)
+        assert.doesNotMatch(generated.html, /data-core-folder="(?:system|global)\/human"/)
+        assert.doesNotMatch(coreFiles.map((file) => file.path).join('\n'), /projects\/beta/)
+      } finally {
+        fs.rmSync(path.dirname(generated.outputPath), { recursive: true, force: true })
+      }
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('refuses to generate Palace HTML from mixed legacy and layered owners', () => {
+    const root = createMemoryRepository()
+    try {
+      writeFilesAndCommit(root, {
+        'global/human.md': '# Human\nLegacy owner',
+        'system/persona.md': layered('Layered persona.', '# Persona\nLayered owner'),
+      })
+      assert.throws(() => generatePalace(root, 'alpha'), /refuses mixed legacy\/layered ownership/)
     } finally {
       fs.rmSync(root, { recursive: true, force: true })
     }

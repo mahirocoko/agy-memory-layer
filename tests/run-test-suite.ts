@@ -22,6 +22,11 @@ export type TestResult = {
 const ROOT_DIR = path.resolve(import.meta.dirname, '..')
 const PLUGIN_DIR = path.join(ROOT_DIR, 'plugins', 'agy-memory-layer')
 const SCRIPTS_DIR = path.join(PLUGIN_DIR, 'scripts')
+const PLUGIN_VERSION = (
+  JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, 'plugin.json'), 'utf-8')) as {
+    version: string
+  }
+).version
 const MEMORY_ROOT = TEST_MEMORY_ROOT
 const TEST_REPORT_FILE = path.join(ROOT_DIR, 'TEST_REPORT.md')
 
@@ -268,11 +273,25 @@ await runTest(
     if (!html.includes('Memory Palace') || !html.includes(expectedWorkspaceName)) {
       throw new Error('Palace HTML is missing key dashboard headers')
     }
+    if (!html.includes(`agy-memory-layer v${PLUGIN_VERSION}`)) {
+      throw new Error('Palace HTML version does not match the plugin manifest')
+    }
+    for (const relativePath of ['global/human.md', 'global/persona.md']) {
+      if (!html.includes(`data-core-path="${relativePath}"`)) {
+        throw new Error(`Palace HTML is missing selectable Core node ${relativePath}`)
+      }
+    }
+    if (html.includes('data-core-group="projects/learn-letta-code"')) {
+      throw new Error('Palace HTML invented a current-project Core group without committed owners')
+    }
+    if (html.includes('system/human/*')) {
+      throw new Error('Palace HTML collapsed Core memory into a wildcard node')
+    }
 
     // Cleanup
     fs.unlinkSync(tempHtml)
 
-    return `HTML dashboard verified (${Math.round(html.length / 1024)} KB) with complete memory palace nodes.`
+    return `Legacy HTML dashboard verified (${Math.round(html.length / 1024)} KB) with two real selectable Core paths and no invented project owners.`
   },
 )
 

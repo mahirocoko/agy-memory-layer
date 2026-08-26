@@ -20,6 +20,13 @@ const brainDir = path.join(process.env.HOME || '', '.gemini', 'antigravity-cli',
 const activeWorkspace = process.argv[2] || process.cwd()
 const outputFile = process.argv[3] || '/tmp/agy-memory-palace.html'
 const activeSlug = resolveProjectSlug(activeWorkspace, memoryRoot)
+const pluginManifest = JSON.parse(
+  fs.readFileSync(path.resolve(import.meta.dirname, '..', 'plugin.json'), 'utf-8'),
+) as { version?: unknown }
+if (typeof pluginManifest.version !== 'string' || !pluginManifest.version.trim()) {
+  throw new Error('Memory Palace requires a valid plugin.json version.')
+}
+const pluginVersion = pluginManifest.version
 
 function estimateTokens(str: string): number {
   if (!str) return 0
@@ -69,6 +76,27 @@ export type ArtifactItem = {
   path: string
   tokens: number
   sizeBytes: number
+}
+
+export type CoreMemoryFile = {
+  id: string
+  index: number
+  name: string
+  dir: string
+  path: string
+  description: string
+  content: string
+  tokens: number
+  chars: number
+  scope: 'global' | 'project'
+  commit: FileCommitInfo
+}
+
+type CoreTreeNode = {
+  name: string
+  path: string
+  file?: CoreMemoryFile
+  children: CoreTreeNode[]
 }
 
 export type CheckpointItem = {
@@ -269,6 +297,11 @@ if (fs.existsSync(convDir)) {
 
 // 3. Read committed MemFS files through the same owner as PreInvocation.
 const activeProjection = inspectCommittedMemoryProjection(memoryRoot, activeSlug)
+if (activeProjection.mode === 'conflict') {
+  throw new Error(
+    `Memory Palace refuses mixed legacy/layered ownership:\n${activeProjection.diagnostics.join('\n')}`,
+  )
+}
 const personaDocument = activeProjection.globalSystem.find(
   (document) =>
     document.relativePath === 'system/persona.md' || document.relativePath === 'global/persona.md',
@@ -278,10 +311,6 @@ const humanDocuments = activeProjection.globalSystem.filter(
 )
 const humanMd = humanDocuments.map((document) => document.body).join('\n\n')
 const personaMd = personaDocument?.body || ''
-const humanDisplayName = activeProjection.mode === 'layered' ? 'system/human/*' : 'human.md'
-const personaDisplayName = activeProjection.mode === 'layered' ? 'system/persona.md' : 'persona.md'
-const humanCommitPath = humanDocuments[0]?.relativePath || 'global/human.md'
-const personaCommitPath = personaDocument?.relativePath || 'global/persona.md'
 
 const humanTokens = estimateTokens(humanMd)
 const personaTokens = estimateTokens(personaMd)
@@ -359,20 +388,6 @@ const activeProject = projects.find((p) => p.isActive) || {
 const projectTokens = estimateTokens(activeProject.projectMd)
 const rulesTokens = estimateTokens(activeProject.rulesMd)
 const memfsInjectedTokens = humanTokens + personaTokens + projectTokens + rulesTokens
-const projectDisplayName = activeProjection.mode === 'layered' ? 'system/overview.md' : 'project.md'
-const rulesDisplayName = activeProjection.mode === 'layered' ? 'system/conventions.md' : 'rules.md'
-const projectCommitPath =
-  activeProjection.projectSystem.find(
-    (document) =>
-      document.relativePath.endsWith('/overview.md') ||
-      document.relativePath.endsWith('/project.md'),
-  )?.relativePath || `projects/${activeSlug}/project.md`
-const rulesCommitPath =
-  activeProjection.projectSystem.find(
-    (document) =>
-      document.relativePath.endsWith('/conventions.md') ||
-      document.relativePath.endsWith('/rules.md'),
-  )?.relativePath || `projects/${activeSlug}/rules.md`
 
 // Allow external CLI / Statusline payload overrides if provided via environment
 if (process.env.CONTEXT_USED_PERCENT) {
@@ -400,52 +415,91 @@ if (process.env.CONTEXT_USED_PERCENT) {
 }
 
 // Core Memory Blocks
-const coreMemoryFiles = [
-  {
-    id: 'core-human',
-    name: humanDisplayName,
-    dir: activeProjection.mode === 'layered' ? 'system' : 'global',
-    path: humanCommitPath,
-    description: 'Durable user preferences, coding habits, and communication directives.',
-    content: humanMd,
-    tokens: humanTokens,
-    chars: humanMd.length,
-    commit: getFileCommitInfo(humanCommitPath),
-  },
-  {
-    id: 'core-persona',
-    name: personaDisplayName,
-    dir: activeProjection.mode === 'layered' ? 'system' : 'global',
-    path: personaCommitPath,
-    description: 'Persistent agent persona, tone, and operational directives.',
-    content: personaMd,
-    tokens: personaTokens,
-    chars: personaMd.length,
-    commit: getFileCommitInfo(personaCommitPath),
-  },
-  {
-    id: 'core-project',
-    name: projectDisplayName,
-    dir: activeSlug,
-    path: projectCommitPath,
-    description: 'Project architecture, domain concepts, stack choices, and key boundaries.',
-    content: activeProject.projectMd,
-    tokens: projectTokens,
-    chars: activeProject.projectMd.length,
-    commit: getFileCommitInfo(projectCommitPath),
-  },
-  {
-    id: 'core-rules',
-    name: rulesDisplayName,
-    dir: activeSlug,
-    path: rulesCommitPath,
-    description: 'Active codebase rules, linters, testing constraints, and conventions.',
-    content: activeProject.rulesMd,
-    tokens: rulesTokens,
-    chars: activeProject.rulesMd.length,
-    commit: getFileCommitInfo(rulesCommitPath),
-  },
-]
+const coreMemoryFiles: CoreMemoryFile[] = [
+  ...activeProjection.globalSystem,
+  ...activeProjection.projectSystem,
+].map((document, index) => ({
+  id: `core-${document.relativePath.replace(/[^a-z0-9]+/gi, '-')}`,
+  index,
+  name: path.basename(document.relativePath),
+  dir: path.dirname(document.relativePath),
+  path: document.relativePath,
+  description: document.description,
+  content: document.body,
+  tokens: estimateTokens(document.body),
+  chars: document.body.length,
+  scope: document.scope,
+  commit: getFileCommitInfo(document.relativePath),
+}))
+
+const buildCoreTree = (files: CoreMemoryFile[], prefix: string): CoreTreeNode[] => {
+  const roots: CoreTreeNode[] = []
+  for (const file of files) {
+    const relativePath = file.path.startsWith(prefix) ? file.path.slice(prefix.length) : file.path
+    const segments = relativePath.split('/').filter(Boolean)
+    let siblings = roots
+    let parentPath = prefix.replace(/\/$/, '')
+    for (let index = 0; index < segments.length; index++) {
+      const name = segments[index]
+      const nodePath = [parentPath, name].filter(Boolean).join('/')
+      const isFile = index === segments.length - 1
+      let node = siblings.find((candidate) => candidate.name === name)
+      if (!node) {
+        node = { name, path: nodePath, children: [] }
+        siblings.push(node)
+      }
+      if (isFile) node.file = file
+      siblings = node.children
+      parentPath = nodePath
+    }
+  }
+
+  const sortNodes = (nodes: CoreTreeNode[]): CoreTreeNode[] =>
+    nodes
+      .sort((left, right) => left.name.localeCompare(right.name))
+      .map((node) => ({ ...node, children: sortNodes(node.children) }))
+  return sortNodes(roots)
+}
+
+const countCoreTreeFiles = (node: CoreTreeNode): number =>
+  (node.file ? 1 : 0) + node.children.reduce((total, child) => total + countCoreTreeFiles(child), 0)
+
+const renderCoreTreeNodes = (nodes: CoreTreeNode[], depth = 0): string =>
+  nodes
+    .map((node) => {
+      if (node.file) {
+        return `<div class="tree-item ${node.file.index === 0 ? 'active' : ''}" style="--tree-indent:${depth * 14}px" data-core-index="${node.file.index}" data-core-path="${escapeHtml(node.file.path)}" onclick="selectCoreFile(${node.file.index}, this)">
+                <span>${escapeHtml(node.name)}</span>
+                <span class="file-chars-badge">${formatChars(node.file.chars)}</span>
+              </div>`
+      }
+      return `<div class="tree-folder" data-core-folder="${escapeHtml(node.path)}">
+              <div class="tree-folder-row" style="--tree-indent:${depth * 14}px">
+                <span><span class="tree-folder-chevron">⌄</span>${escapeHtml(node.name)}/</span>
+                <span class="file-chars-badge">${countCoreTreeFiles(node)}</span>
+              </div>
+              <div class="tree-children">${renderCoreTreeNodes(node.children, depth + 1)}</div>
+            </div>`
+    })
+    .join('')
+
+const renderCoreTreeGroup = (title: string, prefix: string, files: CoreMemoryFile[]): string =>
+  files.length === 0
+    ? ''
+    : `
+  <div class="tree-group" data-core-group="${escapeHtml(prefix.replace(/\/$/, ''))}">
+    <div class="tree-group-title">
+      <span>${escapeHtml(title)}</span>
+      <span class="file-chars-badge">${files.length}</span>
+    </div>
+    ${renderCoreTreeNodes(buildCoreTree(files, prefix))}
+  </div>`
+
+const globalCoreMemoryFiles = coreMemoryFiles.filter((file) => file.scope === 'global')
+const projectCoreMemoryFiles = coreMemoryFiles.filter((file) => file.scope === 'project')
+const globalCorePrefix = activeProjection.mode === 'layered' ? 'system/' : 'global/'
+const projectCorePrefix =
+  activeProjection.mode === 'layered' ? `projects/${activeSlug}/system/` : `projects/${activeSlug}/`
 
 // 5. Read Rich Git History
 let gitCommits = []
@@ -1030,8 +1084,23 @@ const html = `<!DOCTYPE html>
       align-items: center;
       cursor: default;
     }
+    .tree-folder-row {
+      padding: 6px 16px 6px calc(18px + var(--tree-indent, 0px));
+      font-size: 12px;
+      font-weight: 600;
+      color: #b3b7c2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: default;
+    }
+    .tree-folder-chevron {
+      display: inline-block;
+      width: 14px;
+      color: var(--text-muted);
+    }
     .tree-item {
-      padding: 7px 16px 7px 28px;
+      padding: 7px 16px 7px calc(28px + var(--tree-indent, 0px));
       font-size: 13px;
       color: var(--text);
       display: flex;
@@ -1049,7 +1118,7 @@ const html = `<!DOCTYPE html>
       color: var(--accent-active);
       font-weight: 600;
       border-left: 2px solid var(--accent-active);
-      padding-left: 26px;
+      padding-left: calc(26px + var(--tree-indent, 0px));
     }
     .file-chars-badge {
       font-family: var(--font-mono);
@@ -1435,7 +1504,7 @@ const html = `<!DOCTYPE html>
     <div class="top-header">
       <div class="brand-left">
         <span>🧠 Antigravity MemFS</span>
-        <span class="brand-badge">agy-memory-layer v1.14.1</span>
+        <span class="brand-badge">agy-memory-layer v${escapeHtml(pluginVersion)}</span>
         ${
           memfsGitStatus.state === 'dirty'
             ? `<span class="brand-badge" style="background: rgba(245, 158, 11, 0.15); color: #fde047; border-color: rgba(245, 158, 11, 0.4);">🧠 MemFS: +${memfsGitStatus.dirtyCount} dirty</span>`
@@ -1644,35 +1713,8 @@ const html = `<!DOCTYPE html>
           <div class="tree-panel">
             <div class="tree-header">MEMORY STORED IN-CONTEXT</div>
 
-            <div class="tree-group">
-              <div class="tree-group-title">
-                <span>global/</span>
-                <span class="file-chars-badge">2</span>
-              </div>
-              <div class="tree-item active" onclick="selectCoreFile(0, this)">
-                <span>${escapeHtml(humanDisplayName)}</span>
-                <span class="file-chars-badge">${formatChars(humanMd.length)}</span>
-              </div>
-              <div class="tree-item" onclick="selectCoreFile(1, this)">
-                <span>${escapeHtml(personaDisplayName)}</span>
-                <span class="file-chars-badge">${formatChars(personaMd.length)}</span>
-              </div>
-            </div>
-
-            <div class="tree-group">
-              <div class="tree-group-title">
-                <span>${escapeHtml(activeSlug)}/</span>
-                <span class="file-chars-badge">2</span>
-              </div>
-              <div class="tree-item" onclick="selectCoreFile(2, this)">
-                <span>${escapeHtml(projectDisplayName)}</span>
-                <span class="file-chars-badge">${formatChars(activeProject.projectMd.length)}</span>
-              </div>
-              <div class="tree-item" onclick="selectCoreFile(3, this)">
-                <span>${escapeHtml(rulesDisplayName)}</span>
-                <span class="file-chars-badge">${formatChars(activeProject.rulesMd.length)}</span>
-              </div>
-            </div>
+            ${renderCoreTreeGroup(globalCorePrefix, globalCorePrefix, globalCoreMemoryFiles)}
+            ${renderCoreTreeGroup(projectCorePrefix, projectCorePrefix, projectCoreMemoryFiles)}
           </div>
 
           <!-- Right: Detail Markdown Viewer with Commit & Diff Bar -->
@@ -1685,7 +1727,8 @@ const html = `<!DOCTYPE html>
             </div>
 
             <div class="detail-desc-box">
-              <span id="core-file-desc"><strong>description:</strong> ${escapeHtml(coreMemoryFiles[0].description)}</span>
+              <div><strong>path:</strong> <span id="core-file-path">${escapeHtml(coreMemoryFiles[0].path)}</span></div>
+              <div><strong>description:</strong> <span id="core-file-desc">${escapeHtml(coreMemoryFiles[0].description)}</span></div>
               <button class="raw-toggle-btn" onclick="toggleRawMode('core', this)">Raw</button>
             </div>
 
@@ -1911,8 +1954,8 @@ const html = `<!DOCTYPE html>
         const f = CORE_FILES[i];
         if (f.name.toLowerCase() === cleanTarget || f.path.toLowerCase().includes(cleanTarget)) {
           switchTab('core');
-          const items = document.querySelectorAll('#view-core .tree-item');
-          if (items[i]) selectCoreFile(i, items[i]);
+          const item = document.querySelector('#view-core [data-core-index="' + i + '"]');
+          if (item) selectCoreFile(i, item);
           return;
         }
       }
@@ -1937,7 +1980,8 @@ const html = `<!DOCTYPE html>
       document.getElementById('core-commit-msg').textContent = file.commit.msg;
       document.getElementById('core-commit-date').textContent = file.commit.date;
 
-      document.getElementById('core-file-desc').innerHTML = '<strong>description:</strong> ' + file.description;
+      document.getElementById('core-file-path').textContent = file.path;
+      document.getElementById('core-file-desc').textContent = file.description;
       document.getElementById('core-markdown-body').innerHTML = renderMarkdown(file.content);
       document.getElementById('core-raw-body').textContent = file.content;
 

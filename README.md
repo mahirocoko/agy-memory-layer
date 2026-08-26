@@ -1,6 +1,6 @@
 # 🧠 agy-memory-layer
 
-[![Coverage](https://img.shields.io/badge/Coverage-80.83%25-green.svg)](./CONTRACT.md)
+[![Coverage](https://img.shields.io/badge/Coverage-81.18%25-green.svg)](./CONTRACT.md)
 [![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
@@ -9,10 +9,11 @@
 > **Evidence-Controlled Agy Delegation, Committed Git-Backed Memory, and Scoped Correction Recall for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
 
-> **v1.15.2:** focused layered memory, bounded reference indexing,
-> provenance-preserving curation, and a hash-confirmed legacy
+> **v1.15.3 release candidate:** focused layered memory, bounded reference indexing,
+> provenance-preserving curation, a hash-confirmed legacy
 > migration/rollback path. Upgrading the plugin does not automatically migrate
-> an existing MemFS; migration remains an explicit reviewed operation.
+> an existing MemFS; migration remains an explicit reviewed operation. Memory
+> Palace now renders the committed layered Human subtree as individual files.
 
 ---
 
@@ -149,9 +150,13 @@ Run `/palace` or invoke the script directly to open the Memory Palace in your br
 ```
 
 It renders an interactive dashboard showing:
-- 🌐 Global memory blocks (`human.md`, `persona.md`)
-- 📁 Project-scoped memory blocks & learnings
+- 🌐 Committed global Core memory, including nested `system/human/**` files in layered mode
+- 📁 Current-project Core memory as individual selectable files, plus historical learnings
 - 📜 Git commit timeline of all memory snapshots
+
+The Core tree mirrors the selected committed layout: layered folders stay
+nested, legacy owners stay flat, and mixed ownership fails closed instead of
+showing an ambiguous dashboard.
 
 ---
 
@@ -230,13 +235,13 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.15.2 release |
+| Metric | v1.15.3 candidate |
 | :--- | ---: |
-| Lines | **80.83%** |
-| Branches | **63.71%** |
-| Functions | **83.37%** |
+| Lines | **81.18%** |
+| Branches | **64.88%** |
+| Functions | **85.45%** |
 
-This is the aggregate Node/V8 snapshot for the released `v1.15.2` source.
+This is the aggregate Node/V8 snapshot for the `v1.15.3` source candidate.
 Run `pnpm test:coverage` after source changes and update this snapshot in the
 same release commit; per-file percentages remain in command output rather than
 being copied into this README.
