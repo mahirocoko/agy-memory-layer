@@ -103,7 +103,9 @@ const isReferencePath = (relativePath: string): boolean =>
 
 const validateSpec = (spec: MemoryCurationSpec): void => {
   if (spec.schemaVersion !== 1) throw new Error('Curation schemaVersion must be 1.')
-  if (!ID_PATTERN.test(spec.id)) throw new Error('Invalid curation id.')
+  if (typeof spec.id !== 'string' || !ID_PATTERN.test(spec.id)) {
+    throw new Error('Invalid curation id.')
+  }
   if (!spec.expectedHead) throw new Error('Curation expectedHead is required.')
   if (!spec.reason?.trim()) throw new Error('Curation reason is required.')
   if (!Array.isArray(spec.sources) || spec.sources.length === 0) {

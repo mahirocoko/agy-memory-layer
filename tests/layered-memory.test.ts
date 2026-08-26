@@ -313,6 +313,9 @@ describe('lossless layered memory migration', () => {
         /Disposition ledger omits 1 durable source unit/,
       )
 
+      const missingId = { ...structuredClone(spec), id: undefined as unknown as string }
+      assert.throws(() => planLayeredMemoryMigration(root, missingId), /Migration id must be/)
+
       const unrepresented = structuredClone(spec)
       const communicationTarget = unrepresented.targets.find(
         (target) => target.relativePath === 'system/human/prefs/communication.md',
@@ -504,6 +507,9 @@ describe('provenance-preserving memory curation', () => {
         () => planMemoryCuration(root, incomplete),
         /ledger omits 1 durable source unit/,
       )
+
+      const missingId = { ...structuredClone(spec), id: undefined as unknown as string }
+      assert.throws(() => planMemoryCuration(root, missingId), /Invalid curation id/)
 
       const unrepresented = structuredClone(spec)
       unrepresented.targets[1].content = layered(

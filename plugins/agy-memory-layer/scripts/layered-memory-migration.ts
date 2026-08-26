@@ -168,7 +168,7 @@ const validateTargetPath = (relativePath: string): void => {
 
 const validateSpecShape = (spec: LayeredMigrationSpec): void => {
   if (spec.schemaVersion !== 1) throw new Error('Migration spec schemaVersion must be 1.')
-  if (!MIGRATION_ID_PATTERN.test(spec.id)) {
+  if (typeof spec.id !== 'string' || !MIGRATION_ID_PATTERN.test(spec.id)) {
     throw new Error('Migration id must be 3-80 lowercase alphanumeric/hyphen characters.')
   }
   if (!spec.expectedHead) throw new Error('Migration spec requires expectedHead.')

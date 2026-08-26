@@ -31,7 +31,8 @@ learn-letta-code/
 │   ├── releases/v1.13.0.md                  # Prior scoped-health release evidence
 │   ├── releases/v1.14.0.md                  # Superseded Evidence Controller release evidence
 │   ├── releases/v1.14.1.md                  # Prior installed-hook runtime patch evidence
-│   ├── releases/v1.15.0.md                  # Current layered-memory release evidence
+│   ├── releases/v1.15.0.md                  # Initial layered-memory release evidence
+│   ├── releases/v1.15.1.md                  # Current runtime spec-id validation patch
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene

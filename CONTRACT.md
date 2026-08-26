@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.15.0`
+**Package version:** `1.15.1`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.15.0` on 2026-08-26
+**Release state:** Released as `v1.15.1` on 2026-08-26
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -279,7 +279,7 @@ branches**, and **83.09% functions**, with 11/11 integration scenarios and
 cases) passing on Agy `1.1.20`, Node `v26.5.1`, and pnpm `10.33.0`. Coverage is
 evidence, not a substitute for the behavioral negative controls above.
 
-Released `v1.15.0` measures **80.69% lines**, **62.68% branches**, and **83.21%
+Released `v1.15.1` measures **80.38% lines**, **62.59% branches**, and **83.21%
 functions**, with 33/33 Node tests passing (one
 integration runner containing 11/11 scenarios plus 32 focused cases). These
 numbers describe the tagged source; exact migration evidence is linked above.
@@ -301,7 +301,7 @@ See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 5. An automated release workflow remains deferred. Releases use the existing
    manual tag/GitHub Release path only after source, host, and human gates pass;
    current release evidence lives in
-   [`docs/releases/v1.15.0.md`](./docs/releases/v1.15.0.md).
+   [`docs/releases/v1.15.1.md`](./docs/releases/v1.15.1.md).
 
 ## Distribution
 
