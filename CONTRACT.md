@@ -4,8 +4,7 @@
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** `v1.15.2` source candidate; latest published release is
-`v1.15.1` from 2026-08-26
+**Release state:** Released as `v1.15.2` on 2026-08-26
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -281,10 +280,10 @@ branches**, and **83.09% functions**, with 11/11 integration scenarios and
 cases) passing on Agy `1.1.20`, Node `v26.5.1`, and pnpm `10.33.0`. Coverage is
 evidence, not a substitute for the behavioral negative controls above.
 
-The `v1.15.2` release candidate measures **80.83% lines**, **63.71% branches**, and **83.37%
+Released `v1.15.2` measures **80.83% lines**, **63.71% branches**, and **83.37%
 functions**, with 33/33 Node tests passing (one
 integration runner containing 11/11 scenarios plus 32 focused cases). These
-numbers describe the candidate source; exact migration evidence is linked above.
+numbers describe the tagged source; exact migration evidence is linked above.
 
 The real AGY `1.1.16` host E2E also passed committed injection, `/memory`,
 targeted `/remember`, scoped `/init`, non-mutating Stop, fresh-session

@@ -33,7 +33,7 @@ learn-letta-code/
 │   ├── releases/v1.14.1.md                  # Prior installed-hook runtime patch evidence
 │   ├── releases/v1.15.0.md                  # Initial layered-memory release evidence
 │   ├── releases/v1.15.1.md                  # Runtime spec-id validation patch
-│   ├── releases/v1.15.2.md                  # Descendant-safe rollback release candidate
+│   ├── releases/v1.15.2.md                  # Current descendant-safe rollback release
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene
