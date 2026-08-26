@@ -368,6 +368,27 @@ describe('lossless layered memory migration', () => {
         fs.existsSync(path.join(root, 'archives/migrations/test-layered-v1/manifest.json')),
         true,
       )
+      assert.throws(
+        () => rollbackLayeredMemoryMigration(root, undefined as unknown as string, migrated.commit),
+        /Invalid migration id/,
+      )
+      assert.throws(
+        () => rollbackLayeredMemoryMigration(root, spec.id, 'f'.repeat(40)),
+        /to be an ancestor/,
+      )
+
+      const postMigrationContent = `${fs.readFileSync(path.join(root, 'system/persona.md'), 'utf-8')}\n- Post-migration approved detail.\n`
+      fs.writeFileSync(path.join(root, 'system/persona.md'), postMigrationContent)
+      fs.mkdirSync(path.join(root, 'archives/curations/post-migration/source/system'), {
+        recursive: true,
+      })
+      fs.writeFileSync(
+        path.join(root, 'archives/curations/post-migration/source/system/persona.md'),
+        postMigrationContent,
+      )
+      runGit(root, ['add', 'system/persona.md', 'archives/curations/post-migration'])
+      runGit(root, ['commit', '-m', 'test: preserve post-migration curation'])
+      const postMigrationHead = runGit(root, ['rev-parse', 'HEAD'])
 
       fs.writeFileSync(failingHook, '#!/bin/sh\nexit 1\n')
       fs.chmodSync(failingHook, 0o755)
@@ -376,8 +397,26 @@ describe('lossless layered memory migration', () => {
         /Git .* failed/,
       )
       assert.strictEqual(runGit(root, ['status', '--porcelain']), '')
-      assert.strictEqual(runGit(root, ['rev-parse', 'HEAD']), migrated.commit)
+      assert.strictEqual(runGit(root, ['rev-parse', 'HEAD']), postMigrationHead)
       assert.strictEqual(inspectCommittedMemoryProjection(root, 'alpha').mode, 'layered')
+      assert.strictEqual(
+        fs.existsSync(
+          path.join(
+            root,
+            `archives/migrations/test-layered-v1/rollbacks/${postMigrationHead}/manifest.json`,
+          ),
+        ),
+        false,
+      )
+      assert.strictEqual(
+        fs.existsSync(
+          path.join(
+            root,
+            `archives/migrations/test-layered-v1/rollbacks/${postMigrationHead}/current/system/persona.md`,
+          ),
+        ),
+        false,
+      )
       fs.rmSync(failingHook)
 
       const rolledBack = rollbackLayeredMemoryMigration(root, spec.id, migrated.commit)
@@ -391,6 +430,78 @@ describe('lossless layered memory migration', () => {
       assert.strictEqual(
         fs.existsSync(path.join(root, 'archives/migrations/test-layered-v1/manifest.json')),
         true,
+      )
+      assert.strictEqual(
+        fs.readFileSync(
+          path.join(
+            root,
+            `archives/migrations/test-layered-v1/rollbacks/${postMigrationHead}/current/system/persona.md`,
+          ),
+          'utf-8',
+        ),
+        postMigrationContent,
+      )
+      assert.strictEqual(
+        fs.existsSync(
+          path.join(
+            root,
+            `archives/migrations/test-layered-v1/rollbacks/${postMigrationHead}/manifest.json`,
+          ),
+        ),
+        true,
+      )
+      const rollbackManifest = JSON.parse(
+        fs.readFileSync(
+          path.join(
+            root,
+            `archives/migrations/test-layered-v1/rollbacks/${postMigrationHead}/manifest.json`,
+          ),
+          'utf-8',
+        ),
+      )
+      const migrationOwnedPaths = firstPlan.changedPaths.filter(
+        (relativePath) => !relativePath.startsWith('archives/migrations/test-layered-v1/'),
+      )
+      assert.deepStrictEqual(
+        rollbackManifest.currentReceipts.map(
+          (receipt: { relativePath: string }) => receipt.relativePath,
+        ),
+        migrationOwnedPaths,
+      )
+      assert.strictEqual(
+        rollbackManifest.currentReceipts.some(
+          (receipt: { present: boolean; sha256: string | null }) =>
+            !receipt.present && receipt.sha256 === null,
+        ),
+        true,
+      )
+      for (const receipt of rollbackManifest.currentReceipts as Array<{
+        relativePath: string
+        present: boolean
+        sha256: string | null
+      }>) {
+        const snapshotPath = path.join(
+          root,
+          `archives/migrations/test-layered-v1/rollbacks/${postMigrationHead}/current`,
+          receipt.relativePath,
+        )
+        if (!receipt.present) {
+          assert.strictEqual(fs.existsSync(snapshotPath), false)
+          assert.strictEqual(receipt.sha256, null)
+          continue
+        }
+        const snapshot = fs.readFileSync(snapshotPath)
+        assert.strictEqual(
+          crypto.createHash('sha256').update(snapshot).digest('hex'),
+          receipt.sha256,
+        )
+      }
+      assert.strictEqual(
+        fs.readFileSync(
+          path.join(root, 'archives/curations/post-migration/source/system/persona.md'),
+          'utf-8',
+        ),
+        postMigrationContent,
       )
       assert.strictEqual(runGit(root, ['status', '--porcelain']), '')
     } finally {

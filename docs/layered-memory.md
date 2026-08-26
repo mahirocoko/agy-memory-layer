@@ -166,8 +166,8 @@ plugin link, or running health checks never migrates live memory.
 
 ## Rollback
 
-Rollback is additive Git history, not a force reset. It is allowed only while
-the exact migration commit is still `HEAD`:
+Rollback is additive Git history, not a force reset. The named migration commit
+must remain an ancestor of the current clean MemFS `HEAD`:
 
 ```bash
 node --experimental-strip-types \
@@ -176,10 +176,12 @@ node --experimental-strip-types \
   --migration-id <id> --migration-commit <sha>
 ```
 
-The rollback commit restores the parent active files and removes layered
-targets while preserving `archives/migrations/<id>/` and its receipts. If later
-memory commits exist, automatic rollback refuses; reconcile them explicitly
-rather than erasing intervening history.
+Before restoration, rollback archives every present current migration-owned
+path plus a manifest containing explicit present/absent state and SHA-256 for
+present content. The rollback commit then restores the migration parent active
+files and removes layered targets while preserving the migration archive,
+later curation archives, unrelated post-migration paths, and the exact
+pre-rollback snapshot. A non-ancestor migration commit fails closed.
 
 ## Human Gate for the First Live Migration
 

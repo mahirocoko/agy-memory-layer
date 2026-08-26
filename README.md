@@ -1,6 +1,6 @@
 # 🧠 agy-memory-layer
 
-[![Coverage](https://img.shields.io/badge/Coverage-80.38%25-green.svg)](./CONTRACT.md)
+[![Coverage](https://img.shields.io/badge/Coverage-80.83%25-green.svg)](./CONTRACT.md)
 [![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
@@ -9,7 +9,7 @@
 > **Evidence-Controlled Agy Delegation, Committed Git-Backed Memory, and Scoped Correction Recall for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
 
-> **v1.15.1:** focused layered memory, bounded reference indexing,
+> **v1.15.2 release candidate:** focused layered memory, bounded reference indexing,
 > provenance-preserving curation, and a hash-confirmed legacy
 > migration/rollback path. Upgrading the plugin does not automatically migrate
 > an existing MemFS; migration remains an explicit reviewed operation.
@@ -230,13 +230,13 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.15.1 release |
+| Metric | v1.15.2 candidate |
 | :--- | ---: |
-| Lines | **80.38%** |
-| Branches | **62.59%** |
-| Functions | **83.21%** |
+| Lines | **80.83%** |
+| Branches | **63.71%** |
+| Functions | **83.37%** |
 
-This is the aggregate Node/V8 snapshot for the released `v1.15.1` source.
+This is the aggregate Node/V8 snapshot for the `v1.15.2` release candidate.
 Run `pnpm test:coverage` after source changes and update this snapshot in the
 same release commit; per-file percentages remain in command output rather than
 being copied into this README.
@@ -245,7 +245,7 @@ being copied into this README.
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
-> ✅ **Latest release**: [`v1.15.1`](./docs/releases/v1.15.1.md) hardens runtime JSON validation so missing migration/curation identifiers cannot resolve to an `undefined` provenance archive. [`v1.15.0`](./docs/releases/v1.15.0.md) introduced layered committed memory, destination-backed curation, atomic writer ownership, and receipt-bound migration/rollback.
+> ✅ **Latest published release**: [`v1.15.1`](./docs/releases/v1.15.1.md) adds strict runtime spec-identifier validation. The [`v1.15.2` candidate](./docs/releases/v1.15.2.md) keeps rollback available after approved post-migration curation by accepting descendant HEADs and archiving exact current migration-owned paths before restoration.
 
 ---
 

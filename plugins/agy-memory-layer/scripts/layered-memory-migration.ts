@@ -514,12 +514,20 @@ export const rollbackLayeredMemoryMigration = (
   migrationCommit: string,
 ): MigrationRollbackResult =>
   withMemoryWriteLock(memoryRoot, `rollback layered migration ${migrationId}`, () => {
-    if (!MIGRATION_ID_PATTERN.test(migrationId)) throw new Error('Invalid migration id.')
+    if (typeof migrationId !== 'string' || !MIGRATION_ID_PATTERN.test(migrationId)) {
+      throw new Error('Invalid migration id.')
+    }
     assertMemoryRepositoryCleanForWrite(memoryRoot)
     const currentHead = getMemoryHeadRevision(memoryRoot)
-    if (currentHead !== migrationCommit) {
+    if (!currentHead) throw new Error('Rollback requires a committed memory HEAD.')
+    const ancestry = spawnSync(
+      'git',
+      ['-C', memoryRoot, 'merge-base', '--is-ancestor', migrationCommit, currentHead],
+      { encoding: 'utf-8' },
+    )
+    if (ancestry.status !== 0) {
       throw new Error(
-        `Rollback requires migration commit at HEAD: expected ${migrationCommit}, received ${currentHead}.`,
+        `Rollback requires ${migrationCommit} to be an ancestor of current HEAD ${currentHead}.`,
       )
     }
     const parent = execFileSync('git', ['-C', memoryRoot, 'rev-parse', `${migrationCommit}^`], {
@@ -540,7 +548,53 @@ export const rollbackLayeredMemoryMigration = (
       .filter((relativePath) => !relativePath.startsWith(archivePrefix))
       .sort()
 
+    const rollbackArchivePrefix = `${archivePrefix}rollbacks/${currentHead}/`
+    const currentReceipts = changed.map((relativePath) => {
+      const content = readCommittedMemoryFile(memoryRoot, relativePath)
+      return {
+        relativePath,
+        present: content !== null,
+        sha256: content === null ? null : sha256(content),
+      }
+    })
+    const rollbackArchiveTargets: MigrationTarget[] = currentReceipts
+      .filter((receipt) => receipt.present)
+      .map((receipt) => ({
+        relativePath: `${rollbackArchivePrefix}current/${receipt.relativePath}`,
+        content: readCommittedMemoryFile(memoryRoot, receipt.relativePath) as string,
+      }))
+    rollbackArchiveTargets.push({
+      relativePath: `${rollbackArchivePrefix}manifest.json`,
+      content: `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          migrationId,
+          migrationCommit,
+          rollbackFrom: currentHead,
+          restoredParent: parent,
+          currentReceipts,
+          policy: 'Exact current migration-owned paths are archived before rollback.',
+        },
+        null,
+        2,
+      )}\n`,
+    })
+    for (const target of rollbackArchiveTargets) {
+      const resolved = resolveMemoryPath(memoryRoot, target.relativePath)
+      if (
+        readCommittedMemoryFile(memoryRoot, target.relativePath) !== null ||
+        fs.existsSync(resolved.absolutePath)
+      ) {
+        throw new Error(`Rollback archive target already exists: ${target.relativePath}`)
+      }
+    }
+    const rollbackPaths = rollbackArchiveTargets.map((target) => target.relativePath)
+    const commitPaths = [...changed, ...rollbackPaths].sort()
+
     try {
+      for (const target of rollbackArchiveTargets) {
+        writeMemoryFile(memoryRoot, target.relativePath, target.content)
+      }
       for (const relativePath of changed) {
         resolveMemoryPath(memoryRoot, relativePath)
         const parentContent = readFileAtRef(memoryRoot, parent, relativePath)
@@ -550,7 +604,7 @@ export const rollbackLayeredMemoryMigration = (
 
       const commit = commitMemoryPaths({
         memoryRoot,
-        relativePaths: changed,
+        relativePaths: commitPaths,
         reason: `revert(memory): roll back layered migration (${migrationId})`,
         authorName: 'Antigravity Memory Migration',
       })
@@ -561,10 +615,10 @@ export const rollbackLayeredMemoryMigration = (
         commit: commit.sha,
         restoredParent: parent,
         preservedArchive: archivePrefix,
-        changedPaths: changed,
+        changedPaths: commitPaths,
       }
     } catch (error) {
-      restoreDeclaredMemoryPaths(memoryRoot, migrationCommit, changed)
+      restoreDeclaredMemoryPaths(memoryRoot, currentHead, commitPaths)
       throw error
     }
   })

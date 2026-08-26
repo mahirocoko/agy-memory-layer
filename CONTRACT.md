@@ -1,10 +1,11 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.15.1`
+**Package version:** `1.15.2`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.15.1` on 2026-08-26
+**Release state:** `v1.15.2` source candidate; latest published release is
+`v1.15.1` from 2026-08-26
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -180,9 +181,10 @@ Disposable evidence for the exact current live plan is recorded in
   and a disposition manifest.
 - The first live MemFS migration remains human-gated and is never triggered by
   install, update, health, or source verification.
-- Rollback creates a new commit restoring the pre-migration active layout while
-  preserving migration archives. It refuses when the migration commit is no
-  longer `HEAD`.
+- Rollback requires the named migration commit to remain an ancestor of current
+  clean `HEAD`. It archives exact current migration-owned paths, then creates a
+  new commit restoring the pre-migration active layout while preserving
+  migration, rollback, and later curation archives.
 
 ## Plugin Surface
 
@@ -279,10 +281,10 @@ branches**, and **83.09% functions**, with 11/11 integration scenarios and
 cases) passing on Agy `1.1.20`, Node `v26.5.1`, and pnpm `10.33.0`. Coverage is
 evidence, not a substitute for the behavioral negative controls above.
 
-Released `v1.15.1` measures **80.38% lines**, **62.59% branches**, and **83.21%
+The `v1.15.2` release candidate measures **80.83% lines**, **63.71% branches**, and **83.37%
 functions**, with 33/33 Node tests passing (one
 integration runner containing 11/11 scenarios plus 32 focused cases). These
-numbers describe the tagged source; exact migration evidence is linked above.
+numbers describe the candidate source; exact migration evidence is linked above.
 
 The real AGY `1.1.16` host E2E also passed committed injection, `/memory`,
 targeted `/remember`, scoped `/init`, non-mutating Stop, fresh-session
@@ -301,7 +303,7 @@ See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 5. An automated release workflow remains deferred. Releases use the existing
    manual tag/GitHub Release path only after source, host, and human gates pass;
    current release evidence lives in
-   [`docs/releases/v1.15.1.md`](./docs/releases/v1.15.1.md).
+   [`docs/releases/v1.15.2.md`](./docs/releases/v1.15.2.md).
 
 ## Distribution
 
