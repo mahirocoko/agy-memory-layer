@@ -26,7 +26,15 @@ if [ "${1:-}" = "--purge" ]; then
   fi
   RESOLVED_MEMORY_ROOT="$(cd "$MEMORY_ROOT" 2>/dev/null && pwd -P || true)"
   REPOSITORY_ROOT="$(git -C "$MEMORY_ROOT" rev-parse --show-toplevel 2>/dev/null || true)"
-  if [ -z "$RESOLVED_MEMORY_ROOT" ] || [ "$REPOSITORY_ROOT" != "$RESOLVED_MEMORY_ROOT" ] || ! git -C "$MEMORY_ROOT" cat-file -e HEAD:global/human.md 2>/dev/null || ! git -C "$MEMORY_ROOT" cat-file -e HEAD:global/persona.md 2>/dev/null; then
+  LEGACY_SIGNATURE=false
+  LAYERED_SIGNATURE=false
+  if git -C "$MEMORY_ROOT" cat-file -e HEAD:global/human.md 2>/dev/null && git -C "$MEMORY_ROOT" cat-file -e HEAD:global/persona.md 2>/dev/null; then
+    LEGACY_SIGNATURE=true
+  fi
+  if git -C "$MEMORY_ROOT" cat-file -e HEAD:system/human/identity.md 2>/dev/null && git -C "$MEMORY_ROOT" cat-file -e HEAD:system/persona.md 2>/dev/null; then
+    LAYERED_SIGNATURE=true
+  fi
+  if [ -z "$RESOLVED_MEMORY_ROOT" ] || [ "$REPOSITORY_ROOT" != "$RESOLVED_MEMORY_ROOT" ] || { [ "$LEGACY_SIGNATURE" != true ] && [ "$LAYERED_SIGNATURE" != true ]; }; then
     echo "Refusing to purge an unproven MemFS directory: $MEMORY_ROOT" >&2
     exit 1
   fi

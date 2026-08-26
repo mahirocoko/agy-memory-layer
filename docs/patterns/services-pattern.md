@@ -9,7 +9,7 @@
 [scripts/hook-inject-memory.sh]
             │
             ├── Resolve and validate project identity
-            ├── Read global/project files from Git HEAD
+            ├── Compile layered/legacy global + current-project files from Git HEAD
             ├── Select one canonical committed working hypothesis
             ├── Fail closed on malformed or stray active learning metadata
             ├── Report dirty/conflict state without injecting it

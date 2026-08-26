@@ -25,10 +25,13 @@ learn-letta-code/
 │   ├── onboarding.md                        # Day 1 setup and verification
 │   ├── project-overview.md                  # Architecture and subsystem overview
 │   ├── letta-parity.md                      # Canonical Letta behavior/adaptation/status matrix
+│   ├── layered-memory.md                    # Focused layout, curation, migration, and rollback contract
+│   ├── v1.15-layered-memory-evidence.md     # v1.15 plan/apply/rollback and host evidence
 │   ├── releases/v1.12.1.md                  # Historical v1.12.1 evidence
 │   ├── releases/v1.13.0.md                  # Prior scoped-health release evidence
 │   ├── releases/v1.14.0.md                  # Superseded Evidence Controller release evidence
-│   ├── releases/v1.14.1.md                  # Current installed-hook runtime patch evidence
+│   ├── releases/v1.14.1.md                  # Prior installed-hook runtime patch evidence
+│   ├── releases/v1.15.0.md                  # Current layered-memory release evidence
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene
@@ -81,7 +84,11 @@ learn-letta-code/
 │       ├── hook-memory-status.sh             # Strict Stop wrapper
 │       ├── hook-memory-status.ts             # Non-mutating Stop status owner
 │       ├── active-learning.ts                 # Canonical committed working-hypothesis selector
+│       ├── layered-memory.ts                  # Committed layered/legacy projection compiler
+│       ├── layered-memory-migration.ts        # Lossless legacy migration planner/apply/rollback
 │       ├── memory-repository.ts              # Containment, Git state, atomic write, targeted commit
+│       ├── memory-write-lock.ts              # External cross-process MemFS writer lock
+│       ├── memory-curation.ts                # Receipt-led curation proposal and approval
 │       ├── workspace-identity.ts             # Shared project scope and conversation workspace resolution
 │       ├── dream-daemon.ts                  # Manual/optional-cron correction evidence archive
 │       ├── recall-engine.ts                 # Subword N-Gram Vector & BM25 hybrid recall
@@ -108,5 +115,6 @@ learn-letta-code/
     ├── test-environment.ts                  # Disposable HOME/MemFS fixture
     ├── run-test-suite.ts                    # Integration scenario runner and report generator
     ├── test-memory-backup.ts                # Backup integrity and path-containment tests
+    ├── layered-memory.test.ts               # Projection, migration, rollback, curation, and lock cases
     └── unit-coverage.test.ts                # Focused engine unit cases
 ```

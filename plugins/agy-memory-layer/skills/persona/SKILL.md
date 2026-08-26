@@ -1,6 +1,6 @@
 ---
 name: persona
-description: Switch or inspect the agent's active personality preset (e.g. memo, linus, tutor, architect) in ~/.gemini/memory/global/persona.md.
+description: Switch or inspect the agent's active personality preset through an explicit, provenance-preserving MemFS proposal.
 ---
 
 # /persona - Agent Personality Switcher
@@ -17,7 +17,9 @@ Switch or view available personality presets for your stateful pair programmer.
 
 ## Usage
 - `/persona` or `/persona list` — List available presets and see which is active.
-- `/persona <preset>` — Switch to a specific persona (e.g. `/persona linus`).
+- `/persona <preset>` — Prepare a reviewed switch (e.g. `/persona linus`). The
+  existing persona is archived exactly and the replacement stays inactive until
+  the curation proposal is approved.
 
 ## Execution
 ```bash

@@ -54,6 +54,7 @@ const {
 const { createTsInspector } = await import(path.join(SCRIPTS_DIR, 'ts-inspector.ts'))
 const { estimateTokens, compactMarkdownContent, compactProjectMemory, runAutoCompaction } =
   await import(path.join(SCRIPTS_DIR, 'memory-compactor.ts'))
+const { reviewMemoryCuration } = await import(path.join(SCRIPTS_DIR, 'memory-curation.ts'))
 const { scanAndSynthesizeSkills, generateDraftSkill } = await import(
   path.join(SCRIPTS_DIR, 'skill-synthesizer.ts')
 )
@@ -185,14 +186,17 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(typeof PERSONA_PRESETS.tutor, 'object')
     assert.strictEqual(typeof PERSONA_PRESETS.architect, 'object')
 
-    // Test switching persona
-    switchPersona('linus')
-    let current = getActivePersona()
-    assert.strictEqual(current.presetName, 'linus')
-
-    switchPersona('memo')
-    current = getActivePersona()
-    assert.strictEqual(current.presetName, 'memo')
+    // Persona changes are proposals; they do not become active before review.
+    const before = getActivePersona()
+    const switchResult = switchPersona('linus')
+    assert.strictEqual(switchResult.success, true)
+    assert.strictEqual(switchResult.proposalStatus, 'PENDING_APPROVAL')
+    assert.strictEqual(getActivePersona().content, before.content)
+    if (switchResult.proposalId?.startsWith('cur-')) {
+      reviewMemoryCuration(MEMORY_ROOT, switchResult.proposalId, 'reject')
+    } else if (switchResult.proposalId) {
+      reviewProposal(switchResult.proposalId, 'reject')
+    }
   })
 
   it('tests hook-inject-memory budget notice calculation', () => {
@@ -903,6 +907,9 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(install.status, 0, install.stderr)
     assert.strictEqual(fs.lstatSync(targetLink).isSymbolicLink(), true)
     assert.strictEqual(fs.existsSync(path.join(memoryRoot, '.git')), true)
+    assert.strictEqual(fs.existsSync(path.join(memoryRoot, 'system', 'persona.md')), true)
+    assert.strictEqual(fs.existsSync(path.join(memoryRoot, 'system', 'human', 'identity.md')), true)
+    assert.strictEqual(fs.existsSync(path.join(memoryRoot, 'global')), false)
     const configLink = path.join(lifecycleHome, '.gemini', 'config', 'plugins', 'agy-memory-layer')
     assert.strictEqual(fs.lstatSync(configLink).isSymbolicLink(), true)
 
@@ -1037,6 +1044,46 @@ describe('Unit Coverage Extensions', () => {
     )
     fs.rmSync(legacyHome, { recursive: true, force: true })
 
+    const nonEmptyMemoryHome = path.join(TEST_TEMP_ROOT, 'non-empty-memory-home')
+    const nonEmptyMemoryRoot = path.join(nonEmptyMemoryHome, '.gemini', 'memory')
+    fs.mkdirSync(nonEmptyMemoryRoot, { recursive: true })
+    fs.writeFileSync(path.join(nonEmptyMemoryRoot, 'existing-memory.md'), 'preserve me\n')
+    const refusedNonEmptyInstall = spawnSync(
+      '/bin/bash',
+      [path.join(ROOT_DIR, 'plugins', 'agy-memory-layer', 'scripts', 'install.sh')],
+      {
+        cwd: ROOT_DIR,
+        env: { ...env, HOME: nonEmptyMemoryHome, USERPROFILE: nonEmptyMemoryHome },
+        encoding: 'utf-8',
+      },
+    )
+    assert.strictEqual(refusedNonEmptyInstall.status, 1)
+    assert.match(refusedNonEmptyInstall.stderr, /non-empty memory directory without Git/)
+    assert.strictEqual(
+      fs.readFileSync(path.join(nonEmptyMemoryRoot, 'existing-memory.md'), 'utf-8'),
+      'preserve me\n',
+    )
+    assert.strictEqual(fs.existsSync(path.join(nonEmptyMemoryRoot, '.git')), false)
+    fs.rmSync(nonEmptyMemoryHome, { recursive: true, force: true })
+
+    const rootNonEmptyHome = path.join(TEST_TEMP_ROOT, 'root-non-empty-memory-home')
+    const rootNonEmptyMemory = path.join(rootNonEmptyHome, '.gemini', 'memory')
+    fs.mkdirSync(rootNonEmptyMemory, { recursive: true })
+    fs.writeFileSync(path.join(rootNonEmptyMemory, 'existing-memory.md'), 'root preserve\n')
+    const refusedRootNonEmptyInstall = spawnSync('/bin/bash', [path.join(ROOT_DIR, 'install.sh')], {
+      cwd: ROOT_DIR,
+      env: { ...env, HOME: rootNonEmptyHome, USERPROFILE: rootNonEmptyHome },
+      encoding: 'utf-8',
+    })
+    assert.strictEqual(refusedRootNonEmptyInstall.status, 1)
+    assert.match(refusedRootNonEmptyInstall.stderr, /non-empty memory directory without Git/)
+    assert.strictEqual(
+      fs.readFileSync(path.join(rootNonEmptyMemory, 'existing-memory.md'), 'utf-8'),
+      'root preserve\n',
+    )
+    assert.strictEqual(fs.existsSync(path.join(rootNonEmptyMemory, '.git')), false)
+    fs.rmSync(rootNonEmptyHome, { recursive: true, force: true })
+
     const rootInstallerHome = path.join(TEST_TEMP_ROOT, 'root-installer-home')
     const rootInstallerEnv = {
       ...env,
@@ -1082,7 +1129,7 @@ describe('Unit Coverage Extensions', () => {
 
   it('tests memory-approval dual-mode policy, proposals, and reviews', () => {
     const policy = getApprovalPolicy()
-    assert.strictEqual(policy.defaultMode, 'auto')
+    assert.strictEqual(policy.defaultMode, 'explicit')
 
     // Mode check
     const learningMode = getApprovalModeForFile('projects/test/learnings/2026-08-18_note.md')
@@ -1090,12 +1137,20 @@ describe('Unit Coverage Extensions', () => {
     const projectMode = getApprovalModeForFile('projects/test/project.md')
     const rulesMode = getApprovalModeForFile('projects/test/rules.md')
     const humanMode = getApprovalModeForFile('global/human.md')
+    const personaMode = getApprovalModeForFile('system/persona.md')
+    const referenceMode = getApprovalModeForFile('reference/human/workflow.md')
 
     assert.strictEqual(learningMode, 'auto')
     assert.strictEqual(hypothesisMode, 'explicit')
-    assert.strictEqual(humanMode, 'auto')
+    assert.strictEqual(humanMode, 'explicit')
+    assert.strictEqual(personaMode, 'explicit')
+    assert.strictEqual(referenceMode, 'explicit')
     assert.strictEqual(projectMode, 'explicit')
     assert.strictEqual(rulesMode, 'explicit')
+    assert.throws(
+      () => proposeMemoryUpdate('global/human.md', '# Replacement without prior facts'),
+      /use memory-curation\.ts/,
+    )
 
     saveApprovalPolicy({
       defaultMode: 'auto',
@@ -1126,6 +1181,9 @@ describe('Unit Coverage Extensions', () => {
 
     const fetched = getPendingProposal(proposalId)
     assert.strictEqual(fetched?.reason, 'Refactored backend architecture')
+    assert.match(fetched?.oldSha256 || '', /^[a-f0-9]{64}$/)
+    assert.match(fetched?.newSha256 || '', /^[a-f0-9]{64}$/)
+    assert.match(fetched?.baseRevision || '', /^[a-f0-9]{40}$/)
 
     // Review approve
     const reviewApprove = reviewProposal(proposalId, 'approve')
@@ -1470,14 +1528,22 @@ describe('Unit Coverage Extensions', () => {
     })
 
     assert.strictEqual(syncRes.status, 'SYNCED_SUCCESSFULLY')
-    assert.strictEqual(syncRes.globalHumanUpdated, true)
-    assert.strictEqual(syncRes.importedReferencesCount, 1)
+    assert.strictEqual(syncRes.globalHumanUpdated, false)
+    assert.strictEqual(syncRes.importedReferencesCount, 2)
     assert.strictEqual(syncRes.syncedProjectsCount, 0)
 
-    // Verify imported files in sandbox MemFS
-    assert.strictEqual(fs.existsSync(path.join(tempMemfs, 'global', 'human.md')), true)
+    // Imported material is on-demand evidence; active human memory is untouched.
+    assert.strictEqual(fs.existsSync(path.join(tempMemfs, 'global', 'human.md')), false)
     assert.strictEqual(
-      fs.existsSync(path.join(tempMemfs, 'global', 'reference', 'thai-grammar.md')),
+      fs.existsSync(
+        path.join(tempMemfs, 'reference', 'imports', 'letta', 'agent-test-1234', 'human.md'),
+      ),
+      true,
+    )
+    assert.strictEqual(
+      fs.existsSync(
+        path.join(tempMemfs, 'reference', 'imports', 'letta', 'agent-test-1234', 'thai-grammar.md'),
+      ),
       true,
     )
     assert.strictEqual(fs.existsSync(path.join(tempMemfs, 'projects', 'org-repo-a')), false)
@@ -1495,7 +1561,18 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(projectSyncRes.globalHumanUpdated, false)
     assert.strictEqual(projectSyncRes.syncedProjectsCount, 1)
     assert.strictEqual(
-      fs.existsSync(path.join(tempMemfs, 'projects', 'org-repo-a', 'rules.md')),
+      fs.existsSync(
+        path.join(
+          tempMemfs,
+          'projects',
+          'org-repo-a',
+          'reference',
+          'imports',
+          'letta',
+          'agent-test-1234',
+          'project-rules.md',
+        ),
+      ),
       true,
     )
     const projectCommitPaths = execFileSync('git', ['show', '--pretty=', '--name-only', 'HEAD'], {
@@ -1506,8 +1583,8 @@ describe('Unit Coverage Extensions', () => {
       .split('\n')
       .sort()
     assert.deepStrictEqual(projectCommitPaths, [
-      'projects/org-repo-a/learnings/thai-grammar.md',
-      'projects/org-repo-a/rules.md',
+      'projects/org-repo-a/reference/imports/letta/agent-test-1234/project-rules.md',
+      'projects/org-repo-a/reference/imports/letta/agent-test-1234/thai-grammar.md',
     ])
 
     assert.throws(

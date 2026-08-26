@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.14.1`
+**Package version:** `1.15.0`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.14.1` on 2026-08-25
+**Release state:** Released as `v1.15.0` on 2026-08-26
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -19,14 +19,14 @@ The Agy storage model remains one user-owned Git repository:
 ```text
 ~/.gemini/memory/
 ├── .git/
-├── global/
-│   ├── human.md
-│   └── persona.md
-└── projects/<slug>/
-    ├── project.md
-    ├── rules.md
-    └── learnings/*.md
-└── archives/                 # Git-backed recall-only material; never injected
+├── system/                     # always-active global memory
+│   ├── persona.md
+│   └── human/**/*.md
+├── reference/**/*.md           # indexed on-demand global evidence
+├── projects/<slug>/
+│   ├── system/**/*.md          # active only for the current project
+│   └── reference/**/*.md       # indexed on-demand project evidence
+└── archives/                   # exact provenance/history; never injected
 ```
 
 Transient proposal and Dream cursor state lives beside that repository at
@@ -45,7 +45,13 @@ into MemFS commits.
   schema-valid no-op instead of falling back to the current directory.
 - Dirty, conflict, error, and uninitialized states are surfaced as status
   notices without activating their content.
-- The Agy adaptation injects global files, current-project files, and at most one
+- `layered-memory.ts` is the shared projection owner for PreInvocation, strict
+  health, and Memory Palace. It validates minimal `description` frontmatter,
+  injects lexical global/current-project system bodies, and emits only a bounded
+  path/description index for references.
+- The historical four-file shape remains a legacy fallback. Layered and legacy
+  active owners may not coexist; overlap fails closed instead of double injecting.
+- The Agy adaptation injects focused global files, current-project files, and at most one
   committed canonical `working-hypothesis.md` carrying both
   `memory_status: active` and `memory_kind: working-hypothesis` frontmatter.
 - A committed active marker outside that canonical path, malformed canonical
@@ -68,7 +74,8 @@ into MemFS commits.
 3. write files atomically;
 4. reject commits when unrelated dirty paths exist;
 5. stage and commit only declared paths;
-6. return explicit clean, dirty, conflict, uninitialized, or error state.
+6. serialize high-level writers through the external cross-process lock;
+7. return explicit clean, dirty, conflict, uninitialized, or error state.
 
 The initializer, persona switcher, approval flow, Letta import, deterministic
 Dream writer, and backup restore use this boundary. Markdown maintenance is
@@ -89,20 +96,25 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
 
 ### 4. Review policy
 
-- Global `human.md`, `persona.md`, and ordinary dated learnings may use the
-  configured auto policy.
+- All `system/**`, `reference/**`, project layered owners, and legacy active
+  owners require explicit approval by default. Only inert archive outputs may
+  use the narrow automatic policy.
 - `projects/*/learnings/working-hypothesis.md` requires explicit approval and
   outranks the broad auto-learning policy.
-- `projects/*/project.md` and `projects/*/rules.md` require explicit approval.
 - A user-confirmed `/init` invocation passes `--confirm-init` and approves exactly
-  the generated `project.md` and `rules.md` baseline. A live `/sync-letta` import requires an
-  exact agent/scope, a reviewed dry run, and `--confirm-import`.
+  the two generated baseline owners for the selected layered/legacy layout. A
+  live `/sync-letta` import requires an exact agent/scope, a reviewed dry run,
+  and `--confirm-import` but imports only on-demand evidence.
 - `/sync pull|sync` is an explicit whole-repository Git integration boundary. It
   requires a clean MemFS repository and propagates pull/rebase failures.
 - Pending proposals are stored outside the Git working tree and are revalidated
-  for path containment and stale target content before approval.
+  for path containment, exact old/new receipts, stale target content, and stale
+  MemFS `HEAD` before approval.
 - `/remember` routes complete proposed content through
   `memory-approval.ts propose` rather than direct `git add -A`.
+- A move, demotion, paraphrase, deduplication, or removal uses
+  `memory-curation.ts`, whose exhaustive source-unit ledger and exact source
+  archive are approved as one hash-bound plan.
 
 ### 5. Project identity
 
@@ -131,7 +143,7 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
   evidence only when the user expressed explicit durable-memory intent. Other
   sessions update external cursor state as skipped rather than creating
   UUID/turn-count prose. Dream never activates the protected working hypothesis
-  or bypasses explicit project/rules proposals.
+  or bypasses explicit project-system proposals.
 - Deterministic Dream is not equivalent to Letta's model-backed reflection
   worktree lifecycle.
 - Dream is manual or an explicitly installed cron surface. Stop does not invoke
@@ -144,13 +156,33 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
 - Multiple Letta agents require explicit `--agent-id` selection.
 - A single Letta agent also requires explicit `--agent-id`; live import further
   requires `--confirm-import` after a dry-run review.
-- `--target-scope global` writes only `global/*`. Project scope requires an exact
-  `--project-slug` and writes only that project's `rules.md` and `learnings/*`.
+- `--target-scope global` writes only `reference/imports/letta/<agent-id>/**`.
+  Project scope requires an exact `--project-slug` and writes only the equivalent
+  project reference subtree.
 - Imported targets pass shared path and slug validation.
 - Live writes require a clean destination repository.
 - Commits contain only imported target paths.
 - Letta's agent identity, conversation history, compaction records, and MemFS
   semantics are not flattened silently into Agy memory.
+
+### 8. Lossless migration and rollback
+
+The migration and curation contract is owned by
+[`docs/layered-memory.md`](./docs/layered-memory.md).
+Disposable evidence for the exact current live plan is recorded in
+[`docs/v1.15-layered-memory-evidence.md`](./docs/v1.15-layered-memory-evidence.md).
+
+- Migration inventory must cover every committed legacy active owner and every
+  durable source unit.
+- Planning is read-only and produces a deterministic SHA-256 plan receipt.
+- Apply requires that exact receipt, a clean base `HEAD`, the writer lock, and
+  one targeted commit containing focused layered targets, exact legacy archives,
+  and a disposition manifest.
+- The first live MemFS migration remains human-gated and is never triggered by
+  install, update, health, or source verification.
+- Rollback creates a new commit restoring the pre-migration active layout while
+  preserving migration archives. It refuses when the migration commit is no
+  longer `HEAD`.
 
 ## Plugin Surface
 
@@ -162,7 +194,8 @@ The bundle currently contains:
 - TypeScript source executed with Node 22+ type stripping;
 - Evidence Controller routing, Memory Palace, backup/restore, recall, archived
   Dream correction evidence, project onboarding, persona switching, remote Git
-  helper, Letta import, and optional maintenance utilities.
+  helper, Letta import, layered migration, lossless curation, and optional
+  maintenance utilities.
 
 The Evidence Controller is an Agy/Gemini procedure. It requires
 Observed/Inferred/Unverified reporting, scoped claims, one falsifiable
@@ -211,6 +244,8 @@ Current direct regression coverage includes:
 - absolute/traversal paths and unsafe project slugs are rejected;
 - targeted commits reject unrelated dirty paths;
 - explicit proposals are contained and approved through a clean repository;
+- layered projection, legacy fallback, mixed-layout conflict, migration,
+  rollback, curation, and writer-lock contention are covered in disposable repos;
 - Letta import requires exact agent selection and live confirmation, and rejects
   a traversal project slug;
 - all tests run with disposable HOME and MemFS roots.
@@ -244,6 +279,11 @@ branches**, and **83.09% functions**, with 11/11 integration scenarios and
 cases) passing on Agy `1.1.20`, Node `v26.5.1`, and pnpm `10.33.0`. Coverage is
 evidence, not a substitute for the behavioral negative controls above.
 
+Released `v1.15.0` measures **80.69% lines**, **62.68% branches**, and **83.21%
+functions**, with 33/33 Node tests passing (one
+integration runner containing 11/11 scenarios plus 32 focused cases). These
+numbers describe the tagged source; exact migration evidence is linked above.
+
 The real AGY `1.1.16` host E2E also passed committed injection, `/memory`,
 targeted `/remember`, scoped `/init`, non-mutating Stop, fresh-session
 persistence, and cleanup.
@@ -260,8 +300,8 @@ See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 4. Host-level proof or narrower claims for subagent tool restrictions.
 5. An automated release workflow remains deferred. Releases use the existing
    manual tag/GitHub Release path only after source, host, and human gates pass;
-   current patch evidence lives in
-   [`docs/releases/v1.14.1.md`](./docs/releases/v1.14.1.md).
+   current release evidence lives in
+   [`docs/releases/v1.15.0.md`](./docs/releases/v1.15.0.md).
 
 ## Distribution
 

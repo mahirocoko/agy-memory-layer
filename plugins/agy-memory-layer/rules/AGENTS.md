@@ -21,22 +21,22 @@ You MUST proactively consult and maintain memory without waiting for a slash com
 ### A. The Annoyance & Friction Rule
 - The threshold for recording a rule or preference into MemFS is **annoyance, friction, or repeated correction**.
 - When the user corrects your code, phrasing, framework usage, or package management:
-  - **Action**: Propose or record the correction through the scoped memory writer. Global preferences may use the configured auto policy; `project.md` and `rules.md` require explicit approval.
+  - **Action**: Propose the correction through the scoped memory writer. All system, reference, and legacy active owners require explicit approval.
 
 ### B. Proactive Codebase Onboarding & Initialization (`/init`)
-- When entering a workspace or repository that has not been initialized in MemFS yet (no `project.md` in `~/.gemini/memory/projects/<slug>/`):
+- When entering a workspace or repository that has no committed project-system owner in MemFS:
   - **Action**: Recommend `/init` with the exact two protected output paths. Run it only after the user confirms; that invocation is the explicit approval boundary for the generated baseline.
 
-### B. Proactive User Learning (`~/.gemini/memory/global/human.md`)
+### B. Proactive User Learning (`~/.gemini/memory/system/human/`)
 - Whenever the user expresses a preference (e.g. "I prefer Bun", "don't use semicolons", "reply in Thai", "use exact package flags -E"):
-  - **Action**: Update `~/.gemini/memory/global/human.md` through the contained, targeted memory commit path.
+  - **Action**: Prepare a focused proposal for the appropriate `system/human/<topic>.md` owner.
   - **Do NOT wait** for the user to type `/remember`.
 
-### C. Proactive Project Architecture & Rules (`~/.gemini/memory/projects/<slug>/`)
+### C. Proactive Project Architecture & Rules (`~/.gemini/memory/projects/<slug>/system/`)
 - When you discover key architectural patterns, tech stack choices, API boundaries, or project conventions:
-  - **Action**: Prepare a scoped proposal for `project.md` or `rules.md`; apply it only after explicit approval.
+  - **Action**: Prepare a scoped proposal for a focused project-system owner; apply it only after explicit approval.
 - When the user corrects an error or explains how something works in this codebase:
-  - **Action**: Prepare the correction for `rules.md` and route it through the same explicit approval boundary.
+  - **Action**: Prepare the correction for `system/conventions.md` and route it through the same explicit approval boundary.
 
 ### D. Proactive Reflection & Dreaming (`/dream`)
 - When concluding a complex debugging session, refactor, or multi-step feature implementation:
@@ -66,15 +66,17 @@ You MUST proactively consult and maintain memory without waiting for a slash com
 ```text
 ~/.gemini/memory/                # Git Repository (explicit targeted commits)
 ├── .git/                        # Commit history & snapshots
-├── global/
-│   ├── human.md                 # User profile, style, habits, cross-project preferences
-│   └── persona.md               # Agent personality, tone, and operational directives
+├── system/                      # Always-active global memory
+│   ├── persona.md
+│   └── human/
+│       ├── identity.md
+│       └── prefs/*.md
+├── reference/                   # On-demand global evidence; indexed, not injected
 └── projects/
     └── <project-slug>/          # Project-specific memory (isolated per workspace)
-        ├── project.md           # Architecture, domain concepts, tech stack, key files
-        ├── rules.md             # Codebase rules, linters, testing constraints
-        └── learnings/           # Dated learning logs (YYYY-MM-DD_<topic>.md)
-└── archives/                    # Recall-only Markdown; never prompt-injected
+        ├── system/*.md          # Focused active project context
+        └── reference/*.md       # On-demand project evidence
+└── archives/                    # Exact historical/provenance material; never injected
 ```
 
 ---
@@ -85,3 +87,6 @@ You MUST proactively consult and maintain memory without waiting for a slash com
 2. The `PreInvocation` hook injects only committed `HEAD` memory into prompt context; uncommitted content is disclosed as dirty state but is not activated.
 3. Memory writers must resolve paths inside the configured root, start from a clean repository, and commit only their owned paths.
 4. The `Stop` hook is observational: it reports dirty/conflict state and never stages, commits, deletes Git locks, or launches Dream.
+5. A cross-process lock serializes every high-level writer. Curation and migration
+   preserve exact source blobs and disposition manifests; removal is never a
+   silent delete-only rewrite.

@@ -20,7 +20,9 @@ Inspect active memory blocks, Git snapshot commit history, or search across hist
 ## How It Works
 
 1. **Inspection Mode (`/memory`)**:
-   - Prints active `global/human.md`, `global/persona.md`, and project-scoped `project.md` / `rules.md`.
+   - Prints the committed projection: focused global/current-project `system/**/*.md`
+     bodies plus a bounded path/description index for `reference/**/*.md`.
+   - Uses the four-file legacy layout only when no layered owner exists.
    - Shows recent Git commit snapshots and uncommitted state.
 
 2. **Search Mode (`/memory search <query>`)**:

@@ -20,8 +20,10 @@ Host Workspace (learn-letta-code)
   │   └── scripts/*.ts, *.sh       (Lifecycle Hooks, Daemon & Palace Generator)
   │
   └── ~/.gemini/memory/            (Independent Git MemFS Repository)
-      ├── global/                  (human.md, persona.md)
-      └── projects/<slug>/         (project.md, rules.md, learnings/)
+      ├── system/                  (Focused always-active global owners)
+      ├── reference/               (On-demand global evidence)
+      ├── projects/<slug>/         (system/ + reference/)
+      └── archives/                (Inert history and exact provenance)
 ```
 
 ---
@@ -69,7 +71,10 @@ Always run the full test suite before concluding changes:
 pnpm test
 ```
 
-Expected output: **11/11 integration scenarios** in `TEST_REPORT.md` and **25/25 total Node test-runner tests** passing (1 integration runner + 24 focused unit cases).
+Expected output for v1.15.0: **11/11 integration scenarios**
+in `TEST_REPORT.md` and **32 focused Node test-runner cases** passing. Refresh
+the exact count and coverage after the final full run; do not infer release or
+live-migration readiness from source tests alone.
 - PreInvocation hook schema validation
 - Committed-HEAD projection and non-mutating Stop status
 - Contained paths and targeted memory commits

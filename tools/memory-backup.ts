@@ -18,8 +18,11 @@ import {
   assertMemoryRepositoryCleanForWrite,
   commitMemoryPaths,
   deleteMemoryFile,
+  getMemoryHeadRevision,
+  restoreDeclaredMemoryPaths,
   writeMemoryBuffer,
 } from '../plugins/agy-memory-layer/scripts/memory-repository.ts'
+import { withMemoryWriteLock } from '../plugins/agy-memory-layer/scripts/memory-write-lock.ts'
 
 // -----------------------------------------------------------------------------
 // Type Definitions (Strictly type aliases ONLY - No interface)
@@ -500,72 +503,94 @@ export const importMemoryBundle = (options: ImportOptions): ImportResult => {
     }
   }
 
-  // Ensure target directory exists
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true })
-  }
-
-  const changedPaths = new Set<string>()
-  const isGitRepo = fs.existsSync(path.join(targetDir, '.git'))
-  if (isGitRepo) assertMemoryRepositoryCleanForWrite(targetDir)
-
-  // Clean target if requested
-  if (options.cleanTarget) {
-    const existing = scanMemoryDirectory(targetDir)
-    for (const rel of existing) {
-      deleteMemoryFile(targetDir, rel)
-      changedPaths.add(rel)
-    }
-  }
-
-  // Restore files
-  for (const { fileEntry, targetFilePath } of validatedEntries) {
-    const parentDir = path.dirname(targetFilePath)
-
-    if (fs.existsSync(targetFilePath) && !options.overwrite && !options.cleanTarget) {
-      skippedFiles.push(fileEntry.relativePath)
-      continue
+  return withMemoryWriteLock(targetDir, 'restore memory backup', () => {
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true })
     }
 
-    if (!fs.existsSync(parentDir)) {
-      fs.mkdirSync(parentDir, { recursive: true })
+    const changedPaths = new Set<string>()
+    const isGitRepo = fs.existsSync(path.join(targetDir, '.git'))
+    if (isGitRepo) assertMemoryRepositoryCleanForWrite(targetDir)
+    const baseRevision = isGitRepo ? getMemoryHeadRevision(targetDir) : null
+    if (isGitRepo && !baseRevision) throw new Error('Backup restore requires committed MemFS HEAD.')
+    const candidatePaths = new Set<string>(
+      validatedEntries.map(({ fileEntry }) => fileEntry.relativePath),
+    )
+    if (options.cleanTarget) {
+      for (const relativePath of scanMemoryDirectory(targetDir)) candidatePaths.add(relativePath)
+    }
+    const before = new Map<string, Buffer | null>()
+    for (const relativePath of candidatePaths) {
+      const absolutePath = resolveImportTargetPath(targetDir, relativePath)
+      before.set(relativePath, fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath) : null)
     }
 
-    const contentBuffer = Buffer.from(fileEntry.content, fileEntry.encoding || 'utf-8')
-    writeMemoryBuffer(targetDir, fileEntry.relativePath, contentBuffer)
-    restoredFiles.push(fileEntry.relativePath)
-    changedPaths.add(fileEntry.relativePath)
-  }
+    try {
+      if (options.cleanTarget) {
+        const existing = scanMemoryDirectory(targetDir)
+        for (const rel of existing) {
+          deleteMemoryFile(targetDir, rel)
+          changedPaths.add(rel)
+        }
+      }
 
-  // Git auto-commit if target is a git repository
-  let gitCommitted = false
-  let commitHash: string | undefined
+      for (const { fileEntry, targetFilePath } of validatedEntries) {
+        const parentDir = path.dirname(targetFilePath)
 
-  const shouldAutoCommit = options.autoCommit !== false
+        if (fs.existsSync(targetFilePath) && !options.overwrite && !options.cleanTarget) {
+          skippedFiles.push(fileEntry.relativePath)
+          continue
+        }
 
-  if (shouldAutoCommit && isGitRepo && changedPaths.size > 0) {
-    const commitMsg = `backup: restore ${restoredFiles.length} memory blocks (${new Date().toISOString()})`
-    const commit = commitMemoryPaths({
-      memoryRoot: targetDir,
-      relativePaths: [...changedPaths],
-      reason: commitMsg,
-    })
-    if (commit.committed) {
-      commitHash = getGitCommitHash(targetDir) || undefined
-      gitCommitted = true
+        if (!fs.existsSync(parentDir)) {
+          fs.mkdirSync(parentDir, { recursive: true })
+        }
+
+        const contentBuffer = Buffer.from(fileEntry.content, fileEntry.encoding || 'utf-8')
+        writeMemoryBuffer(targetDir, fileEntry.relativePath, contentBuffer)
+        restoredFiles.push(fileEntry.relativePath)
+        changedPaths.add(fileEntry.relativePath)
+      }
+
+      let gitCommitted = false
+      let commitHash: string | undefined
+      const shouldAutoCommit = options.autoCommit !== false
+
+      if (shouldAutoCommit && isGitRepo && changedPaths.size > 0) {
+        const commitMsg = `backup: restore ${restoredFiles.length} memory blocks (${new Date().toISOString()})`
+        const commit = commitMemoryPaths({
+          memoryRoot: targetDir,
+          relativePaths: [...changedPaths],
+          reason: commitMsg,
+        })
+        if (commit.committed) {
+          commitHash = getGitCommitHash(targetDir) || undefined
+          gitCommitted = true
+        }
+      }
+
+      return {
+        success: true,
+        targetDir,
+        restoredFiles,
+        skippedFiles,
+        dryRun: false,
+        gitCommitted,
+        commitHash,
+        verification,
+      }
+    } catch (error) {
+      if (isGitRepo && baseRevision) {
+        restoreDeclaredMemoryPaths(targetDir, baseRevision, [...candidatePaths])
+      } else {
+        for (const [relativePath, content] of before) {
+          if (content === null) deleteMemoryFile(targetDir, relativePath)
+          else writeMemoryBuffer(targetDir, relativePath, content)
+        }
+      }
+      throw error
     }
-  }
-
-  return {
-    success: true,
-    targetDir,
-    restoredFiles,
-    skippedFiles,
-    dryRun: false,
-    gitCommitted,
-    commitHash,
-    verification,
-  }
+  })
 }
 
 // -----------------------------------------------------------------------------

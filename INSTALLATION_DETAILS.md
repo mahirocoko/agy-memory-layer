@@ -26,14 +26,17 @@
 └── 3. Memory Git Storage Directory (ที่เก็บข้อมูล Memory)
     └── ~/.gemini/memory/                    [Git Repository แยกอิสระ]
         ├── .git/                            [Commit History & Snapshots]
-        ├── global/
-        │   ├── human.md                     [User Profile & Preferences]
-        │   └── persona.md                   [Agent Persona]
-        └── projects/
+        ├── system/                          [Memory ที่ active ทุกครั้ง]
+        │   ├── persona.md                   [Agent Persona]
+        │   └── human/
+        │       ├── identity.md              [ตัวตนและบริบทการทำงานร่วมกัน]
+        │       └── prefs/*.md               [Preference แยกตามหัวข้อ]
+        ├── reference/                       [หลักฐานสำหรับค้นเมื่อจำเป็น]
+        ├── projects/
             └── <project-slug>/              [แยกตามชื่อแต่ละโปรเจกต์]
-                ├── project.md
-                ├── rules.md
-                └── learnings/
+                ├── system/*.md              [Inject เฉพาะตอนอยู่โปรเจกต์นี้]
+                └── reference/*.md           [รายละเอียดสำหรับค้นเมื่อจำเป็น]
+        └── archives/                        [ประวัติและหลักฐานเดิม ไม่ inject]
 ```
 
 State ชั่วคราวของ proposal และ Dream cursor จะอยู่ที่ `~/.gemini/memory.state/` แยกจาก Git repository จึงไม่ถูก inject เข้า prompt และไม่ติดไปกับ memory commit
@@ -65,19 +68,26 @@ cd agy-memory-layer
 ### Step 2: สร้างและตั้งค่า Git Memory Repository (`~/.gemini/memory/`)
 - **โฟลเดอร์เป้าหมาย**: `/Users/<username>/.gemini/memory/`
 - **สิ่งที่เกิดขึ้น**:
-  1. สร้างโฟลเดอร์ `~/.gemini/memory/global/` และ `~/.gemini/memory/projects/`
+  1. สร้างโครง `system/`, `reference/`, `projects/` และ `archives/`
   2. ตรวจสอบว่ามี `.git/` อยู่หรือไม่ ถ้ายังไม่มีจะสั่ง:
      ```bash
      git init -b main
      ```
-  3. สร้างไฟล์ Template เริ่มต้น (หากยังไม่มี):
-     - `global/human.md` : ใส่ค่าเริ่มต้น เช่น การใช้ `-E` flag, ภาษาที่ชอบ, การเขียนโค้ดแบบ strict type
-     - `global/persona.md` : กำหนดบทบาทของ Agent ให้เป็น Stateful Pair Programmer
+  3. สร้างไฟล์เริ่มต้นแบบแยก owner ชัดเจน:
+     - `system/human/identity.md` : ตัวตนและบริบทการทำงานร่วมกัน
+     - `system/human/prefs/communication.md` : ภาษาและสไตล์การสื่อสาร
+     - `system/human/prefs/coding.md` : ค่า default ด้านโค้ด ใช้เมื่อ repo ไม่ได้กำหนดไว้
+     - `system/persona.md` : บทบาท Stateful Pair Programmer
   4. ทำการ Commit ครั้งแรก:
      ```bash
-     git add global/human.md global/persona.md
+     git add system/human/identity.md system/human/prefs/*.md system/persona.md
      git commit -m "memory-layer: initial memory repository bootstrap"
      ```
+
+ถ้ามี MemFS เดิมอยู่แล้ว installer จะไม่ย้ายหรือเขียนทับไฟล์เก่าเอง โครง
+`global/human.md`, `global/persona.md`, `project.md` และ `rules.md` ยังทำงานเป็น
+legacy fallback ต่อได้ การย้ายไป layered memory ต้องผ่านแผน migration ที่มี
+receipt ครบและได้รับอนุมัติก่อนเท่านั้น
 
 ### Step 3: ทำการเชื่อมโยง Plugin เข้ากับ Antigravity CLI (Symlink)
 - **โฟลเดอร์เป้าหมาย**: `~/.gemini/antigravity-cli/plugins/`
@@ -112,15 +122,18 @@ sequenceDiagram
 
     User->>Engine: พิมพ์คำสั่ง / ข้อความ
     Engine->>Hook: เรียก hook-inject-memory.sh
-    Hook->>Mem: อ่าน human.md + project.md จาก committed HEAD
-    Hook-->>Engine: Inject เฉพาะ committed memory
+    Hook->>Mem: compile global/current-project system จาก committed HEAD
+    Hook-->>Engine: Inject system body + reference index แบบจำกัดขนาด
     Engine->>User: ประมวลผลและตอบกลับพร้อมบริบท
     Engine->>Stop: จบการทำงาน (Stop Event)
     Stop->>Mem: ตรวจสถานะ clean / dirty / conflict
     Stop-->>Engine: ส่ง decision=stop โดยไม่แก้ Git state
 ```
 
-ถ้า repository มีไฟล์ที่ยังไม่ commit รอบถัดไปจะยังใช้เนื้อหาจาก `HEAD` เดิม พร้อมแจ้งสถานะ dirty แยกต่างหาก ไฟล์ใหม่จะ active ก็ต่อเมื่อผ่าน writer ที่ตรวจ path และ commit เฉพาะไฟล์ของงานนั้นแล้ว
+ถ้า repository มีไฟล์ที่ยังไม่ commit รอบถัดไปจะยังใช้เนื้อหาจาก `HEAD` เดิม
+พร้อมแจ้งสถานะ dirty แยกต่างหาก ไฟล์ใหม่จะ active ก็ต่อเมื่อผ่าน writer ที่ตรวจ
+path, base revision และ commit เฉพาะไฟล์ของงานนั้นแล้ว ส่วนการย้ายหรือลดทอน
+ข้อมูลเดิมต้องใช้ curation ledger เพื่อเก็บที่มาไว้ครบ ไม่ลบเงียบ ๆ
 
 ---
 

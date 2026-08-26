@@ -16,8 +16,9 @@ This guide outlines core development patterns, performance constraints, and memo
 ## 2. Memory Hygiene & Token Budget Guard
 
 - **Compact Signal**: Memory blocks injected into the prompt must be dense, clear, and high-signal Markdown.
-- Avoid dumping multi-megabyte log files or large code snippets into `human.md` or `project.md`.
-- The active TypeScript hook emits a **Budget Notice** above `1,400` estimated tokens but does not truncate memory. `memory-health.ts --strict` owns the failing offline gate; curate global/project blocks when it fails.
+- Avoid dumping logs or large snippets into active `system/**/*.md`. Put detailed
+  evidence in `reference/` and obsolete/exact source history in `archives/`.
+- The active TypeScript hook emits a **Budget Notice** above `1,400` estimated tokens but does not truncate memory. `memory-health.ts --strict` owns the failing offline gate; curate focused global/project owners when it fails.
 - Only `projects/<slug>/learnings/working-hypothesis.md` can be prompt-active, and it must declare both `memory_status: active` and `memory_kind: working-hypothesis`. The exact path requires explicit approval. Any active marker outside it fails closed. Keep uncurated, superseded, Dream, and historical material under `archives/`, where `/memory search` can still retrieve it.
 - Uncommitted Markdown is not active prompt state. Fix or commit it through the shared writer instead of relying on the hook to legitimize it.
 
@@ -46,5 +47,8 @@ This guide outlines core development patterns, performance constraints, and memo
 - Commit only those pathspecs with a concrete reason.
 - Refuse unrelated dirty paths rather than staging around them.
 - Store pending proposal/cursor state outside the Git working tree.
+- Take the shared cross-process lock before any high-level mutation.
+- Treat moves, demotions, paraphrases, and removals as curation: disposition
+  every durable source unit and archive exact source bytes before activation.
 - Treat `--confirm-init`, reviewed `--confirm-import`, or verified backup
   restore as approval only for that command's exact declared path set.

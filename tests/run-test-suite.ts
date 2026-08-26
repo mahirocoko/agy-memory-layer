@@ -383,7 +383,7 @@ await runTest(
 // -----------------------------------------------------------------------------
 await runTest(
   'Codebase Scanner (/init)',
-  'Scans repository architecture and seeds project.md on Day 1',
+  'Scans repository architecture and seeds the selected project-memory baseline',
   async () => {
     const { initProjectMemory, scanCodebase } = await import(
       path.join(SCRIPTS_DIR, 'init-project-memory.ts')
@@ -421,13 +421,13 @@ await runTest(
       throw new Error(`Initialization failed: ${initResult.status}`)
     }
 
-    const seededProjectMd = fs.readFileSync(initResult.filesCreated[0], 'utf-8')
+    const seededOverview = fs.readFileSync(initResult.filesCreated[0], 'utf-8')
     if (
-      !seededProjectMd.includes('sample-service') ||
-      !seededProjectMd.includes('React') ||
-      !seededProjectMd.includes('vitest run')
+      !seededOverview.includes('sample-service') ||
+      !seededOverview.includes('React') ||
+      !seededOverview.includes('vitest run')
     ) {
-      throw new Error('Seeded project.md missing detected frameworks or scripts')
+      throw new Error('Seeded project overview missing detected frameworks or scripts')
     }
 
     // Cleanup
@@ -642,7 +642,7 @@ ${results.map((r) => `| **${r.suite}** | ${r.name} | ${r.status === 'PASSED' ? '
    - The Hook delivers committed \`HEAD\` memory via \`injectSteps[].ephemeralMessage\` and excludes an uncommitted sentinel.
 
 2. **Day 1 Codebase Scanner (\`/init\`)**:
-   - Analyzes fixture manifests, entry points, linters, scripts, and documentation to seed \`project.md\` and \`rules.md\` deterministically.
+   - Analyzes fixture manifests, entry points, linters, scripts, and documentation to seed the selected layered or legacy project baseline deterministically.
 
 3. **Historical Learnings Search (\`/memory search\`)**:
    - Ranked retrieval returns exact file paths, line numbers, and snippets from the isolated MemFS fixture.

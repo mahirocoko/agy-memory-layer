@@ -11,9 +11,9 @@ Git staging or broad MemFS mutation.
 2. Compare each candidate with committed MemFS content. Distinguish replacement,
    addition, contradiction, and transient session detail.
 3. Draft concise complete-file proposals:
-   - global preference → `global/human.md`;
-   - project architecture → `projects/<slug>/project.md`;
-   - project convention → `projects/<slug>/rules.md`;
+   - global preference → a focused `system/human/prefs/<topic>.md` proposal;
+   - project architecture → `projects/<slug>/system/architecture.md` proposal;
+   - project convention → `projects/<slug>/system/conventions.md` proposal;
    - session evidence → a dated file in `projects/<slug>/learnings/`.
 4. Route each complete proposal through `memory-approval.ts propose`. Project
    architecture and rule files require explicit approval.

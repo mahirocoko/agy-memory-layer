@@ -8,6 +8,7 @@
 import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { listCommittedMemoryFiles, readCommittedMemoryFile } from './memory-repository.ts'
 
 export type SearchMatch = {
   file: string
@@ -20,6 +21,7 @@ export type SearchMatch = {
 export type MemorySearchOptions = {
   limit?: number
   scope?: string
+  memoryRoot?: string
 }
 
 export type MemoryStatus = {
@@ -36,13 +38,13 @@ const memoryRoot =
 
 export function getMemoryStatus(root: string = memoryRoot): MemoryStatus {
   const initialized = fs.existsSync(path.join(root, '.git'))
-  const globalDir = path.join(root, 'global')
   const projectsDir = path.join(root, 'projects')
-  const globalFiles = fs.existsSync(globalDir)
-    ? fs
-        .readdirSync(globalDir)
-        .filter((entry) => entry.endsWith('.md'))
-        .sort()
+  const globalFiles = initialized
+    ? [
+        ...listCommittedMemoryFiles(root, 'system'),
+        ...listCommittedMemoryFiles(root, 'reference'),
+        ...listCommittedMemoryFiles(root, 'global'),
+      ].sort()
     : []
   const projects = fs.existsSync(projectsDir)
     ? fs
@@ -104,6 +106,39 @@ export function searchMemory(query: string, options: MemorySearchOptions = {}): 
 
   const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean)
   const results: SearchMatch[] = []
+  const root = path.resolve(options.memoryRoot || memoryRoot)
+
+  const searchContent = (relativePath: string, content: string): void => {
+    if (options.scope && !relativePath.startsWith(options.scope)) return
+    const fullPath = path.join(root, relativePath)
+    const lines = content.split('\n')
+    lines.forEach((line, idx) => {
+      const lowerLine = line.toLowerCase()
+      let matchCount = 0
+      for (const term of queryTerms) {
+        if (lowerLine.includes(term)) matchCount++
+      }
+      if (matchCount > 0) {
+        results.push({
+          file: fullPath,
+          relPath: relativePath,
+          lineNum: idx + 1,
+          line: line.trim(),
+          score: matchCount,
+        })
+      }
+    })
+  }
+
+  if (fs.existsSync(path.join(root, '.git'))) {
+    for (const relativePath of listCommittedMemoryFiles(root, '')) {
+      if (!relativePath.endsWith('.md')) continue
+      const content = readCommittedMemoryFile(root, relativePath)
+      if (content !== null) searchContent(relativePath, content)
+    }
+    results.sort((a, b) => b.score - a.score)
+    return results.slice(0, options.limit || 20)
+  }
 
   function walk(dir: string): void {
     if (!fs.existsSync(dir)) return
@@ -118,28 +153,7 @@ export function searchMemory(query: string, options: MemorySearchOptions = {}): 
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
         try {
           const content = fs.readFileSync(fullPath, 'utf-8')
-          const lines = content.split('\n')
-
-          lines.forEach((line, idx) => {
-            const lowerLine = line.toLowerCase()
-            let matchCount = 0
-
-            for (const term of queryTerms) {
-              if (lowerLine.includes(term)) {
-                matchCount++
-              }
-            }
-
-            if (matchCount > 0) {
-              results.push({
-                file: fullPath,
-                relPath: path.relative(memoryRoot, fullPath),
-                lineNum: idx + 1,
-                line: line.trim(),
-                score: matchCount,
-              })
-            }
-          })
+          searchContent(path.relative(root, fullPath).split(path.sep).join('/'), content)
         } catch (_e) {
           // ignore read error
         }
@@ -147,7 +161,7 @@ export function searchMemory(query: string, options: MemorySearchOptions = {}): 
     }
   }
 
-  walk(memoryRoot)
+  walk(root)
 
   // Sort by score descending
   results.sort((a, b) => b.score - a.score)

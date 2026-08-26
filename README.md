@@ -1,6 +1,6 @@
 # 🧠 agy-memory-layer
 
-[![Coverage](https://img.shields.io/badge/Coverage-80.42%25-green.svg)](./CONTRACT.md)
+[![Coverage](https://img.shields.io/badge/Coverage-80.69%25-green.svg)](./CONTRACT.md)
 [![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
@@ -8,6 +8,11 @@
 
 > **Evidence-Controlled Agy Delegation, Committed Git-Backed Memory, and Scoped Correction Recall for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
+
+> **v1.15.0:** focused layered memory, bounded reference indexing,
+> provenance-preserving curation, and a hash-confirmed legacy
+> migration/rollback path. Upgrading the plugin does not automatically migrate
+> an existing MemFS; migration remains an explicit reviewed operation.
 
 ---
 
@@ -20,7 +25,7 @@
 | **`evidence_reviewer_agent`**<br/>↳ [`evidence_reviewer.md`](./plugins/agy-memory-layer/prompts/subagents/evidence_reviewer.md) | **Fresh Evidence Falsification Reviewer**<br/>Independently tries to disprove consequential claims with scoped deterministic evidence. | `flash` | `Read-only` |
 | **`dream_agent`**<br/>↳ [`dream_subagent.md`](./plugins/agy-memory-layer/prompts/subagents/dream_subagent.md) | **Dream Reflection Subagent**<br/>Analyzes transcripts, captures user preferences (*The Annoyance Rule*), and updates MemFS. | `inherit` | `Write` (MemFS) |
 | **`recall_agent`**<br/>↳ [`recall_subagent.md`](./plugins/agy-memory-layer/prompts/subagents/recall_subagent.md) | **Episodic Recall Specialist**<br/>Searches available Antigravity transcripts via hybrid local similarity. | `flash` | `Read-only` |
-| **`onboarding_agent`**<br/>↳ [`onboarding.md`](./plugins/agy-memory-layer/prompts/subagents/onboarding.md) | **Codebase Onboarding Specialist**<br/>Explores repositories on Day 1 to bootstrap `project.md` and `rules.md`. | `flash` | `Write` (MemFS) |
+| **`onboarding_agent`**<br/>↳ [`onboarding.md`](./plugins/agy-memory-layer/prompts/subagents/onboarding.md) | **Codebase Onboarding Specialist**<br/>Explores repositories on Day 1 to bootstrap focused project-system owners. | `flash` | `Write` (MemFS) |
 | **`memory_agent`**<br/>↳ [`remember.md`](./plugins/agy-memory-layer/prompts/subagents/remember.md) | **MemFS Memory Specialist**<br/>Proactively updates, organizes, and prunes core memory blocks. | `inherit` | `Write` (MemFS) |
 | **`history_analyzer_agent`**<br/>↳ [`recall_subagent_local.md`](./plugins/agy-memory-layer/prompts/subagents/recall_subagent_local.md) | **Deep History Analyzer**<br/>Investigates multi-step debugging traces across local conversation transcripts. | `flash` | `Read-only` |
 | **`skill_creator_agent`**<br/>↳ [`skill_creator.md`](./plugins/agy-memory-layer/prompts/subagents/skill_creator.md) | **Skill Creator Specialist**<br/>Designs, authors, tests, and validates new Antigravity skills. | `pro` | `Write` |
@@ -38,7 +43,14 @@
 ## ✨ Features
 
 - 🧭 **Agy Evidence Controller (`/evidence-controller`)**: Applies a fixed source-of-truth/hypothesis/check/closeout loop with model-guided `DIRECT`, `ONE_LANE`, `WRITER_REVIEWER`, or `PARALLEL_READONLY` routing.
-- 👤 **Committed In-Context Memory**: Injects committed `HEAD` versions of compact global/project blocks plus at most one canonical protected working hypothesis before every invocation; uncommitted, archived, malformed, conflicting, and uncurated content is never activated.
+- 👤 **Focused Committed Memory**: Injects lexical global/current-project
+  `system/**/*.md` bodies plus a bounded path/description reference index and at
+  most one protected working hypothesis. Other projects, reference bodies,
+  archives, dirty edits, malformed metadata, and mixed layouts never activate.
+- 🧾 **Lossless Curation & Migration**: Explicit proposals carry base/content
+  receipts; moves and demotions require exhaustive dispositions and exact source
+  archives. Legacy migration is read-only until a reviewed plan hash is applied,
+  and rollback adds a restoring commit instead of rewriting history.
 - 📦 **Git-Backed MemFS (`~/.gemini/memory/`)**: Decoupled from project source code; tracks all knowledge snapshots in an independent Git repository.
 - ⚡ **Zero-Friction Lifecycle Hooks**:
   - `PreInvocation`: Reads committed Git memory into `ephemeralMessage` and discloses dirty/conflict state separately.
@@ -73,7 +85,7 @@ cd agy-memory-layer
 
 The installer will:
 1. Initialize the Git-backed memory repository at `~/.gemini/memory/`.
-2. Seed default template files (`human.md`, `persona.md`).
+2. Seed focused `system/persona.md` and `system/human/**/*.md` templates for a new MemFS.
 3. Symlink the plugin bundle to `~/.gemini/antigravity-cli/plugins/agy-memory-layer`.
 4. Validate lifecycle hook scripts.
 
@@ -89,16 +101,16 @@ Once installed, the following commands are available directly inside Antigravity
 | Command | Description | Example Usage |
 | :--- | :--- | :--- |
 | **`/evidence-controller`** | Evidence-scoped execution, model-guided direct/delegated routing, fresh review, provider stop gates, and human-owned acceptance. | `/evidence-controller` or `/evidence-controller bootstrap` |
-| **`/init`** | **Day 1 Onboarding**: Scans codebase architecture, entry points, linters, and scripts to seed `project.md` and `rules.md` immediately. | `/init` or `/init --force` |
+| **`/init`** | **Day 1 Onboarding**: Scans architecture, entry points, linters, and scripts to seed the selected project's overview and conventions. | `/init` or `/init --force` |
 | **`/memory`** | Inspect active memory blocks and recent Git snapshot history. | `/memory` |
-| **`/memory search`** | Fast ranked search across historical `learnings/` logs, project rules, and global memory. | `/memory search docker` |
+| **`/memory search`** | Fast ranked search across active, reference, and archived Markdown. | `/memory search docker` |
 | **`/recall`** | Hybrid search across available Antigravity conversation sessions, separate from editable Markdown memory. | `/recall palace token`, `/recall list`, or `/recall search "setup" --semantic` |
 | **`/remember`** | Record a preference, style guideline, or project rule into MemFS. | `/remember Always use exact flag (-E) when installing packages` |
-| **`/persona`** | Switch or inspect the active personality preset (`memo`, `linus`, `tutor`, `kawaii`, `architect`, `blank`). | `/persona linus` or `/persona list` |
+| **`/persona`** | Inspect presets or prepare an explicit, provenance-preserving persona switch. | `/persona linus` or `/persona list` |
 | **`/dream`** | Explicit reflection workflow; the deterministic daemon is a separate manual/optional-cron note generator. | `/dream` or `node --experimental-strip-types scripts/dream-daemon.ts --run-now` |
 | **`/doctor`** | Check memory health and detect rule contradictions with codebase. | `/doctor` |
 | **`/palace`** | Generate and open the interactive Memory Palace web dashboard. | `/palace` or `/palace --summary` |
-| **`/sync-letta`** | Explicit, one-way import of selected Letta Markdown into contained MemFS targets. | `/sync-letta` |
+| **`/sync-letta`** | Explicit, one-way import of selected Letta Markdown as on-demand evidence. | `/sync-letta` |
 | **`/sync`** | Sync MemFS with a remote private Git repository across multiple development machines. | `/sync setup <repo-url>` or `/sync push` |
 | **`/update`** | Refresh permissions, active links, and hooks from the current source; it does not download a newer release. | `/update` |
 
@@ -111,17 +123,20 @@ Memory files are stored outside the active workspace under `~/.gemini/memory/`:
 ```text
 ~/.gemini/memory/                # Standalone Git Repository
 ├── .git/                        # Full commit history & snapshots
-├── global/
-│   ├── human.md                 # User profile, coding habits, quirks
-│   └── persona.md               # Agent personality & core instructions
-└── projects/
+├── system/                      # Always-active global memory
+│   ├── persona.md
+│   └── human/**/*.md            # Focused identity and preference owners
+├── reference/**/*.md            # Indexed on-demand global evidence
+├── projects/
     └── <project-slug>/          # Project-specific memory (auto-resolved from workspace)
-        ├── project.md           # Architecture decisions & domain context
-        ├── rules.md             # Project-specific coding rules
-        └── learnings/
-            └── working-hypothesis.md # Optional protected active hypothesis
-└── archives/                    # Recall-only Markdown; never prompt-injected
+        ├── system/**/*.md       # Active only for the current project
+        └── reference/**/*.md    # Indexed on-demand project evidence
+└── archives/                    # Exact provenance/history; never prompt-injected
 ```
+
+Existing four-file MemFS repositories continue in legacy fallback mode. See
+[`docs/layered-memory.md`](./docs/layered-memory.md) for the human-gated migration
+and rollback protocol.
 
 ---
 
@@ -199,8 +214,9 @@ Purge is not part of normal uninstall. It requires the second confirmation flag,
 
 `agy-memory-layer` comes with a comprehensive multi-tier automated test suite verifying lifecycle hooks, memory isolation, rollback integrity, plugin schema validation, and Day 1 onboarding.
 
-The generated report covers 11 integration scenarios. The full Node runner adds
-24 focused unit cases, for 25/25 total tests in the current candidate.
+The generated report covers 11 integration scenarios. v1.15.0 includes 32
+focused Node cases across projection, migration, rollback, curation, lock
+contention, lifecycle, and engine behavior.
 
 ### Running Tests Locally
 
@@ -214,13 +230,13 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.14.1 release |
+| Metric | v1.15.0 release |
 | :--- | ---: |
-| Lines | **80.42%** |
-| Branches | **62.04%** |
-| Functions | **83.09%** |
+| Lines | **80.69%** |
+| Branches | **62.68%** |
+| Functions | **83.21%** |
 
-This is the aggregate Node/V8 snapshot for the released `v1.14.1` source.
+This is the aggregate Node/V8 snapshot for the released `v1.15.0` source.
 Run `pnpm test:coverage` after source changes and update this snapshot in the
 same release commit; per-file percentages remain in command output rather than
 being copied into this README.
@@ -229,7 +245,7 @@ being copied into this README.
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
-> ✅ **Latest release**: [`v1.14.1`](./docs/releases/v1.14.1.md) repairs installed-symlink hook execution and makes lifecycle validation fail on empty output. [`v1.14.0`](./docs/releases/v1.14.0.md) records the Evidence Controller and live migration but is superseded by this runtime patch.
+> ✅ **Latest release**: [`v1.15.0`](./docs/releases/v1.15.0.md) adds layered committed memory, destination-backed curation, atomic writer ownership, and receipt-bound migration/rollback. [`v1.14.1`](./docs/releases/v1.14.1.md) remains the installed-hook runtime patch baseline.
 
 ---
 

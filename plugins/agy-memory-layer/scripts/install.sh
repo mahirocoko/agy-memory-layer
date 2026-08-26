@@ -47,38 +47,59 @@ assert_owned_or_absent "$CONFIG_LINK"
 chmod +x "${PLUGIN_ROOT}/scripts/"*.sh
 
 # 2. Setup Memory Git Repository
-mkdir -p "${MEMORY_ROOT}/global" "${MEMORY_ROOT}/projects"
+mkdir -p "$MEMORY_ROOT"
 
 if [ ! -d "${MEMORY_ROOT}/.git" ]; then
+  if [ -n "$(find "$MEMORY_ROOT" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]; then
+    echo "Refusing to initialize non-empty memory directory without Git: ${MEMORY_ROOT}" >&2
+    echo "Back it up and initialize or migrate it explicitly; installer will not shadow existing files." >&2
+    exit 1
+  fi
   echo "📦 Initializing Git-backed MemFS at ${MEMORY_ROOT}..."
   git -C "$MEMORY_ROOT" init -b main >/dev/null 2>&1 || git -C "$MEMORY_ROOT" init >/dev/null 2>&1
   
-  # Create initial human.md if not existing
-  if [ ! -f "${MEMORY_ROOT}/global/human.md" ]; then
-    cat << 'EOF' > "${MEMORY_ROOT}/global/human.md"
-# Human Profile & Preferences
+  mkdir -p "${MEMORY_ROOT}/system/human/prefs" "${MEMORY_ROOT}/reference" "${MEMORY_ROOT}/projects" "${MEMORY_ROOT}/archives"
 
-## Communication & Style
+  cat << 'EOF' > "${MEMORY_ROOT}/system/human/identity.md"
+---
+description: Stable user identity and collaboration context.
+---
+# Human Identity
+
+- Learn stable identity from direct evidence; do not infer personal facts.
+EOF
+
+  cat << 'EOF' > "${MEMORY_ROOT}/system/human/prefs/communication.md"
+---
+description: Stable communication and response-style preferences.
+---
+# Communication
+
 - Language: Thai or English as requested.
 - Tone: Direct, concise, technical, no unnecessary fluff.
+EOF
 
-## General Coding Standards
+  cat << 'EOF' > "${MEMORY_ROOT}/system/human/prefs/coding.md"
+---
+description: Cross-project coding defaults used only when repository guidance is silent.
+---
+# Coding Defaults
+
 - Package Manager: Always use exact version flag (`-E`) when installing packages.
 - Strict typing, explicit error boundaries, avoid any.
 EOF
-  fi
 
-  # Create initial persona.md if not existing
-  if [ ! -f "${MEMORY_ROOT}/global/persona.md" ]; then
-    cat << 'EOF' > "${MEMORY_ROOT}/global/persona.md"
+  cat << 'EOF' > "${MEMORY_ROOT}/system/persona.md"
+---
+description: Persistent agent identity and operating posture.
+---
 # Agent Persona: Stateful Pair Programmer
 
 You are a persistent, stateful pair programming assistant backed by MemFS.
 You retain context across sessions, continuously learn from user feedback, and respect project conventions.
 EOF
-  fi
 
-  git -C "$MEMORY_ROOT" add -- global/human.md global/persona.md
+  git -C "$MEMORY_ROOT" add -- system/human/identity.md system/human/prefs/communication.md system/human/prefs/coding.md system/persona.md
   git -C "$MEMORY_ROOT" \
     -c user.name=agy-memory-layer \
     -c user.email=agy-memory-layer@local.invalid \

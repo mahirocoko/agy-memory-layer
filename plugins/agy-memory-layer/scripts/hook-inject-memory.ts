@@ -13,7 +13,11 @@ import {
   inspectCommittedWorkingHypothesis,
 } from './active-learning.ts'
 import { isDirectCliInvocation } from './cli-entrypoint.ts'
-import { getMemoryRepositoryStatus, readCommittedMemoryFile } from './memory-repository.ts'
+import {
+  inspectCommittedMemoryProjection,
+  renderCommittedMemoryProjection,
+} from './layered-memory.ts'
+import { getMemoryRepositoryStatus } from './memory-repository.ts'
 import { resolveProjectSlug } from './workspace-identity.ts'
 
 export type PreInvocationPayload = {
@@ -87,30 +91,8 @@ export function generatePreInvocationContext(
     memoryRootOverride || process.env.AGY_MEMORY_DIR || path.join(os.homedir(), '.gemini', 'memory')
   const projectSlug = resolveProjectSlug(wsPath, memRoot)
 
-  let contextText = ''
-
-  const human = readCommittedMemoryFile(memRoot, 'global/human.md')?.trim()
-  if (human) {
-    contextText += `### 👤 User Profile & Preferences (global/human.md)\n${human}\n\n`
-  }
-
-  const persona = readCommittedMemoryFile(memRoot, 'global/persona.md')?.trim()
-  if (persona) {
-    contextText += `### 🤖 Agent Persona (global/persona.md)\n${persona}\n\n`
-  }
-
-  const projectMemory = readCommittedMemoryFile(
-    memRoot,
-    `projects/${projectSlug}/project.md`,
-  )?.trim()
-  if (projectMemory) {
-    contextText += `### 📁 Project Context (${projectSlug}/project.md)\n${projectMemory}\n\n`
-  }
-
-  const projectRules = readCommittedMemoryFile(memRoot, `projects/${projectSlug}/rules.md`)?.trim()
-  if (projectRules) {
-    contextText += `### 📋 Project Rules (${projectSlug}/rules.md)\n${projectRules}\n\n`
-  }
+  const memoryProjection = inspectCommittedMemoryProjection(memRoot, projectSlug)
+  let contextText = renderCommittedMemoryProjection(memRoot, memoryProjection)
 
   // Inject at most one committed, canonical working hypothesis.
   const learningsText = getRecentLearningsSnippet(projectSlug, memRoot, 1)

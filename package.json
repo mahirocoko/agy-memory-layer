@@ -1,6 +1,6 @@
 {
   "name": "agy-memory-layer",
-  "version": "1.14.1",
+  "version": "1.15.0",
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=22"
@@ -9,13 +9,15 @@
   "description": "Evidence-controlled Agy delegation with committed Git-backed MemFS and scoped correction recall",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "tsc --noEmit && node --experimental-strip-types --test --test-concurrency=1 tests/run-test-suite.ts tests/unit-coverage.test.ts",
-    "test:coverage": "tsc --noEmit && node --experimental-strip-types --experimental-test-coverage --test --test-concurrency=1 tests/run-test-suite.ts tests/unit-coverage.test.ts",
+    "test": "tsc --noEmit && node --experimental-strip-types --test --test-concurrency=1 tests/layered-memory.test.ts tests/run-test-suite.ts tests/unit-coverage.test.ts",
+    "test:coverage": "tsc --noEmit && node --experimental-strip-types --experimental-test-coverage --test --test-concurrency=1 tests/layered-memory.test.ts tests/run-test-suite.ts tests/unit-coverage.test.ts",
     "check": "tsc --noEmit && biome check .",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "fix": "biome check --write .",
-    "memory:health": "node --experimental-strip-types tools/memory-health.ts --strict"
+    "memory:health": "node --experimental-strip-types tools/memory-health.ts --strict",
+    "memory:migration": "node --experimental-strip-types plugins/agy-memory-layer/scripts/layered-memory-migration.ts",
+    "memory:curation": "node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-curation.ts"
   },
   "keywords": [
     "antigravity",

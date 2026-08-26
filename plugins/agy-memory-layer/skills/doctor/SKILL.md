@@ -19,11 +19,12 @@ Audits the consistency, validity, and Git health of MemFS against the active wor
 
 2. **Project Slug & Memory Resolution**:
    - Verify that the active project matches `~/.gemini/memory/projects/<slug>/`.
-   - Verify `project.md` and `rules.md` exist and have valid markdown formatting.
+   - Verify the selected layout has valid active owners: focused `system/**/*.md`
+     files with descriptions, or complete legacy fallback files—but never both.
 
 3. **Codebase Reality vs Memory Rules**:
    - Verify mentioned package managers (e.g. `pnpm-lock.yaml`, `bun.lockb`, `package-lock.json`).
-   - Check if architectural rules in `project.md` match current file trees.
+   - Check whether active project-system architecture and conventions match the current file tree.
    - Flag any contradictory or obsolete rules.
 
 ## Execution

@@ -9,8 +9,8 @@ this file when they disagree.
 The project targets **contract parity**, not architecture parity:
 
 - preserve Letta's state, scope, commit, reflection, and user-control guarantees;
-- keep Agy's host-native plugin hooks and one user-owned `global/ + projects/`
-  MemFS repository;
+- keep Agy's host-native plugin hooks and one user-owned layered
+  `system/ + reference/ + projects/ + archives/` MemFS repository;
 - do not copy Letta Cloud APIs, per-agent Git remotes, package-manager updater,
   or backend-specific prompt compilation literally.
 
@@ -19,12 +19,15 @@ The project targets **contract parity**, not architecture parity:
 | Contract | Canonical executable owner | Supporting surface |
 | --- | --- | --- |
 | Memory path containment and Git state | `scripts/memory-repository.ts` | lifecycle tests |
-| Active prompt projection | `scripts/hook-inject-memory.ts` | `hooks.json` |
+| Active prompt projection and layout selection | `scripts/layered-memory.ts` | PreInvocation, strict health, Palace |
 | Working-hypothesis selection | `scripts/active-learning.ts` | PreInvocation, strict health |
 | Agy evidence/delegation procedure | `skills/evidence-controller/SKILL.md` | plugin rules, native Agy subagent tools |
 | Workspace/project identity | `scripts/workspace-identity.ts` | PreInvocation, `/init`, Dream |
 | Stop behavior | `scripts/hook-memory-status.ts` | `hooks.json` |
 | Explicit memory review | `scripts/memory-approval.ts` | `/remember` |
+| Provenance-preserving curation | `scripts/memory-curation.ts` | `/remember`, `/persona` |
+| Legacy-to-layered migration | `scripts/layered-memory-migration.ts` | human-gated CLI |
+| Cross-process write serialization | `scripts/memory-write-lock.ts` | high-level writers |
 | Project initialization | `scripts/init-project-memory.ts` | `/init` |
 | Letta import | `scripts/letta-sync.ts` | `/sync-letta` |
 | Explicit-intent transcript-note generation | `scripts/dream-daemon.ts` | `/dream` |
@@ -36,8 +39,9 @@ The project targets **contract parity**, not architecture parity:
 | --- | --- | --- |
 | MemFS ownership is agent-scoped | One user-owned repo with global and stable project scopes | **Intentional adaptation** |
 | Local prompt compilation reads committed `HEAD` | PreInvocation reads committed files with `git show HEAD:<path>` | **Implemented** |
+| In-context memory stays focused while detail remains discoverable | Global/current-project system bodies are active; reference bodies are replaced by a bounded path/description index | **Released in v1.15.0** |
 | Uncommitted memory is not active prompt state | Dirty/conflict status is disclosed without injecting working-tree content | **Implemented** |
-| Memory tools require a clean repo and commit selected paths | Shared writer validates root containment, rejects unrelated dirt, and commits owned paths; confirmed `/init`, import, and restore commands own exact declared sets | **Implemented adaptation** |
+| Memory tools require a clean repo and commit selected paths | Shared writer validates containment, serializes high-level writers, rejects unrelated dirt, and commits owned paths; curation adds receipts and exhaustive dispositions | **Implemented adaptation** |
 | Post-turn sync never legitimizes arbitrary dirt | Stop reports state and never stages, commits, deletes Git locks, or launches Dream | **Implemented** |
 | Recall history is distinct from editable memory | `recall-engine.ts` searches Antigravity brain transcripts; `/memory search` searches Markdown | **Implemented adaptation** |
 | Context compaction is distinct from memory maintenance | `memory-compactor.ts` is read-only Markdown maintenance analysis | **Implemented boundary** |
@@ -52,10 +56,11 @@ The project targets **contract parity**, not architecture parity:
 ### PreInvocation
 
 1. Resolve the configured MemFS root and shared child/root/remote project identity.
-2. Read compact global/project content plus at most one canonical protected working hypothesis from committed Git `HEAD`.
-3. Fail closed on malformed canonical metadata or active markers outside the canonical path.
-4. Never inject an uncommitted edit.
-5. Add a status notice when the repo is dirty, conflicted, unavailable, or
+2. Select layered or legacy fallback ownership; mixed ownership fails closed.
+3. Read lexical global/current-project system bodies plus a bounded reference index and at most one canonical protected working hypothesis from committed Git `HEAD`.
+4. Fail closed on malformed layered metadata or active markers outside the canonical path.
+5. Never inject an uncommitted edit.
+6. Add a status notice when the repo is dirty, conflicted, unavailable, or
    uninitialized.
 
 ### Memory write
@@ -63,14 +68,16 @@ The project targets **contract parity**, not architecture parity:
 1. Resolve a relative path inside MemFS and reject absolute paths, traversal,
    unsafe slugs, and symlink escapes.
 2. Require a clean repository before editing.
-3. Write atomically.
-4. Refuse a commit when any dirty path is outside the writer's declared set.
-5. Commit only the owned pathspecs with a concrete reason.
+3. Take the shared cross-process writer lock.
+4. Write atomically.
+5. Refuse a commit when any dirty path is outside the writer's declared set.
+6. Commit only the owned pathspecs with a concrete reason.
 
-`project.md` and `rules.md` use explicit proposals unless a user invokes a
-bounded command that names and confirms the exact protected output set
-(`--confirm-init` or `--confirm-import`). Pending proposal state and Dream cursors live beside
-the repository in `memory.state/`, not in the prompt or Git working tree.
+All active system/reference and legacy owners use explicit proposals unless a
+bounded command names and confirms an exact generated baseline (`--confirm-init`).
+Moves, demotions, and removals require curation receipts and exact archives.
+Pending proposal, lock, and Dream cursor state lives beside the repository in
+`memory.state/`, not in the prompt or Git working tree.
 
 ### Stop
 
@@ -90,10 +97,11 @@ The following are useful Agy features, not proof of Letta parity:
 - explicit-intent deterministic Dream correction archives;
 - skill candidate synthesis;
 - Letta-to-Agy import.
+- hash-bound layered migration and provenance-preserving curation.
 
-Letta import requires an exact agent and scope. Global scope is confined to
-`global/*`; project scope also requires a project slug and is confined to that
-project's `rules.md` and `learnings/*`.
+Letta import requires an exact agent and scope. It writes only on-demand
+evidence under `reference/imports/letta/<agent-id>/**` or the equivalent project
+reference path; active owners are not rewritten by import.
 
 Each feature needs its own tested contract and must not be presented as an
 equivalent Letta subsystem when the semantics differ.
@@ -115,8 +123,9 @@ equivalent Letta subsystem when the semantics differ.
 
 - `pnpm test`: integration scenarios plus focused Node test-runner regressions.
 - Direct negative controls cover uncommitted projection exclusion, non-mutating
-  Stop, path traversal, unrelated dirty paths, targeted commits, and Letta
-  project-slug rejection.
+  Stop, path traversal, unrelated dirty paths, targeted commits, mixed-layout
+  conflict, lock contention, exhaustive migration/curation ledgers, rollback,
+  and Letta project-slug rejection.
 - A disposable-HOME lifecycle case covers local install, current-source refresh,
   non-symlink refusal, normal uninstall preservation, and confirmed purge.
 - Remote sync uses a disposable local bare repository to prove successful

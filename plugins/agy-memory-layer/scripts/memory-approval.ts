@@ -3,19 +3,24 @@
 /**
  * Dual-Mode Memory Approval Policy for agy-memory-layer
  * Manages 'auto' (silent commit) vs 'explicit' (human review gate) memory updates.
- * Protects core project architecture (project.md) and rules (rules.md) from unapproved agent mutation.
+ * Protects layered and legacy active owners from unapproved agent mutation.
  */
 
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { extractDurableSourceUnits } from './layered-memory-migration.ts'
 import {
   assertMemoryRepositoryCleanForWrite,
   commitMemoryPaths,
+  getMemoryHeadRevision,
   normalizeMemoryRelativePath,
+  readCommittedMemoryFile,
   resolveMemoryPath,
+  restoreDeclaredMemoryPaths,
   writeMemoryFile,
 } from './memory-repository.ts'
+import { withMemoryWriteLock } from './memory-write-lock.ts'
 
 export type ApprovalMode = 'auto' | 'explicit'
 
@@ -26,9 +31,12 @@ export type ApprovalPolicy = {
 
 export type ApprovalProposal = {
   id: string
+  baseRevision: string | null
   targetRelPath: string
   oldContent: string
+  oldSha256: string
   newContent: string
+  newSha256: string
   reason: string
   author: string
   diff: string
@@ -58,14 +66,19 @@ const policyFile = path.join(memoryStateRoot, 'approval-policy.json')
 const pendingDir = path.join(memoryStateRoot, 'pending-approvals')
 
 export const DEFAULT_APPROVAL_POLICY: ApprovalPolicy = {
-  defaultMode: 'auto',
+  defaultMode: 'explicit',
   patterns: {
     [PROTECTED_WORKING_HYPOTHESIS_PATTERN]: 'explicit',
+    'system/*': 'explicit',
+    'reference/*': 'explicit',
+    'projects/*/system/*': 'explicit',
+    'projects/*/reference/*': 'explicit',
     'projects/*/project.md': 'explicit',
     'projects/*/rules.md': 'explicit',
-    'global/human.md': 'auto',
-    'global/persona.md': 'auto',
+    'global/human.md': 'explicit',
+    'global/persona.md': 'explicit',
     'projects/*/learnings/*': 'auto',
+    'archives/*': 'auto',
   },
 }
 
@@ -104,6 +117,34 @@ export function getApprovalModeForFile(relPath: string): ApprovalMode {
   return policy.defaultMode
 }
 
+const requiresLosslessCuration = (relativePath: string): boolean =>
+  relativePath.startsWith('system/') ||
+  relativePath.startsWith('reference/') ||
+  relativePath.includes('/system/') ||
+  relativePath.includes('/reference/') ||
+  relativePath === 'global/human.md' ||
+  relativePath === 'global/persona.md' ||
+  /^projects\/[^/]+\/(project|rules)\.md$/.test(relativePath)
+
+const assertNoDurableUnitsRemoved = (
+  relativePath: string,
+  oldContent: string,
+  newContent: string,
+): void => {
+  if (!oldContent || !requiresLosslessCuration(relativePath)) return
+  const newUnitTexts = new Set(
+    extractDurableSourceUnits(relativePath, newContent).map((unit) => unit.text),
+  )
+  const removed = extractDurableSourceUnits(relativePath, oldContent).filter(
+    (unit) => !newUnitTexts.has(unit.text),
+  )
+  if (removed.length > 0) {
+    throw new Error(
+      `Update would remove or paraphrase ${removed.length} durable unit(s) from ${relativePath}; use memory-curation.ts with explicit dispositions and a provenance archive.`,
+    )
+  }
+}
+
 function generateSimpleDiff(oldText: string, newText: string, filename: string): string {
   const oldLines = oldText.split('\n')
   const newLines = newText.split('\n')
@@ -133,12 +174,10 @@ export function proposeMemoryUpdate(
   newContent: string,
   options: { reason?: string; author?: string } = {},
 ): ProposeResult {
-  const { relativePath: normalizedRel, absolutePath: fullPath } = resolveMemoryPath(
-    memoryRoot,
-    targetRelPath,
-  )
+  const { relativePath: normalizedRel } = resolveMemoryPath(memoryRoot, targetRelPath)
+  assertMemoryRepositoryCleanForWrite(memoryRoot)
   const mode = getApprovalModeForFile(normalizedRel)
-  const oldContent = fs.existsSync(fullPath) ? fs.readFileSync(fullPath, 'utf-8') : ''
+  const oldContent = readCommittedMemoryFile(memoryRoot, normalizedRel) || ''
 
   if (oldContent.trim() === newContent.trim()) {
     return {
@@ -148,26 +187,36 @@ export function proposeMemoryUpdate(
   }
 
   const diff = generateSimpleDiff(oldContent, newContent, normalizedRel)
+  assertNoDurableUnitsRemoved(normalizedRel, oldContent, newContent)
   const reason = options.reason || 'Autonomous reflection or rule update'
   const author = options.author || 'Antigravity Agent'
 
   if (mode === 'auto') {
-    assertMemoryRepositoryCleanForWrite(memoryRoot)
-    writeMemoryFile(memoryRoot, normalizedRel, newContent)
-    const commit = commitMemoryPaths({
-      memoryRoot,
-      relativePaths: [normalizedRel],
-      reason: `chore(memory): auto-merged update to ${normalizedRel}`,
-      authorName: author,
-    })
+    return withMemoryWriteLock(memoryRoot, `auto update ${normalizedRel}`, () => {
+      assertMemoryRepositoryCleanForWrite(memoryRoot)
+      const baseRevision = getMemoryHeadRevision(memoryRoot)
+      if (!baseRevision) throw new Error('Automatic memory update requires committed MemFS HEAD.')
+      try {
+        writeMemoryFile(memoryRoot, normalizedRel, newContent)
+        const commit = commitMemoryPaths({
+          memoryRoot,
+          relativePaths: [normalizedRel],
+          reason: `chore(memory): auto-merged update to ${normalizedRel}`,
+          authorName: author,
+        })
 
-    return {
-      status: 'COMMITTED',
-      diff,
-      message: commit.committed
-        ? `Directly merged and committed changes to ${normalizedRel}`
-        : `No effective Git change remained for ${normalizedRel}`,
-    }
+        return {
+          status: 'COMMITTED',
+          diff,
+          message: commit.committed
+            ? `Directly merged and committed changes to ${normalizedRel}`
+            : `No effective Git change remained for ${normalizedRel}`,
+        }
+      } catch (error) {
+        restoreDeclaredMemoryPaths(memoryRoot, baseRevision, [normalizedRel])
+        throw error
+      }
+    })
   }
 
   // Mode: Explicit - Create Pending Approval Proposal
@@ -178,9 +227,12 @@ export function proposeMemoryUpdate(
   const proposalId = `prop-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`
   const proposal: ApprovalProposal = {
     id: proposalId,
+    baseRevision: getMemoryHeadRevision(memoryRoot),
     targetRelPath: normalizedRel,
     oldContent,
+    oldSha256: crypto.createHash('sha256').update(oldContent).digest('hex'),
     newContent,
+    newSha256: crypto.createHash('sha256').update(newContent).digest('hex'),
     reason,
     author,
     diff,
@@ -248,34 +300,62 @@ export function reviewProposal(proposalId: string, decision: 'approve' | 'reject
     }
   }
 
-  // Decision: Approve
-  const resolved = resolveMemoryPath(memoryRoot, proposal.targetRelPath)
-  const currentContent = fs.existsSync(resolved.absolutePath)
-    ? fs.readFileSync(resolved.absolutePath, 'utf-8')
-    : ''
-  if (currentContent !== proposal.oldContent) {
-    throw new Error(
-      `Proposal ${proposalId} is stale because ${proposal.targetRelPath} changed after review began.`,
-    )
-  }
+  return withMemoryWriteLock(memoryRoot, `approve proposal ${proposalId}`, () => {
+    const resolved = resolveMemoryPath(memoryRoot, proposal.targetRelPath)
+    const currentContent = fs.existsSync(resolved.absolutePath)
+      ? fs.readFileSync(resolved.absolutePath, 'utf-8')
+      : ''
+    if (currentContent !== proposal.oldContent) {
+      throw new Error(
+        `Proposal ${proposalId} is stale because ${proposal.targetRelPath} changed after review began.`,
+      )
+    }
+    if (
+      proposal.oldSha256 &&
+      crypto.createHash('sha256').update(proposal.oldContent).digest('hex') !== proposal.oldSha256
+    ) {
+      throw new Error(`Proposal ${proposalId} has an invalid old-content receipt.`)
+    }
+    if (
+      proposal.newSha256 &&
+      crypto.createHash('sha256').update(proposal.newContent).digest('hex') !== proposal.newSha256
+    ) {
+      throw new Error(`Proposal ${proposalId} has an invalid new-content receipt.`)
+    }
+    assertNoDurableUnitsRemoved(proposal.targetRelPath, proposal.oldContent, proposal.newContent)
+    if (proposal.baseRevision && getMemoryHeadRevision(memoryRoot) !== proposal.baseRevision) {
+      throw new Error(
+        `Proposal ${proposalId} is stale because the MemFS HEAD changed after review began.`,
+      )
+    }
 
-  assertMemoryRepositoryCleanForWrite(memoryRoot)
-  writeMemoryFile(memoryRoot, proposal.targetRelPath, proposal.newContent)
-  commitMemoryPaths({
-    memoryRoot,
-    relativePaths: [proposal.targetRelPath],
-    reason: `chore(memory): approved update to ${proposal.targetRelPath} (${proposal.reason})`,
-    authorName: proposal.author,
+    assertMemoryRepositoryCleanForWrite(memoryRoot)
+    const baseRevision = getMemoryHeadRevision(memoryRoot)
+    if (!baseRevision) throw new Error('Memory approval requires committed MemFS HEAD.')
+    try {
+      writeMemoryFile(memoryRoot, proposal.targetRelPath, proposal.newContent)
+      commitMemoryPaths({
+        memoryRoot,
+        relativePaths: [proposal.targetRelPath],
+        reason: `chore(memory): approved update to ${proposal.targetRelPath} (${proposal.reason})`,
+        authorName: proposal.author,
+      })
+
+      try {
+        if (fs.existsSync(proposalFile)) fs.unlinkSync(proposalFile)
+      } catch {}
+
+      return {
+        success: true,
+        decision: 'approve',
+        proposal,
+        message: `Proposal ${proposalId} approved and applied to ${proposal.targetRelPath}!`,
+      }
+    } catch (error) {
+      restoreDeclaredMemoryPaths(memoryRoot, baseRevision, [proposal.targetRelPath])
+      throw error
+    }
   })
-
-  if (fs.existsSync(proposalFile)) fs.unlinkSync(proposalFile)
-
-  return {
-    success: true,
-    decision: 'approve',
-    proposal,
-    message: `Proposal ${proposalId} approved and applied to ${proposal.targetRelPath}!`,
-  }
 }
 
 if (process.argv[1]?.endsWith('memory-approval.ts')) {

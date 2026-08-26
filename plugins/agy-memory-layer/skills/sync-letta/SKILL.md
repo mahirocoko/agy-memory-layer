@@ -18,9 +18,10 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts l
 ```
 
 Always ask the user to choose the exact agent and target scope. Even a single
-agent requires `--agent-id`; never select a "first" agent
-silently. `global` writes only `global/*`. `project` additionally requires an
-exact `--project-slug` and writes only that project's memory paths.
+agent requires `--agent-id`; never select a "first" agent silently. Imported
+human, rule, and reference Markdown is stored only as on-demand evidence under
+`reference/imports/letta/<agent-id>/` or the equivalent project reference path.
+The importer never rewrites active human, persona, or project-system owners.
 
 ### 2. Inspect the selected raw payload
 
@@ -62,7 +63,7 @@ node --experimental-strip-types \
 
 ## Current Boundary
 
-The script performs section-aware Markdown merging, not LLM cognitive grooming.
-If semantic rewriting is desired, prepare the replacement separately and route
-it through `memory-approval.ts propose` rather than claiming the raw importer
-performed model-based distillation.
+The script performs contained evidence import, not LLM cognitive grooming. If
+imported evidence should become active, prepare a focused layered target and
+route it through `memory-curation.ts`; every prior source unit needs a reviewed
+disposition and exact archive receipt.

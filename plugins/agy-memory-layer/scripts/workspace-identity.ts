@@ -2,7 +2,11 @@ import { execFileSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { committedMemoryPathExists, validateProjectSlug } from './memory-repository.ts'
+import {
+  committedMemoryPathExists,
+  listCommittedMemoryFiles,
+  validateProjectSlug,
+} from './memory-repository.ts'
 
 export type WorkspaceHistoryEntry = {
   conversationId?: string
@@ -39,7 +43,10 @@ export const getWorkspaceRootSlug = (workspacePath: string = process.cwd()): str
 
 const projectScopeExists = (memoryRoot: string, slug: string): boolean =>
   committedMemoryPathExists(memoryRoot, `projects/${slug}/project.md`) ||
-  committedMemoryPathExists(memoryRoot, `projects/${slug}/rules.md`)
+  committedMemoryPathExists(memoryRoot, `projects/${slug}/rules.md`) ||
+  listCommittedMemoryFiles(memoryRoot, `projects/${slug}/system`).some((relativePath) =>
+    relativePath.endsWith('.md'),
+  )
 
 const getRemoteCanonicalSlug = (workspacePath: string): string | null => {
   try {

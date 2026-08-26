@@ -39,8 +39,8 @@ After execution:
 1. report which conversation IDs produced files and which were skipped;
 2. verify every written note has explicit durable-memory intent, the correct
    workspace/project scope, and a recall-only archive target;
-3. route any proposed `project.md` or `rules.md` rewrite through
-   `memory-approval.ts propose` and explicit approval;
+3. route any proposed active system-memory rewrite through `memory-approval.ts`,
+   or through `memory-curation.ts` when existing units move or disappear;
 4. never promote an archive note into `working-hypothesis.md` without an explicit proposal;
 5. never use `git add -A` or treat Stop as the approval boundary.
 

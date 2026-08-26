@@ -9,15 +9,14 @@ import {
   ACTIVE_MEMORY_BUDGET_TOKENS,
   generatePreInvocationContext,
 } from '../plugins/agy-memory-layer/scripts/hook-inject-memory.ts'
-import {
-  committedMemoryPathExists,
-  getMemoryRepositoryStatus,
-} from '../plugins/agy-memory-layer/scripts/memory-repository.ts'
+import { inspectCommittedMemoryProjection } from '../plugins/agy-memory-layer/scripts/layered-memory.ts'
+import { getMemoryRepositoryStatus } from '../plugins/agy-memory-layer/scripts/memory-repository.ts'
 import { resolveProjectSlug } from '../plugins/agy-memory-layer/scripts/workspace-identity.ts'
 
 export type WorkspaceHealth = {
   workspace: string
   projectSlug: string
+  layoutMode: 'empty' | 'legacy' | 'layered' | 'conflict'
   estimatedTokens: number
   withinBudget: boolean
   hasProjectContext: boolean
@@ -70,17 +69,28 @@ export const inspectMemoryHealth = (
     const message = output.injectSteps[0]?.ephemeralMessage || ''
     const estimatedTokens = Math.ceil(message.length / 4)
     const workingHypothesis = inspectCommittedWorkingHypothesis(projectSlug, memoryRoot)
+    const memoryProjection = inspectCommittedMemoryProjection(memoryRoot, projectSlug)
 
     return {
       workspace,
       projectSlug,
+      layoutMode: memoryProjection.mode,
       estimatedTokens,
       withinBudget: estimatedTokens <= ACTIVE_MEMORY_BUDGET_TOKENS,
-      hasProjectContext: committedMemoryPathExists(
-        memoryRoot,
-        `projects/${projectSlug}/project.md`,
-      ),
-      hasProjectRules: committedMemoryPathExists(memoryRoot, `projects/${projectSlug}/rules.md`),
+      hasProjectContext:
+        memoryProjection.projectSystem.length > 0 &&
+        (memoryProjection.mode === 'legacy'
+          ? memoryProjection.projectSystem.some((document) =>
+              document.relativePath.endsWith('/project.md'),
+            )
+          : true),
+      hasProjectRules:
+        memoryProjection.projectSystem.length > 0 &&
+        (memoryProjection.mode === 'legacy'
+          ? memoryProjection.projectSystem.some((document) =>
+              document.relativePath.endsWith('/rules.md'),
+            )
+          : true),
       injectsArchive: message.includes('archive_'),
       injectsSessionBoilerplate:
         message.includes('Session Continuity') || message.includes('Autonomous Recall'),
@@ -111,6 +121,10 @@ export const inspectMemoryHealth = (
     }
     for (const diagnostic of workspace.workingHypothesisDiagnostics) {
       issues.push(`Working hypothesis conflict (${workspace.projectSlug}): ${diagnostic}`)
+    }
+    const memoryProjection = inspectCommittedMemoryProjection(memoryRoot, workspace.projectSlug)
+    for (const diagnostic of memoryProjection.diagnostics) {
+      issues.push(`Layered memory (${workspace.projectSlug}): ${diagnostic}`)
     }
   }
 

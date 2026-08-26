@@ -95,7 +95,8 @@ bash plugins/agy-memory-layer/scripts/palace-server.sh /tmp/agy-memory-palace.ht
 
 ## 🎭 Persona Switcher
 
-Switches or inspects agent personality presets in `~/.gemini/memory/global/persona.md`.
+Switches or inspects agent personality presets through an explicit curation
+proposal. Existing persona bytes are archived before an approved replacement.
 
 ```bash
 # List available persona presets
@@ -108,11 +109,34 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/switch-persona.
 node --experimental-strip-types plugins/agy-memory-layer/scripts/switch-persona.ts memo
 ```
 
+The switch command prints a proposal ID; it does not activate the new persona
+until that proposal is approved.
+
+---
+
+## 🧱 Layered Migration and Curation
+
+```bash
+# Inventory legacy source receipts and durable unit IDs
+pnpm memory:migration units --memory "${HOME}/.gemini/memory"
+
+# Plan only; no MemFS mutation
+pnpm memory:migration plan --memory "${HOME}/.gemini/memory" --spec /tmp/migration.json
+
+# Plan or propose a provenance-preserving routine curation
+pnpm memory:curation plan --memory "${HOME}/.gemini/memory" --spec /tmp/curation.json
+pnpm memory:curation propose --memory "${HOME}/.gemini/memory" --spec /tmp/curation.json
+```
+
+Live migration requires the reviewed plan hash and a separate human gate. See
+[`layered-memory.md`](./layered-memory.md).
+
 ---
 
 ## 🤖 Explicit Letta Markdown Import
 
-Inspects and imports selected Letta Markdown into Antigravity MemFS. This is a one-way adapter, not live sync or LLM grooming.
+Inspects and imports selected Letta Markdown as on-demand reference evidence.
+This is a one-way adapter, not active-memory merging, live sync, or LLM grooming.
 
 ```bash
 # List all stateful agents (excluding subagent manifests)

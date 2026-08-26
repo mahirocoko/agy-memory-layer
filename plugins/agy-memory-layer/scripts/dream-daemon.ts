@@ -13,9 +13,12 @@ import * as path from 'node:path'
 import {
   assertMemoryRepositoryCleanForWrite,
   commitMemoryPaths,
+  getMemoryHeadRevision,
+  restoreDeclaredMemoryPaths,
   validateProjectSlug,
   writeMemoryFile,
 } from './memory-repository.ts'
+import { acquireMemoryWriteLock, releaseMemoryWriteLock } from './memory-write-lock.ts'
 import { readConversationWorkspaceMap, resolveProjectSlug } from './workspace-identity.ts'
 
 export type DreamState = {
@@ -272,56 +275,71 @@ export function runAutoDream(
     return []
   }
 
-  assertMemoryRepositoryCleanForWrite(memoryRoot)
-
-  const processed: ProcessedDreamResult[] = []
+  const writeLock = acquireMemoryWriteLock(memoryRoot, `dream archive ${slug}`)
+  let baseRevision: string | null = null
+  let memoryCommitted = false
   const changedPaths: string[] = []
-  const today = new Date().toISOString().split('T')[0]
-  const state = getDreamState()
+  try {
+    assertMemoryRepositoryCleanForWrite(memoryRoot)
+    baseRevision = getMemoryHeadRevision(memoryRoot)
+    if (!baseRevision) throw new Error('Dream archive requires committed MemFS HEAD.')
 
-  for (const conv of pending) {
-    console.log(
-      `  ⏳ Synthesizing conv-${conv.shortId} (${conv.steps} steps, ${conv.ageMinutes}m ago)...`,
-    )
-    const doc = synthesizeConversationLearning(conv, slug)
-    state.lastDreamedSteps[conv.id] = conv.steps
-    if (!doc) {
+    const processed: ProcessedDreamResult[] = []
+    const today = new Date().toISOString().split('T')[0]
+    const state = getDreamState()
+
+    for (const conv of pending) {
+      console.log(
+        `  ⏳ Synthesizing conv-${conv.shortId} (${conv.steps} steps, ${conv.ageMinutes}m ago)...`,
+      )
+      const doc = synthesizeConversationLearning(conv, slug)
+      state.lastDreamedSteps[conv.id] = conv.steps
+      if (!doc) {
+        processed.push({
+          convId: conv.id,
+          shortId: conv.shortId,
+          status: 'skipped',
+        })
+        console.log('     ↳ Skipped: no explicit durable-memory intent found.')
+        continue
+      }
+
+      const relativePath = `archives/projects/${slug}/learnings/${today}_auto_dream_${conv.shortId}.md`
+      const targetFile = writeMemoryFile(memoryRoot, relativePath, doc).absolutePath
+
+      changedPaths.push(relativePath)
       processed.push({
         convId: conv.id,
         shortId: conv.shortId,
-        status: 'skipped',
+        status: 'written',
+        file: targetFile,
       })
-      console.log('     ↳ Skipped: no explicit durable-memory intent found.')
-      continue
+      console.log(`     ↳ Saved to ${path.relative(memoryRoot, targetFile)}`)
     }
 
-    const relativePath = `archives/projects/${slug}/learnings/${today}_auto_dream_${conv.shortId}.md`
-    const targetFile = writeMemoryFile(memoryRoot, relativePath, doc).absolutePath
+    if (changedPaths.length > 0) {
+      commitMemoryPaths({
+        memoryRoot,
+        relativePaths: changedPaths,
+        reason: `chore(dream): archive ${changedPaths.length} explicit correction evidence note(s)`,
+      })
+      memoryCommitted = true
+    }
+    state.lastRun = new Date().toISOString()
+    saveDreamState(state)
+    console.log(
+      `\n✓ Dream scan complete: ${changedPaths.length} written, ${processed.length - changedPaths.length} skipped.`,
+    )
 
-    changedPaths.push(relativePath)
-    processed.push({
-      convId: conv.id,
-      shortId: conv.shortId,
-      status: 'written',
-      file: targetFile,
-    })
-    console.log(`     ↳ Saved to ${path.relative(memoryRoot, targetFile)}`)
+    return processed
+  } catch (error) {
+    if (!memoryCommitted && baseRevision && changedPaths.length > 0) {
+      restoreDeclaredMemoryPaths(memoryRoot, baseRevision, changedPaths)
+    }
+    throw error
+  } finally {
+    releaseMemoryWriteLock(writeLock)
   }
-
-  if (changedPaths.length > 0) {
-    commitMemoryPaths({
-      memoryRoot,
-      relativePaths: changedPaths,
-      reason: `chore(dream): archive ${changedPaths.length} explicit correction evidence note(s)`,
-    })
-  }
-  state.lastRun = new Date().toISOString()
-  saveDreamState(state)
-  console.log(
-    `\n✓ Dream scan complete: ${changedPaths.length} written, ${processed.length - changedPaths.length} skipped.`,
-  )
-
-  return processed
 }
 
 export function checkAndAutoDreamOnStepCount(

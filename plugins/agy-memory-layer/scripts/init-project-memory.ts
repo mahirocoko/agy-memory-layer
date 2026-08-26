@@ -3,16 +3,20 @@
 /**
  * Codebase Scanner & Initializer for agy-memory-layer (/init)
  * Analyzes repository structure, dependencies, frameworks, scripts, and linters,
- * then generates project.md and rules.md in ~/.gemini/memory/projects/<slug>/
+ * then generates the selected layered or legacy project baseline under MemFS.
  */
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { inspectCommittedMemoryProjection } from './layered-memory.ts'
 import {
   assertMemoryRepositoryCleanForWrite,
   commitMemoryPaths,
+  getMemoryHeadRevision,
+  restoreDeclaredMemoryPaths,
   writeMemoryFile,
 } from './memory-repository.ts'
+import { withMemoryWriteLock } from './memory-write-lock.ts'
 import { resolveProjectSlug } from './workspace-identity.ts'
 
 export type CodebaseScanResult = {
@@ -246,11 +250,18 @@ export function initProjectMemory(
   options: InitOptions = {},
 ): InitResult {
   const scan = scanCodebase(workspaceDir)
-  const projectDir = path.join(memoryRoot, 'projects', scan.slug)
-  const learningsDir = path.join(projectDir, 'learnings')
+  const projection = inspectCommittedMemoryProjection(memoryRoot, scan.slug)
+  if (projection.mode === 'conflict') {
+    throw new Error('Cannot initialize project memory while layered and legacy owners overlap.')
+  }
+  const layeredLayout = projection.mode === 'layered'
+  const projectBaseDir = path.join(memoryRoot, 'projects', scan.slug)
+  const projectDir = path.join(projectBaseDir, ...(layeredLayout ? ['system'] : []))
 
-  const projectMdPath = path.join(projectDir, 'project.md')
-  const rulesMdPath = path.join(projectDir, 'rules.md')
+  const projectFilename = layeredLayout ? 'overview.md' : 'project.md'
+  const rulesFilename = layeredLayout ? 'conventions.md' : 'rules.md'
+  const projectMdPath = path.join(projectDir, projectFilename)
+  const rulesMdPath = path.join(projectDir, rulesFilename)
 
   if (fs.existsSync(projectMdPath) && !options.force) {
     return {
@@ -274,20 +285,39 @@ export function initProjectMemory(
     throw new Error('Project initialization requires --confirm-init for protected memory files.')
   }
 
-  assertMemoryRepositoryCleanForWrite(memoryRoot)
+  const relativeProjectPath = layeredLayout
+    ? `projects/${scan.slug}/system/overview.md`
+    : `projects/${scan.slug}/project.md`
+  const relativeRulesPath = layeredLayout
+    ? `projects/${scan.slug}/system/conventions.md`
+    : `projects/${scan.slug}/rules.md`
 
-  // Write Memory Blocks
-  const projectContent = generateProjectMemoryMarkdown(scan)
-  const rulesContent = generateRulesMarkdown(scan)
+  withMemoryWriteLock(memoryRoot, `initialize project ${scan.slug}`, () => {
+    assertMemoryRepositoryCleanForWrite(memoryRoot)
+    const baseRevision = getMemoryHeadRevision(memoryRoot)
+    if (!baseRevision) throw new Error('Project initialization requires committed MemFS HEAD.')
+    const rawProjectContent = generateProjectMemoryMarkdown(scan)
+    const rawRulesContent = generateRulesMarkdown(scan)
+    const projectContent = layeredLayout
+      ? `---\ndescription: Architecture and domain context for ${scan.slug}.\n---\n${rawProjectContent}`
+      : rawProjectContent
+    const rulesContent = layeredLayout
+      ? `---\ndescription: Repository conventions and verification commands for ${scan.slug}.\n---\n${rawRulesContent}`
+      : rawRulesContent
 
-  writeMemoryFile(memoryRoot, `projects/${scan.slug}/project.md`, projectContent)
-  writeMemoryFile(memoryRoot, `projects/${scan.slug}/rules.md`, rulesContent)
-  fs.mkdirSync(learningsDir, { recursive: true })
-
-  commitMemoryPaths({
-    memoryRoot,
-    relativePaths: [`projects/${scan.slug}/project.md`, `projects/${scan.slug}/rules.md`],
-    reason: `init(project): bootstrap memory for ${scan.slug}`,
+    const changedPaths = [relativeProjectPath, relativeRulesPath]
+    try {
+      writeMemoryFile(memoryRoot, relativeProjectPath, projectContent)
+      writeMemoryFile(memoryRoot, relativeRulesPath, rulesContent)
+      commitMemoryPaths({
+        memoryRoot,
+        relativePaths: changedPaths,
+        reason: `init(project): bootstrap memory for ${scan.slug}`,
+      })
+    } catch (error) {
+      restoreDeclaredMemoryPaths(memoryRoot, baseRevision, changedPaths)
+      throw error
+    }
   })
 
   return {

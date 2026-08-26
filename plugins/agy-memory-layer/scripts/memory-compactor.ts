@@ -12,7 +12,12 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { resolveMemoryPath, validateProjectSlug } from './memory-repository.ts'
+import {
+  listCommittedMemoryFiles,
+  readCommittedMemoryFile,
+  resolveMemoryPath,
+  validateProjectSlug,
+} from './memory-repository.ts'
 
 export type CompactionOptions = {
   softBudget?: number
@@ -40,6 +45,7 @@ export type ProjectCompactionResult = {
 }
 
 export type GlobalCompactionResult = {
+  files: FileCompactionResult[]
   humanFile: FileCompactionResult | null
   personaFile: FileCompactionResult | null
   totalTokensSaved: number
@@ -56,6 +62,30 @@ export type OverallCompactionResult = {
 
 export const DEFAULT_SOFT_BUDGET = 2000
 export const DEFAULT_HARD_BUDGET = 3500
+
+const listLocalMarkdownFiles = (memoryRoot: string, directory: string): string[] => {
+  const start = path.join(memoryRoot, directory)
+  if (!fs.existsSync(start)) return []
+  const results: string[] = []
+  const visit = (current: string): void => {
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const absolutePath = path.join(current, entry.name)
+      if (entry.isDirectory()) visit(absolutePath)
+      else if (entry.isFile() && entry.name.endsWith('.md')) {
+        results.push(path.relative(memoryRoot, absolutePath).split(path.sep).join('/'))
+      }
+    }
+  }
+  visit(start)
+  return results.sort()
+}
+
+const listMemoryMarkdown = (memoryRoot: string, directory: string): string[] =>
+  fs.existsSync(path.join(memoryRoot, '.git'))
+    ? listCommittedMemoryFiles(memoryRoot, directory).filter((relativePath) =>
+        relativePath.endsWith('.md'),
+      )
+    : listLocalMarkdownFiles(memoryRoot, directory)
 
 /**
  * Approximate token estimator for Markdown (accurate within ~5-10% of cl100k/o200k)
@@ -188,7 +218,8 @@ export function compactFile(
 ): FileCompactionResult {
   const relativePath = path.relative(memoryRoot, filePath).split(path.sep).join('/')
   const resolved = resolveMemoryPath(memoryRoot, relativePath)
-  if (!fs.existsSync(resolved.absolutePath)) {
+  const committed = readCommittedMemoryFile(memoryRoot, relativePath)
+  if (committed === null && !fs.existsSync(resolved.absolutePath)) {
     return {
       relativePath,
       originalTokens: 0,
@@ -200,7 +231,7 @@ export function compactFile(
     }
   }
 
-  const raw = fs.readFileSync(resolved.absolutePath, 'utf-8')
+  const raw = committed ?? fs.readFileSync(resolved.absolutePath, 'utf-8')
   const originalTokens = estimateTokens(raw)
   const { compacted, deduplicatedCount, prunedSectionsCount } = compactMarkdownContent(raw, options)
   const compactedTokens = estimateTokens(compacted)
@@ -243,31 +274,21 @@ export function compactProjectMemory(
 
   const filesResults: FileCompactionResult[] = []
 
-  // Compact project.md & rules.md
-  for (const fileName of ['project.md', 'rules.md']) {
-    const fullPath = path.join(projectDir, fileName)
-    if (fs.existsSync(fullPath)) {
-      filesResults.push(compactFile(fullPath, memoryRoot, options))
-    }
+  const projectFiles = listMemoryMarkdown(memoryRoot, `projects/${projectSlug}`).filter(
+    (relativePath) =>
+      relativePath.endsWith('.md') && !relativePath.startsWith(`projects/${projectSlug}/archives/`),
+  )
+  for (const relativePath of projectFiles) {
+    filesResults.push(compactFile(path.join(memoryRoot, relativePath), memoryRoot, options))
   }
 
-  // Compact learnings
-  const learningsDir = path.join(projectDir, 'learnings')
   let archivedLearningsCount = 0
-
-  if (fs.existsSync(learningsDir)) {
-    const learningFiles = fs
-      .readdirSync(learningsDir)
-      .filter((f) => f.endsWith('.md') && !f.startsWith('archive_'))
-      .sort()
-
-    for (const lf of learningFiles) {
-      const fullPath = path.join(learningsDir, lf)
-      filesResults.push(compactFile(fullPath, memoryRoot, options))
-    }
-
-    if (learningFiles.length > 15) archivedLearningsCount = learningFiles.length - 10
-  }
+  const learningFiles = projectFiles.filter(
+    (relativePath) =>
+      relativePath.startsWith(`projects/${projectSlug}/learnings/`) &&
+      !path.basename(relativePath).startsWith('archive_'),
+  )
+  if (learningFiles.length > 15) archivedLearningsCount = learningFiles.length - 10
 
   const totalOriginalTokens = filesResults.reduce((acc, f) => acc + f.originalTokens, 0)
   const totalCompactedTokens = filesResults.reduce((acc, f) => acc + f.compactedTokens, 0)
@@ -284,24 +305,39 @@ export function compactProjectMemory(
 }
 
 /**
- * Compacts global profile (human.md & persona.md)
+ * Analyzes committed global layered/legacy owners and references.
  */
 export function compactGlobalMemory(
   options: CompactionOptions = {},
   customMemoryRoot?: string,
 ): GlobalCompactionResult {
   const memoryRoot = customMemoryRoot || path.join(process.env.HOME || '', '.gemini', 'memory')
-  const humanPath = path.join(memoryRoot, 'global', 'human.md')
-  const personaPath = path.join(memoryRoot, 'global', 'persona.md')
-
-  const humanRes = fs.existsSync(humanPath) ? compactFile(humanPath, memoryRoot, options) : null
-  const personaRes = fs.existsSync(personaPath)
-    ? compactFile(personaPath, memoryRoot, options)
-    : null
-
-  const saved = (humanRes?.tokensSaved || 0) + (personaRes?.tokensSaved || 0)
+  const globalPaths = [
+    ...listMemoryMarkdown(memoryRoot, 'system'),
+    ...listMemoryMarkdown(memoryRoot, 'reference'),
+    ...listMemoryMarkdown(memoryRoot, 'global').filter(
+      (relativePath) => relativePath === 'global/human.md' || relativePath === 'global/persona.md',
+    ),
+  ]
+    .filter((relativePath) => relativePath.endsWith('.md'))
+    .sort()
+  const files = globalPaths.map((relativePath) =>
+    compactFile(path.join(memoryRoot, relativePath), memoryRoot, options),
+  )
+  const humanRes =
+    files.find(
+      (file) =>
+        file.relativePath === 'global/human.md' || file.relativePath.startsWith('system/human/'),
+    ) || null
+  const personaRes =
+    files.find(
+      (file) =>
+        file.relativePath === 'global/persona.md' || file.relativePath === 'system/persona.md',
+    ) || null
+  const saved = files.reduce((total, file) => total + file.tokensSaved, 0)
 
   return {
+    files,
     humanFile: humanRes,
     personaFile: personaRes,
     totalTokensSaved: saved,
@@ -322,9 +358,13 @@ export function runAutoCompaction(
   const projectsResults: ProjectCompactionResult[] = []
 
   if (fs.existsSync(projectsDir)) {
-    const slugs = fs
-      .readdirSync(projectsDir)
-      .filter((s) => fs.statSync(path.join(projectsDir, s)).isDirectory())
+    const slugs = [
+      ...new Set(
+        listMemoryMarkdown(memoryRoot, 'projects')
+          .map((relativePath) => relativePath.split('/')[1])
+          .filter(Boolean),
+      ),
+    ].sort()
 
     for (const slug of slugs) {
       projectsResults.push(compactProjectMemory(slug, options, memoryRoot))

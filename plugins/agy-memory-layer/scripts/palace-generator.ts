@@ -8,6 +8,9 @@
 import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { inspectCommittedMemoryProjection } from './layered-memory.ts'
+import { listCommittedMemoryFiles, readCommittedMemoryFile } from './memory-repository.ts'
+import { resolveProjectSlug } from './workspace-identity.ts'
 
 const memoryRoot =
   process.env.AGY_MEMORY_DIR ||
@@ -16,11 +19,7 @@ const memoryRoot =
 const brainDir = path.join(process.env.HOME || '', '.gemini', 'antigravity-cli', 'brain')
 const activeWorkspace = process.argv[2] || process.cwd()
 const outputFile = process.argv[3] || '/tmp/agy-memory-palace.html'
-const activeSlug = path.basename(activeWorkspace).toLowerCase().replace(/\s+/g, '-')
-
-// Ensure directories
-fs.mkdirSync(path.join(memoryRoot, 'global'), { recursive: true })
-fs.mkdirSync(path.join(memoryRoot, 'projects'), { recursive: true })
+const activeSlug = resolveProjectSlug(activeWorkspace, memoryRoot)
 
 function estimateTokens(str: string): number {
   if (!str) return 0
@@ -268,11 +267,21 @@ if (fs.existsSync(convDir)) {
   } catch {}
 }
 
-// 3. Read MemFS Files
-const humanFile = path.join(memoryRoot, 'global', 'human.md')
-const personaFile = path.join(memoryRoot, 'global', 'persona.md')
-const humanMd = fs.existsSync(humanFile) ? fs.readFileSync(humanFile, 'utf-8') : ''
-const personaMd = fs.existsSync(personaFile) ? fs.readFileSync(personaFile, 'utf-8') : ''
+// 3. Read committed MemFS files through the same owner as PreInvocation.
+const activeProjection = inspectCommittedMemoryProjection(memoryRoot, activeSlug)
+const personaDocument = activeProjection.globalSystem.find(
+  (document) =>
+    document.relativePath === 'system/persona.md' || document.relativePath === 'global/persona.md',
+)
+const humanDocuments = activeProjection.globalSystem.filter(
+  (document) => document.relativePath !== personaDocument?.relativePath,
+)
+const humanMd = humanDocuments.map((document) => document.body).join('\n\n')
+const personaMd = personaDocument?.body || ''
+const humanDisplayName = activeProjection.mode === 'layered' ? 'system/human/*' : 'human.md'
+const personaDisplayName = activeProjection.mode === 'layered' ? 'system/persona.md' : 'persona.md'
+const humanCommitPath = humanDocuments[0]?.relativePath || 'global/human.md'
+const personaCommitPath = personaDocument?.relativePath || 'global/persona.md'
 
 const humanTokens = estimateTokens(humanMd)
 const personaTokens = estimateTokens(personaMd)
@@ -283,39 +292,52 @@ const projects: ProjectItem[] = []
 const allLearnings: LearningItem[] = []
 
 if (fs.existsSync(projectsDir)) {
-  const dirs = fs.readdirSync(projectsDir)
+  const dirs = [
+    ...new Set(
+      listCommittedMemoryFiles(memoryRoot, 'projects')
+        .map((relativePath) => relativePath.split('/')[1])
+        .filter(Boolean),
+    ),
+  ].sort()
   for (const dir of dirs) {
-    const fullPath = path.join(projectsDir, dir)
-    if (fs.statSync(fullPath).isDirectory() && !dir.startsWith('.')) {
-      const projFile = path.join(fullPath, 'project.md')
-      const rulesFile = path.join(fullPath, 'rules.md')
-      const learningsDir = path.join(fullPath, 'learnings')
-
-      const projContent = fs.existsSync(projFile) ? fs.readFileSync(projFile, 'utf-8') : ''
-      const rulesContent = fs.existsSync(rulesFile) ? fs.readFileSync(rulesFile, 'utf-8') : ''
+    if (!dir.startsWith('.')) {
+      const projection = inspectCommittedMemoryProjection(memoryRoot, dir)
+      const overview = projection.projectSystem.find(
+        (document) =>
+          document.relativePath.endsWith('/overview.md') ||
+          document.relativePath.endsWith('/project.md'),
+      )
+      const conventions = projection.projectSystem.find(
+        (document) =>
+          document.relativePath.endsWith('/conventions.md') ||
+          document.relativePath.endsWith('/rules.md'),
+      )
+      const projContent = overview?.body || ''
+      const rulesContent = conventions?.body || ''
 
       let learnings: LearningItem[] = []
-      if (fs.existsSync(learningsDir)) {
-        learnings = fs
-          .readdirSync(learningsDir)
-          .filter((f) => f.endsWith('.md'))
-          .map((f) => {
-            const content = fs.readFileSync(path.join(learningsDir, f), 'utf-8')
-            const relPath = `projects/${dir}/learnings/${f}`
-            const commit = getFileCommitInfo(relPath)
-            const item = {
-              id: `learning-${dir}-${f}`,
-              project: dir,
-              filename: f,
-              path: relPath,
-              content,
-              tokens: estimateTokens(content),
-              chars: content.length,
-              commit,
-            }
-            allLearnings.push(item)
-            return item
-          })
+      const learningPaths = listCommittedMemoryFiles(
+        memoryRoot,
+        `projects/${dir}/learnings`,
+      ).filter((relativePath) => relativePath.endsWith('.md'))
+      if (learningPaths.length > 0) {
+        learnings = learningPaths.map((relPath) => {
+          const content = readCommittedMemoryFile(memoryRoot, relPath) || ''
+          const f = path.basename(relPath)
+          const commit = getFileCommitInfo(relPath)
+          const item = {
+            id: `learning-${dir}-${f}`,
+            project: dir,
+            filename: f,
+            path: relPath,
+            content,
+            tokens: estimateTokens(content),
+            chars: content.length,
+            commit,
+          }
+          allLearnings.push(item)
+          return item
+        })
       }
 
       projects.push({
@@ -337,6 +359,20 @@ const activeProject = projects.find((p) => p.isActive) || {
 const projectTokens = estimateTokens(activeProject.projectMd)
 const rulesTokens = estimateTokens(activeProject.rulesMd)
 const memfsInjectedTokens = humanTokens + personaTokens + projectTokens + rulesTokens
+const projectDisplayName = activeProjection.mode === 'layered' ? 'system/overview.md' : 'project.md'
+const rulesDisplayName = activeProjection.mode === 'layered' ? 'system/conventions.md' : 'rules.md'
+const projectCommitPath =
+  activeProjection.projectSystem.find(
+    (document) =>
+      document.relativePath.endsWith('/overview.md') ||
+      document.relativePath.endsWith('/project.md'),
+  )?.relativePath || `projects/${activeSlug}/project.md`
+const rulesCommitPath =
+  activeProjection.projectSystem.find(
+    (document) =>
+      document.relativePath.endsWith('/conventions.md') ||
+      document.relativePath.endsWith('/rules.md'),
+  )?.relativePath || `projects/${activeSlug}/rules.md`
 
 // Allow external CLI / Statusline payload overrides if provided via environment
 if (process.env.CONTEXT_USED_PERCENT) {
@@ -367,47 +403,47 @@ if (process.env.CONTEXT_USED_PERCENT) {
 const coreMemoryFiles = [
   {
     id: 'core-human',
-    name: 'human.md',
-    dir: 'global',
-    path: 'global/human.md',
+    name: humanDisplayName,
+    dir: activeProjection.mode === 'layered' ? 'system' : 'global',
+    path: humanCommitPath,
     description: 'Durable user preferences, coding habits, and communication directives.',
     content: humanMd,
     tokens: humanTokens,
     chars: humanMd.length,
-    commit: getFileCommitInfo('global/human.md'),
+    commit: getFileCommitInfo(humanCommitPath),
   },
   {
     id: 'core-persona',
-    name: 'persona.md',
-    dir: 'global',
-    path: 'global/persona.md',
+    name: personaDisplayName,
+    dir: activeProjection.mode === 'layered' ? 'system' : 'global',
+    path: personaCommitPath,
     description: 'Persistent agent persona, tone, and operational directives.',
     content: personaMd,
     tokens: personaTokens,
     chars: personaMd.length,
-    commit: getFileCommitInfo('global/persona.md'),
+    commit: getFileCommitInfo(personaCommitPath),
   },
   {
     id: 'core-project',
-    name: 'project.md',
+    name: projectDisplayName,
     dir: activeSlug,
-    path: `projects/${activeSlug}/project.md`,
+    path: projectCommitPath,
     description: 'Project architecture, domain concepts, stack choices, and key boundaries.',
     content: activeProject.projectMd,
     tokens: projectTokens,
     chars: activeProject.projectMd.length,
-    commit: getFileCommitInfo(`projects/${activeSlug}/project.md`),
+    commit: getFileCommitInfo(projectCommitPath),
   },
   {
     id: 'core-rules',
-    name: 'rules.md',
+    name: rulesDisplayName,
     dir: activeSlug,
-    path: `projects/${activeSlug}/rules.md`,
+    path: rulesCommitPath,
     description: 'Active codebase rules, linters, testing constraints, and conventions.',
     content: activeProject.rulesMd,
     tokens: rulesTokens,
     chars: activeProject.rulesMd.length,
-    commit: getFileCommitInfo(`projects/${activeSlug}/rules.md`),
+    commit: getFileCommitInfo(rulesCommitPath),
   },
 ]
 
@@ -1614,11 +1650,11 @@ const html = `<!DOCTYPE html>
                 <span class="file-chars-badge">2</span>
               </div>
               <div class="tree-item active" onclick="selectCoreFile(0, this)">
-                <span>human.md</span>
+                <span>${escapeHtml(humanDisplayName)}</span>
                 <span class="file-chars-badge">${formatChars(humanMd.length)}</span>
               </div>
               <div class="tree-item" onclick="selectCoreFile(1, this)">
-                <span>persona.md</span>
+                <span>${escapeHtml(personaDisplayName)}</span>
                 <span class="file-chars-badge">${formatChars(personaMd.length)}</span>
               </div>
             </div>
@@ -1629,11 +1665,11 @@ const html = `<!DOCTYPE html>
                 <span class="file-chars-badge">2</span>
               </div>
               <div class="tree-item" onclick="selectCoreFile(2, this)">
-                <span>project.md</span>
+                <span>${escapeHtml(projectDisplayName)}</span>
                 <span class="file-chars-badge">${formatChars(activeProject.projectMd.length)}</span>
               </div>
               <div class="tree-item" onclick="selectCoreFile(3, this)">
-                <span>rules.md</span>
+                <span>${escapeHtml(rulesDisplayName)}</span>
                 <span class="file-chars-badge">${formatChars(activeProject.rulesMd.length)}</span>
               </div>
             </div>

@@ -8,8 +8,10 @@ You are performing Day 1 codebase onboarding for a newly opened repository.
    - Identify main entry points, active frameworks, linters, test commands, and build scripts.
    - Read existing documentation (`README.md`, `CONTRIBUTING.md`, architecture docs).
 2. **Establish Ground Truth**:
-   - Synthesize high-signal `project.md` (Domain concepts, tech stack, directory boundaries).
-   - Synthesize codebase conventions in `rules.md` (Formatting, testing rules, typing standards).
+   - Synthesize a high-signal project overview (domain, stack, and directory boundaries).
+   - Synthesize focused conventions (formatting, testing, and typing standards).
 3. **Commit into MemFS**:
    - Run `init-project-memory.ts` rather than writing or staging arbitrary paths.
-   - The initializer validates the slug, requires a clean MemFS repository, and commits only `project.md` and `rules.md`.
+   - The initializer validates the slug, respects the selected layered/legacy
+     layout, takes the shared writer lock, requires a clean MemFS repository,
+     and commits only its two declared output paths.

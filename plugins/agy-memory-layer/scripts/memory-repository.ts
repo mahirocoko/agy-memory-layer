@@ -231,16 +231,44 @@ export function committedMemoryPathExists(memoryRoot: string, input: string): bo
 }
 
 export function listCommittedMemoryFiles(memoryRoot: string, directory: string): string[] {
-  const { relativePath } = resolveMemoryPath(memoryRoot, directory)
   if (!fs.existsSync(path.join(memoryRoot, '.git'))) return []
+  const relativePath = directory ? resolveMemoryPath(memoryRoot, directory).relativePath : ''
 
   const result = runGit(
     memoryRoot,
-    ['ls-tree', '-r', '--name-only', '-z', 'HEAD', '--', relativePath],
+    relativePath
+      ? ['ls-tree', '-r', '--name-only', '-z', 'HEAD', '--', relativePath]
+      : ['ls-tree', '-r', '--name-only', '-z', 'HEAD'],
     { allowFailure: true },
   )
   if (result.status !== 0) return []
   return (result.stdout || '').split('\0').filter(Boolean).sort()
+}
+
+export function getMemoryHeadRevision(memoryRoot: string): string | null {
+  if (!fs.existsSync(path.join(memoryRoot, '.git'))) return null
+  const result = runGit(memoryRoot, ['rev-parse', '--verify', 'HEAD'], { allowFailure: true })
+  return result.status === 0 ? result.stdout.trim() : null
+}
+
+export function restoreDeclaredMemoryPaths(
+  memoryRoot: string,
+  revision: string,
+  relativePaths: string[],
+): void {
+  if (!/^[a-f0-9]{40}$/i.test(revision)) throw new Error('Invalid restore revision.')
+  const normalizedPaths = [...new Set(relativePaths.map(normalizeMemoryRelativePath))].sort()
+  if (normalizedPaths.length === 0) return
+  for (const relativePath of normalizedPaths) resolveMemoryPath(memoryRoot, relativePath)
+
+  runGit(memoryRoot, ['reset', revision, '--', ...normalizedPaths])
+  for (const relativePath of normalizedPaths) {
+    const previous = runGit(memoryRoot, ['show', `${revision}:${relativePath}`], {
+      allowFailure: true,
+    })
+    if (previous.status === 0) writeMemoryFile(memoryRoot, relativePath, previous.stdout)
+    else deleteMemoryFile(memoryRoot, relativePath)
+  }
 }
 
 export function writeMemoryFile(
