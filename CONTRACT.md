@@ -4,8 +4,7 @@
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** `v1.15.3` source candidate; latest published release is
-`v1.15.2` from 2026-08-26
+**Release state:** Released as `v1.15.3` on 2026-08-26
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -286,7 +285,7 @@ functions**, with 33/33 Node tests passing (one
 integration runner containing 11/11 scenarios plus 32 focused cases). These
 numbers describe the tagged source; exact migration evidence is linked above.
 
-The `v1.15.3` source candidate measures **81.18% lines**, **64.88% branches**,
+Released `v1.15.3` measures **81.18% lines**, **64.88% branches**,
 and **85.45% functions**, with 36/36 Node tests passing (one integration runner
 containing 11/11 scenarios plus 35 focused cases). Three focused Palace
 scenarios cover layered per-file topology/current-project isolation, legacy

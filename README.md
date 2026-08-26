@@ -9,7 +9,7 @@
 > **Evidence-Controlled Agy Delegation, Committed Git-Backed Memory, and Scoped Correction Recall for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
 
-> **v1.15.3 release candidate:** focused layered memory, bounded reference indexing,
+> **v1.15.3:** focused layered memory, bounded reference indexing,
 > provenance-preserving curation, a hash-confirmed legacy
 > migration/rollback path. Upgrading the plugin does not automatically migrate
 > an existing MemFS; migration remains an explicit reviewed operation. Memory
@@ -235,13 +235,13 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.15.3 candidate |
+| Metric | v1.15.3 release |
 | :--- | ---: |
 | Lines | **81.18%** |
 | Branches | **64.88%** |
 | Functions | **85.45%** |
 
-This is the aggregate Node/V8 snapshot for the `v1.15.3` source candidate.
+This is the aggregate Node/V8 snapshot for the released `v1.15.3` source.
 Run `pnpm test:coverage` after source changes and update this snapshot in the
 same release commit; per-file percentages remain in command output rather than
 being copied into this README.
@@ -250,7 +250,7 @@ being copied into this README.
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
-> ✅ **Latest release**: [`v1.15.2`](./docs/releases/v1.15.2.md) keeps rollback available after approved post-migration curation by accepting descendant HEADs and archiving exact current migration-owned paths before restoration. [`v1.15.1`](./docs/releases/v1.15.1.md) added strict runtime spec-identifier validation.
+> ✅ **Latest release**: [`v1.15.3`](./docs/releases/v1.15.3.md) restores the committed layered Human subtree in Memory Palace and adds real Agy host acceptance for owner attribution, project routing, reference boundaries, and on-demand retrieval. [`v1.15.2`](./docs/releases/v1.15.2.md) remains the descendant-safe rollback release.
 
 ---
 
