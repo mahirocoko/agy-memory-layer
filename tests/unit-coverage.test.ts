@@ -2016,11 +2016,11 @@ describe('Unit Coverage Extensions', () => {
     }
   })
 
-  it('validates Phase 3 version manifests, candidate contract boundary, parity owners, and documentation alignment', () => {
+  it('validates Phase 3 version manifests, release contract boundary, parity owners, and documentation alignment', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'))
     const pluginJson = JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, 'plugin.json'), 'utf8'))
 
-    // 1. Candidate version intent and mirror equality
+    // 1. Released version intent and mirror equality
     assert.strictEqual(packageJson.version, '1.15.4')
     assert.strictEqual(pluginJson.version, '1.15.4')
     assert.strictEqual(packageJson.version, pluginJson.version)
@@ -2028,10 +2028,7 @@ describe('Unit Coverage Extensions', () => {
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
     assert.strictEqual(contractDoc.includes('**Package version:** `1.15.4`'), true)
-    assert.strictEqual(
-      contractDoc.includes('Unreleased v1.15.4 candidate based on released v1.15.3 (not released)'),
-      true,
-    )
+    assert.strictEqual(contractDoc.includes('Released as `v1.15.4` on 2026-09-02'), true)
     assert.strictEqual(
       contractDoc.includes(
         'Every schema-valid invocation that runs to completion within the host hook',
@@ -2067,13 +2064,13 @@ describe('Unit Coverage Extensions', () => {
     // Preserves historical released v1.15.3 evidence
     assert.strictEqual(contractDoc.includes('Released `v1.15.3` measures'), true)
 
-    // 3. README.md candidate + latest-release distinction
+    // 3. README.md current + prior-release distinction
     const readmeDoc = fs.readFileSync(path.join(ROOT_DIR, 'README.md'), 'utf8')
-    assert.strictEqual(readmeDoc.includes('**v1.15.4 Candidate (Unreleased):**'), true)
-    assert.strictEqual(readmeDoc.includes('**v1.15.3 (Latest Release):**'), true)
-    assert.strictEqual(readmeDoc.includes('| Metric | v1.15.4 candidate |'), true)
-    assert.strictEqual(readmeDoc.includes('| Lines | **81.23%** |'), true)
-    assert.strictEqual(readmeDoc.includes('| Branches | **65.68%** |'), true)
+    assert.strictEqual(readmeDoc.includes('**v1.15.4 (Latest Release):**'), true)
+    assert.strictEqual(readmeDoc.includes('**v1.15.3 (Prior Release):**'), true)
+    assert.strictEqual(readmeDoc.includes('| Metric | v1.15.4 release |'), true)
+    assert.strictEqual(readmeDoc.includes('| Lines | **81.26%** |'), true)
+    assert.strictEqual(readmeDoc.includes('| Branches | **65.86%** |'), true)
     assert.strictEqual(readmeDoc.includes('| Functions | **85.45%** |'), true)
     assert.strictEqual(
       readmeDoc.includes('docs/letta-parity.md#model-guided-authority-host-matrix--2026-09-02'),

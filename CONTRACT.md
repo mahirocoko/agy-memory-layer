@@ -4,7 +4,7 @@
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Unreleased v1.15.4 candidate based on released v1.15.3 (not released)
+**Release state:** Released as `v1.15.4` on 2026-09-02
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -247,7 +247,7 @@ them sandboxed execution boundaries without host-level evidence.
 
 ## Verification Contract
 
-Required checks for this unreleased candidate:
+Required checks for the released source:
 
 ```bash
 pnpm check
@@ -317,7 +317,7 @@ routing from `learn-letta-code` to `earn-money`, index-only reference visibility
 and bounded on-demand retrieval of two reference-only facts without mutation.
 This does not prove legacy-host or memory-write behavior.
 
-The unreleased `v1.15.4` candidate measures **81.23% lines**, **65.68%
+Released `v1.15.4` measures **81.26% lines**, **65.86%
 branches**, and **85.45% functions**, with 39/39 Node tests passing (one
 integration runner containing 11/11 scenarios plus 38 focused cases). These
 source checks cover the bounded PreInvocation stanza and current contract drift;
@@ -348,7 +348,7 @@ See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 5. An automated release workflow remains deferred. Releases use the existing
    manual tag/GitHub Release path only after source, host, and human gates pass;
    current release evidence lives in
-   [`docs/releases/v1.15.2.md`](./docs/releases/v1.15.2.md).
+   [`docs/releases/v1.15.4.md`](./docs/releases/v1.15.4.md).
 
 ## Distribution
 

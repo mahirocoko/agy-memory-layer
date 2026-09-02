@@ -9,17 +9,17 @@
 > **Evidence-Controlled Agy Delegation, Committed Git-Backed Memory, and Scoped Correction Recall for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
 
-> **v1.15.4 Candidate (Unreleased):** Model-guided authority boundary and
+> **v1.15.4 (Latest Release):** Model-guided authority boundary and
 > anti-laundering stanza emitted first whenever a schema-valid PreInvocation
 > hook completes, canonical authority doctrine across plugin rules, skills, and
 > authority-sensitive subagent prompts,
 > and explicit distinction between non-binding historical evidence and fresh
-> authorization. (Development candidate; v1.15.3 remains the latest actual release).
+> authorization.
 > A serialized real-Agy authority matrix passed an 8/8 coached baseline and a
 > separate 4/4 uncoached bare-turn remediation with one scored host conversation
 > per scenario; see the [parity evidence](./docs/letta-parity.md#model-guided-authority-host-matrix--2026-09-02).
 
-> **v1.15.3 (Latest Release):** focused layered memory, bounded reference indexing,
+> **v1.15.3 (Prior Release):** focused layered memory, bounded reference indexing,
 > provenance-preserving curation, a hash-confirmed legacy
 > migration/rollback path. Upgrading the plugin does not automatically migrate
 > an existing MemFS; migration remains an explicit reviewed operation. Memory
@@ -230,8 +230,8 @@ Purge is not part of normal uninstall. It requires the second confirmation flag,
 
 `agy-memory-layer` comes with a comprehensive multi-tier automated test suite verifying lifecycle hooks, memory isolation, rollback integrity, plugin schema validation, and Day 1 onboarding.
 
-The generated report covers 11 integration scenarios. The unreleased v1.15.4
-candidate includes 38 focused Node cases across projection, migration, rollback,
+The generated report covers 11 integration scenarios. Released v1.15.4
+includes 38 focused Node cases across projection, migration, rollback,
 curation, lock contention, lifecycle, engine behavior, authority boundaries,
 and current contract drift.
 
@@ -247,13 +247,13 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.15.4 candidate |
+| Metric | v1.15.4 release |
 | :--- | ---: |
-| Lines | **81.23%** |
-| Branches | **65.68%** |
+| Lines | **81.26%** |
+| Branches | **65.86%** |
 | Functions | **85.45%** |
 
-This is the aggregate Node/V8 snapshot for the unreleased `v1.15.4` candidate.
+This is the aggregate Node/V8 snapshot for the released `v1.15.4` source.
 Run `pnpm test:coverage` after source changes and update this snapshot in the
 same candidate/release change; per-file percentages remain in command output rather than
 being copied into this README.
@@ -262,7 +262,7 @@ being copied into this README.
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
-> ✅ **Latest release**: [`v1.15.3`](./docs/releases/v1.15.3.md) restores the committed layered Human subtree in Memory Palace and adds real Agy host acceptance for owner attribution, project routing, reference boundaries, and on-demand retrieval. [`v1.15.2`](./docs/releases/v1.15.2.md) remains the descendant-safe rollback release.
+> ✅ **Latest release**: [`v1.15.4`](./docs/releases/v1.15.4.md) adds the model-guided authority boundary, canonical anti-laundering doctrine, and separately predeclared uncoached real-host evidence. [`v1.15.3`](./docs/releases/v1.15.3.md) remains the layered Memory Palace topology release.
 
 ---
 
