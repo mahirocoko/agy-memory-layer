@@ -1,6 +1,6 @@
 # 🧠 agy-memory-layer
 
-[![Coverage](https://img.shields.io/badge/Coverage-81.18%25-green.svg)](./CONTRACT.md)
+[![Coverage](https://img.shields.io/badge/Coverage-81.23%25-green.svg)](./CONTRACT.md)
 [![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
@@ -9,7 +9,17 @@
 > **Evidence-Controlled Agy Delegation, Committed Git-Backed Memory, and Scoped Correction Recall for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
 
-> **v1.15.3:** focused layered memory, bounded reference indexing,
+> **v1.15.4 Candidate (Unreleased):** Model-guided authority boundary and
+> anti-laundering stanza emitted first whenever a schema-valid PreInvocation
+> hook completes, canonical authority doctrine across plugin rules, skills, and
+> authority-sensitive subagent prompts,
+> and explicit distinction between non-binding historical evidence and fresh
+> authorization. (Development candidate; v1.15.3 remains the latest actual release).
+> A serialized real-Agy authority matrix passed an 8/8 coached baseline and a
+> separate 4/4 uncoached bare-turn remediation with one scored host conversation
+> per scenario; see the [parity evidence](./docs/letta-parity.md#model-guided-authority-host-matrix--2026-09-02).
+
+> **v1.15.3 (Latest Release):** focused layered memory, bounded reference indexing,
 > provenance-preserving curation, a hash-confirmed legacy
 > migration/rollback path. Upgrading the plugin does not automatically migrate
 > an existing MemFS; migration remains an explicit reviewed operation. Memory
@@ -44,6 +54,7 @@
 ## ✨ Features
 
 - 🧭 **Agy Evidence Controller (`/evidence-controller`)**: Applies a fixed source-of-truth/hypothesis/check/closeout loop with model-guided `DIRECT`, `ONE_LANE`, `WRITER_REVIEWER`, or `PARALLEL_READONLY` routing.
+- 🔒 **Model-Guided Authority & Anti-Laundering Boundary**: Emits a bounded authority stanza first whenever the schema-valid PreInvocation hook runs to completion; a host timeout or unexpected hook-process failure can omit the entire injection. Treats summaries, recall, injected memory, and child reports as historical evidence rather than fresh authorization.
 - 👤 **Focused Committed Memory**: Injects lexical global/current-project
   `system/**/*.md` bodies plus a bounded path/description reference index and at
   most one protected working hypothesis. Other projects, reference bodies,
@@ -219,9 +230,10 @@ Purge is not part of normal uninstall. It requires the second confirmation flag,
 
 `agy-memory-layer` comes with a comprehensive multi-tier automated test suite verifying lifecycle hooks, memory isolation, rollback integrity, plugin schema validation, and Day 1 onboarding.
 
-The generated report covers 11 integration scenarios. v1.15.0 includes 32
-focused Node cases across projection, migration, rollback, curation, lock
-contention, lifecycle, and engine behavior.
+The generated report covers 11 integration scenarios. The unreleased v1.15.4
+candidate includes 38 focused Node cases across projection, migration, rollback,
+curation, lock contention, lifecycle, engine behavior, authority boundaries,
+and current contract drift.
 
 ### Running Tests Locally
 
@@ -235,15 +247,15 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.15.3 release |
+| Metric | v1.15.4 candidate |
 | :--- | ---: |
-| Lines | **81.18%** |
-| Branches | **64.88%** |
+| Lines | **81.23%** |
+| Branches | **65.68%** |
 | Functions | **85.45%** |
 
-This is the aggregate Node/V8 snapshot for the released `v1.15.3` source.
+This is the aggregate Node/V8 snapshot for the unreleased `v1.15.4` candidate.
 Run `pnpm test:coverage` after source changes and update this snapshot in the
-same release commit; per-file percentages remain in command output rather than
+same candidate/release change; per-file percentages remain in command output rather than
 being copied into this README.
 
 > 📋 **Detailed integration evidence**: See [TEST_REPORT.md](./TEST_REPORT.md) for the latest isolated scenario results and measured timings.

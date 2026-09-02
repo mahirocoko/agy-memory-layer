@@ -7,6 +7,7 @@ import { inspectCommittedWorkingHypothesis } from '../plugins/agy-memory-layer/s
 import { isDirectCliInvocation } from '../plugins/agy-memory-layer/scripts/cli-entrypoint.ts'
 import {
   ACTIVE_MEMORY_BUDGET_TOKENS,
+  AUTHORITY_BOUNDARY_STANZA,
   generatePreInvocationContext,
 } from '../plugins/agy-memory-layer/scripts/hook-inject-memory.ts'
 import { inspectCommittedMemoryProjection } from '../plugins/agy-memory-layer/scripts/layered-memory.ts'
@@ -67,7 +68,14 @@ export const inspectMemoryHealth = (
       memoryRoot,
     )
     const message = output.injectSteps[0]?.ephemeralMessage || ''
-    const estimatedTokens = Math.ceil(message.length / 4)
+    const authorityPrefix = `${AUTHORITY_BOUNDARY_STANZA}\n\n`
+    const activeMemoryMessage =
+      message === AUTHORITY_BOUNDARY_STANZA
+        ? ''
+        : message.startsWith(authorityPrefix)
+          ? message.slice(authorityPrefix.length)
+          : message
+    const estimatedTokens = Math.ceil(activeMemoryMessage.length / 4)
     const workingHypothesis = inspectCommittedWorkingHypothesis(projectSlug, memoryRoot)
     const memoryProjection = inspectCommittedMemoryProjection(memoryRoot, projectSlug)
 

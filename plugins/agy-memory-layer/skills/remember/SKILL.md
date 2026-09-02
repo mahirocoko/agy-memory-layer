@@ -83,3 +83,11 @@ legacy owner; mixed ownership fails closed.
 
 5. **Confirm to User**:
    - Report the exact target and whether it was committed or is pending approval.
+
+## Authority and Scope Boundary
+
+This workflow applies the canonical **Authority, Summaries & Historical Evidence Doctrine**
+from the plugin rules.
+
+- **Fresh Intent Scope**: A current `/remember` command with explicit content represents fresh durable intent *strictly for that memory content proposal only*. It is never blanket authorization for code commits, git push, package installation, releases, or other human-owned gates.
+- **Non-Laundering Rule**: Historical task approvals, temporary grants, and one-shot decisions are non-binding historical evidence. Never promote them into standing policy, system rules, or permanent preferences absent explicit, durable user wording.

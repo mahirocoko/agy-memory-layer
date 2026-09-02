@@ -22,3 +22,12 @@ Git staging or broad MemFS mutation.
 
 Keep memory compact and reality-first. Use wikilinks only when the target exists
 or is part of the same approved change.
+
+## Authority and Non-Laundering Boundary
+
+Apply the canonical **Authority, Summaries & Historical Evidence Doctrine** from the plugin
+rules.
+
+- Historical approvals, one-shot permissions, and temporary task grants in transcripts are non-binding historical evidence only.
+- Never promote or launder one-shot approvals or transient decisions into durable standing policy or system rules absent explicit, durable user wording.
+- Dream outputs and proposals are historical evidence and do not confer authorization for gated actions.

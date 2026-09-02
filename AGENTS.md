@@ -49,10 +49,10 @@ Host Workspace (learn-letta-code)
 - Use the repository's pinned pnpm toolchain and exact versions: `pnpm add -E <package>`.
 
 ### 6. Version Bump & Manifest Sync
-- Whenever code is updated or a new release is prepared, bump the version simultaneously across all manifest surfaces:
+- `package.json` owns candidate version intent. `plugins/agy-memory-layer/plugin.json` mirrors it, and `palace-generator.ts` dynamically reads `plugin.json` at runtime (not a static version-bump surface).
+- Whenever code is updated or a new release is prepared, sync version manifests across:
   - `package.json`
   - `plugins/agy-memory-layer/plugin.json`
-  - `plugins/agy-memory-layer/scripts/palace-generator.ts`
   - `CONTRACT.md`
 - User-owned MemFS is not a release metadata surface and must not be edited for a package version bump.
 
@@ -72,7 +72,7 @@ pnpm test
 ```
 
 Expected output for the current source: **11/11 integration scenarios**
-in `TEST_REPORT.md` and **35 focused Node test-runner cases** passing. Refresh
+in `TEST_REPORT.md` and **38 focused Node test-runner cases** passing. Refresh
 the exact count and coverage after the final full run; do not infer release or
 live-migration readiness from source tests alone.
 - PreInvocation hook schema validation

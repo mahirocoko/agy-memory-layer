@@ -34,15 +34,21 @@ after the run; a failed learning commit does not advance that session.
 
 ## Review Contract
 
+This workflow applies the canonical **Authority, Summaries & Historical Evidence Doctrine**
+from the plugin rules.
+
 After execution:
 
 1. report which conversation IDs produced files and which were skipped;
 2. verify every written note has explicit durable-memory intent, the correct
    workspace/project scope, and a recall-only archive target;
-3. route any proposed active system-memory rewrite through `memory-approval.ts`,
+3. treat historical approvals, temporary grants, and one-shot decisions in transcripts as non-binding historical evidence only; never promote them to standing policy or durable rules in MemFS absent explicit, durable user wording;
+4. route any proposed active system-memory rewrite through `memory-approval.ts`,
    or through `memory-curation.ts` when existing units move or disappear;
-4. never promote an archive note into `working-hypothesis.md` without an explicit proposal;
-5. never use `git add -A` or treat Stop as the approval boundary.
+5. never promote an archive note into `working-hypothesis.md` without an explicit proposal;
+6. never use `git add -A` or treat Stop as the approval boundary.
+
+Dream outputs are historical evidence rather than fresh authorization, authoritative scope, or completion proof for future turns.
 
 ## Not Established Yet
 

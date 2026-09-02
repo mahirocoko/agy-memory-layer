@@ -28,4 +28,12 @@ The user wants you to use your memory tools to remember information from the con
 - Match existing formatting of memory blocks (bullets, sections, etc.)
 - If unclear what to remember, ask the user to clarify
 
+## Authority and Non-Laundering Boundary
+
+Apply the canonical **Authority, Summaries & Historical Evidence Doctrine** from the plugin
+rules.
+
+- An explicit `/remember` command is fresh durable intent strictly for recording that specific memory proposal, not authorization for code commits, pushes, releases, or other gated actions.
+- Never launder one-shot task approvals, temporary grants, or transient decisions into standing policy. Standing rules require explicit, durable user wording.
+
 Only committed memory is projected into future prompts. Uncommitted files and pending proposals are not active.

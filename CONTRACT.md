@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.15.3`
+**Package version:** `1.15.4`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.15.3` on 2026-08-26
+**Release state:** Unreleased v1.15.4 candidate based on released v1.15.3 (not released)
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -41,8 +41,22 @@ into MemFS commits.
 - The TypeScript owner, `hook-inject-memory.ts`, reads active content from Git
   `HEAD` through `memory-repository.ts`.
 - Working-tree edits are never injected as active memory.
-- Malformed PreInvocation JSON or invalid `workspacePaths` types return a
-  schema-valid no-op instead of falling back to the current directory.
+- Every schema-valid invocation that runs to completion within the host hook
+  timeout emits the bounded authority stanza first even with empty memory;
+  malformed PreInvocation JSON or invalid `workspacePaths` types return a
+  schema-valid no-op emitting no step (`{ injectSteps: [] }`) instead of falling
+  back to the current directory. A host timeout or unexpected hook-process
+  failure can omit the entire injection; this program contract is not a host
+  availability guarantee.
+- The fixed authority stanza overhead is outside the existing 1,400-token
+  active-memory projection calculation; the memory/status portion retains its
+  current budget semantics.
+- Summaries (including host compaction summaries), recall results, injected
+  memory (`[MemFS Active Memory]`), and child subagent reports are
+  model-guided historical evidence rather than current authorization,
+  authoritative scope, completion proof, or verification.
+- Explicitly, this is model guidance for reasoning and execution safety; there
+  is no deterministic command interception or compaction detection by the host.
 - Dirty, conflict, error, and uninitialized states are surfaced as status
   notices without activating their content.
 - `layered-memory.ts` is the shared projection owner for PreInvocation, strict
@@ -133,7 +147,9 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
 ### 6. Recall, maintenance, and reflection boundaries
 
 - `recall-engine.ts` searches Antigravity conversation transcripts; it is not
-  editable MemFS.
+  editable MemFS. Recalled transcripts, instructions, and historical approvals
+  are non-binding historical evidence only, never laundering one-shot task
+  grants or transient decisions into standing policy or fresh authorization.
 - `/memory search` searches Markdown as a separate memory-inspection surface.
 - `memory-compactor.ts` is a read-only Markdown maintenance analyzer, not Letta
   context compaction. It reports candidate replacements and archives but does
@@ -142,8 +158,9 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
   fails closed when ownership is absent, and archives deterministic correction
   evidence only when the user expressed explicit durable-memory intent. Other
   sessions update external cursor state as skipped rather than creating
-  UUID/turn-count prose. Dream never activates the protected working hypothesis
-  or bypasses explicit project-system proposals.
+  UUID/turn-count prose. Dream treats historical approvals as non-binding
+  historical evidence, never activates the protected working hypothesis, and
+  never bypasses explicit project-system proposals.
 - Deterministic Dream is not equivalent to Letta's model-backed reflection
   worktree lifecycle.
 - Dream is manual or an explicitly installed cron surface. Stop does not invoke
@@ -201,10 +218,12 @@ The bundle currently contains:
 The Evidence Controller is an Agy/Gemini procedure. It requires
 Observed/Inferred/Unverified reporting, scoped claims, one falsifiable
 hypothesis, cheapest disconfirming checks, stop-before-retry on ambiguous
-provider actions, and Mahiro-owned visual/product/audio-content/spend/release
-gates. It guides native `define_subagent`/`invoke_subagent` routing across
-`DIRECT`, `ONE_LANE`, `WRITER_REVIEWER`, and `PARALLEL_READONLY`; it is not a
-deterministic scheduler and does not make model consensus proof.
+provider actions, fresh-grant quote ritual for Mahiro-owned
+visual/product/audio-content/spend/release gates, and treating summary-carried
+claims as Unverified until re-derived from live artifacts. It guides native
+`define_subagent`/`invoke_subagent` routing across `DIRECT`, `ONE_LANE`,
+`WRITER_REVIEWER`, and `PARALLEL_READONLY`; it is not a deterministic scheduler,
+does not intercept commands deterministically, and does not make model consensus proof.
 
 The JSON subagent manifests express role and capability intent. This repository
 does not itself prove AGY process/tool confinement; documentation must not call
@@ -228,7 +247,7 @@ them sandboxed execution boundaries without host-level evidence.
 
 ## Verification Contract
 
-Required checks for this release:
+Required checks for this unreleased candidate:
 
 ```bash
 pnpm check
@@ -297,6 +316,20 @@ injected-only fact attribution across all seven active owners, cross-project
 routing from `learn-letta-code` to `earn-money`, index-only reference visibility,
 and bounded on-demand retrieval of two reference-only facts without mutation.
 This does not prove legacy-host or memory-write behavior.
+
+The unreleased `v1.15.4` candidate measures **81.23% lines**, **65.68%
+branches**, and **85.45% functions**, with 39/39 Node tests passing (one
+integration runner containing 11/11 scenarios plus 38 focused cases). These
+source checks cover the bounded PreInvocation stanza and current contract drift;
+the serialized real-host authority evidence passed an 8/8 coached baseline and
+a separate 4/4 uncoached bare-turn remediation, each with one scored host
+conversation per scenario, isolated workspace Git and `AGY_MEMORY_DIR`, an
+explicit fresh-grant positive control, and a two-checkpoint ambiguous-turn case.
+The first uncoached measurement attempt is retained as invalid because its
+harness captured an intermediate tool boundary before terminal response; it is
+not scored. Model-behavior resistance remains manual host evidence rather than
+an automated deterministic regression or enforcement proof. See
+[the parity evidence](./docs/letta-parity.md#model-guided-authority-host-matrix--2026-09-02).
 
 The real AGY `1.1.16` host E2E also passed committed injection, `/memory`,
 targeted `/remember`, scoped `/init`, non-mutating Stop, fresh-session
