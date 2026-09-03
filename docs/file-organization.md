@@ -87,6 +87,9 @@ learn-letta-code/
 │   └── scripts/                             # Runtime scripts and executables
 │       ├── hook-inject-memory.sh            # Strict PreInvocation wrapper
 │       ├── hook-inject-memory.ts            # Committed-HEAD projection owner
+│       ├── hook-pre-tool-use.sh             # Strict PreToolUse wrapper
+│       ├── hook-pre-tool-use.ts             # PreToolUse entrypoint and dispatcher
+│       ├── tool-guard.ts                    # Escalate-only safety classifier (Git, dependencies, containment)
 │       ├── hook-memory-status.sh             # Strict Stop wrapper
 │       ├── hook-memory-status.ts             # Non-mutating Stop status owner
 │       ├── active-learning.ts                 # Canonical committed working-hypothesis selector

@@ -1,6 +1,6 @@
 # 🧪 Integration Scenario Report: `agy-memory-layer`
 
-**Date**: 2026-09-03 04:51:26 UTC
+**Date**: 2026-09-03 07:38:20 UTC
 **Environment**: macOS (Darwin) · Antigravity CLI 1.1.25 · Node v22.22.3
 **Storage Target**: disposable test HOME (isolated from the user's real `~/.gemini/memory/`)
 **Scope**: Integration scenarios only; aggregate Node test count and coverage come from `pnpm test` / `pnpm test:coverage` and release evidence.
@@ -15,7 +15,7 @@
 | **Total Test Scenarios** | **11** |
 | **Passed** | **11** (100%) |
 | **Failed** | **0** |
-| **Total Execution Time** | **3463 ms** |
+| **Total Execution Time** | **5150 ms** |
 
 ---
 
@@ -23,17 +23,17 @@
 
 | Test Suite | Scenario | Status | Time | Verification Evidence |
 | :--- | :--- | :---: | :---: | :--- |
-| **Hooks Contract** | PreInvocation Hook outputs valid AGY JSON schema | 🟢 PASSED | 611ms | Valid JSON schema with 1 committed-memory projection step(s). |
-| **Hooks Contract** | Stop Hook reports dirty memory without mutating Git state | 🟢 PASSED | 114ms | Verified Stop reports dirty state while preserving HEAD and the working tree. |
-| **Workspace Isolation** | Separates Project A and Project B while preserving Global User profile | 🟢 PASSED | 634ms | Project A and Project B contexts are strictly isolated; Global profile is shared 100%. |
-| **Memory Palace** | Palace generator builds interactive HTML with all live projects & git timeline | 🟢 PASSED | 482ms | Legacy HTML dashboard verified (70 KB) with two real selectable Core paths and no invented project owners. |
-| **Git Versioning** | Memory changes can be audited with git log and rolled back cleanly | 🟢 PASSED | 125ms | Successfully proved Git revert and rollback capability. Base hash: 4ea3f32 |
-| **AGY Plugin Schema** | Plugin passes 'agy plugin validate' with zero errors | 🟢 PASSED | 63ms | Native AGY plugin validation: 12 skills, 9 agents, 2 hooks processed with 0 errors. |
+| **Hooks Contract** | PreInvocation Hook outputs valid AGY JSON schema | 🟢 PASSED | 887ms | Valid JSON schema with 1 committed-memory projection step(s). |
+| **Hooks Contract** | Stop Hook reports dirty memory without mutating Git state | 🟢 PASSED | 134ms | Verified Stop reports dirty state while preserving HEAD and the working tree. |
+| **Workspace Isolation** | Separates Project A and Project B while preserving Global User profile | 🟢 PASSED | 910ms | Project A and Project B contexts are strictly isolated; Global profile is shared 100%. |
+| **Memory Palace** | Palace generator builds interactive HTML with all live projects & git timeline | 🟢 PASSED | 947ms | Legacy HTML dashboard verified (70 KB) with two real selectable Core paths and no invented project owners. |
+| **Git Versioning** | Memory changes can be audited with git log and rolled back cleanly | 🟢 PASSED | 166ms | Successfully proved Git revert and rollback capability. Base hash: 0c2c68b |
+| **AGY Plugin Schema** | Plugin passes 'agy plugin validate' with zero errors | 🟢 PASSED | 88ms | Native AGY plugin validation: 12 skills, 9 agents, 3 hooks processed with 0 errors. |
 | **Proactive Directives** | rules/AGENTS.md keeps proactive learning behind explicit lifecycle boundaries | 🟢 PASSED | 0ms | All 8 proactive and approval-aware directives verified in rules/AGENTS.md. |
-| **Codebase Scanner (/init)** | Scans repository architecture and seeds the selected project-memory baseline | 🟢 PASSED | 337ms | Scanner accurately detected React, Vite, TypeScript, Vitest, and seeded Day 1 MemFS blocks. |
-| **Memory Search Engine** | Searches across global, project, and historical learnings with ranked snippets | 🟢 PASSED | 134ms | Search engine returned 1 ranked matches in 27.05ms. |
-| **Remote Git Sync** | Manages remote URL setup and sync status cleanly | 🟢 PASSED | 431ms | Local bare-remote push/pull passed; dirty MemFS is rejected before network access. |
-| **Backup & Integrity** | Exports, verifies SHA-256 signatures, detects tampering, and restores bundle byte-for-byte | 🟢 PASSED | 532ms | All 7 backup utility tests passed, including checksum integrity and import path containment. |
+| **Codebase Scanner (/init)** | Scans repository architecture and seeds the selected project-memory baseline | 🟢 PASSED | 577ms | Scanner accurately detected React, Vite, TypeScript, Vitest, and seeded Day 1 MemFS blocks. |
+| **Memory Search Engine** | Searches across global, project, and historical learnings with ranked snippets | 🟢 PASSED | 206ms | Search engine returned 1 ranked matches in 32.94ms. |
+| **Remote Git Sync** | Manages remote URL setup and sync status cleanly | 🟢 PASSED | 556ms | Local bare-remote push/pull passed; dirty MemFS is rejected before network access. |
+| **Backup & Integrity** | Exports, verifies SHA-256 signatures, detects tampering, and restores bundle byte-for-byte | 🟢 PASSED | 679ms | All 7 backup utility tests passed, including checksum integrity and import path containment. |
 
 ---
 
@@ -55,4 +55,4 @@
    - Targeted writers reject unrelated dirty paths; Stop preserves both `HEAD` and dirty working-tree content while reporting status.
 
 6. **Native Tooling Compatibility**:
-   - Verified with `agy plugin validate` (12 skills, 9 declarative agent roles, 2 hooks active).
+   - Verified with `agy plugin validate` (12 skills, 9 declarative agent roles, 3 hooks active).

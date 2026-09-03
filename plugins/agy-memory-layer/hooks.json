@@ -16,5 +16,19 @@
         "timeout": 10
       }
     ]
+  },
+  "tool-guard": {
+    "PreToolUse": [
+      {
+        "matcher": "run_command|write_to_file|replace_file_content|multi_replace_file_content|define_subagent|manage_task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/hook-pre-tool-use.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
   }
 }

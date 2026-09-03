@@ -45,7 +45,7 @@ type GitResult = {
   stderr: string
 }
 
-const isWithin = (root: string, candidate: string): boolean => {
+export const isWithin = (root: string, candidate: string): boolean => {
   const relative = path.relative(root, candidate)
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
 }

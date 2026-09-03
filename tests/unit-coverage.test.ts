@@ -1,6 +1,7 @@
 import * as assert from 'node:assert'
 import { execFileSync, spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import { describe, it } from 'node:test'
 import { TEST_ENVIRONMENT, TEST_MEMORY_ROOT, TEST_TEMP_ROOT } from './test-environment.ts'
@@ -2059,14 +2060,14 @@ describe('Unit Coverage Extensions', () => {
     const pluginJson = JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, 'plugin.json'), 'utf8'))
 
     // 1. Released version intent and mirror equality
-    assert.strictEqual(packageJson.version, '1.15.6')
-    assert.strictEqual(pluginJson.version, '1.15.6')
+    assert.strictEqual(packageJson.version, '1.16.0')
+    assert.strictEqual(pluginJson.version, '1.16.0')
     assert.strictEqual(packageJson.version, pluginJson.version)
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(contractDoc.includes('**Package version:** `1.15.6`'), true)
-    assert.strictEqual(contractDoc.includes('Released as `v1.15.6` on 2026-09-03'), true)
+    assert.strictEqual(contractDoc.includes('**Package version:** `1.16.0`'), true)
+    assert.strictEqual(contractDoc.includes('Released as `v1.16.0` on 2026-09-03'), true)
     assert.strictEqual(
       contractDoc.includes(
         'Every schema-valid invocation that runs to completion within the host hook',
@@ -2144,7 +2145,7 @@ describe('Unit Coverage Extensions', () => {
       versionRuleSection.includes('plugins/agy-memory-layer/scripts/palace-generator.ts'),
       false,
     )
-    assert.strictEqual(rootAgentsDoc.includes('**40 focused Node test-runner cases**'), true)
+    assert.strictEqual(rootAgentsDoc.includes('**41 focused Node test-runner cases**'), true)
 
     // 6. Bounded real-host evidence remains scoped and current
     const hostEvidenceDoc = parityDoc
@@ -2190,5 +2191,124 @@ describe('Unit Coverage Extensions', () => {
     await new Promise((resolve) => setTimeout(resolve, 50))
     clearInterval(timer)
     assert.strictEqual(orphanHandled, true)
+  })
+
+  it('tests PreToolUse tool-guard classifier, command parsing, and safety gates', async () => {
+    const {
+      classifyCommandLine,
+      classifyWriteTarget,
+      classifySubagentDefinition,
+      evaluatePreToolUse,
+      splitCommandSegments,
+    } = await import(path.join(SCRIPTS_DIR, 'tool-guard.ts'))
+
+    // 1. Command segment splitting
+    const segments = splitCommandSegments('git status; pnpm test && git log | grep foo')
+    assert.strictEqual(segments.length, 4)
+    assert.strictEqual(segments[0], 'git status')
+    assert.strictEqual(segments[1], 'pnpm test')
+    assert.strictEqual(segments[2], 'git log')
+    assert.strictEqual(segments[3], 'grep foo')
+
+    // 2. Destructive Git commands -> deny
+    assert.strictEqual(classifyCommandLine('git reset --hard HEAD~1').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('git clean -fd').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('git push --force origin main').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('git push origin +main').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('git checkout -- .').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('git checkout .').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('git restore .').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('git branch -D feat').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('git branch --delete --force feat').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('git reflog expire --expire=now').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('git update-ref -d refs/heads/feat').decision, 'deny')
+
+    // 3. Multi-segment severity: deny outranks force_ask
+    assert.strictEqual(
+      classifyCommandLine('git commit -m "fix"; git reset --hard').decision,
+      'deny',
+    )
+    assert.strictEqual(classifyCommandLine('echo ok; git push --force').decision, 'deny')
+
+    // 4. State-altering Git commands -> force_ask
+    assert.strictEqual(classifyCommandLine('git commit -m "fix"').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('git push origin main').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('git checkout -b new-branch').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('git stash').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('git merge feat').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('git pull').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('git revert HEAD').decision, 'force_ask')
+
+    // 5. Read-only Git commands -> ask
+    assert.strictEqual(classifyCommandLine('git status').decision, 'ask')
+    assert.strictEqual(classifyCommandLine('git diff').decision, 'ask')
+    assert.strictEqual(classifyCommandLine('git log -n 5').decision, 'ask')
+    assert.strictEqual(classifyCommandLine('git clean -n').decision, 'ask')
+
+    // 6. Laundering resilience (wrappers, env vars, alias, case-insensitivity)
+    assert.strictEqual(classifyCommandLine('Git commit -m "capital"').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('env git commit -m "bypass"').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('PAGER=cat git push').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('git -c Alias.ci=commit ci').decision, 'force_ask')
+    assert.strictEqual(
+      classifyCommandLine("GIT_CONFIG_PARAMETERS='alias.ci=commit' git ci").decision,
+      'force_ask',
+    )
+    assert.strictEqual(classifyCommandLine('eval "git commit"').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('echo `whoami`').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('bash -c "git commit"').decision, 'force_ask')
+
+    // 7. Shell manipulation of MemFS and .git
+    assert.strictEqual(classifyCommandLine('echo foo > ~/.gemini/memory/test.md').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('rm -rf ~/.gemini/memory').decision, 'deny')
+    assert.strictEqual(classifyCommandLine('rm -rf .git').decision, 'deny')
+
+    // 8. Package manager commands -> force_ask for install, ask for bare install
+    assert.strictEqual(classifyCommandLine('pnpm add -E lodash').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('pnpm --filter web add lodash').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('npm install express').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('cargo add tokio').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('go get github.com/foo/bar').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('pnpm install').decision, 'ask')
+    assert.strictEqual(classifyCommandLine('pnpm install --frozen-lockfile').decision, 'ask')
+
+    // 9. Write target classifications & MemFS containment
+    const memRoot = path.join(os.homedir(), '.gemini', 'memory')
+    assert.strictEqual(
+      classifyWriteTarget(path.join(memRoot, 'system', 'test.md'), memRoot).decision,
+      'deny',
+    )
+    assert.strictEqual(
+      classifyWriteTarget('~/.gemini/memory/system/test.md', memRoot).decision,
+      'deny',
+    )
+    assert.strictEqual(classifyWriteTarget('/repo/.git/HEAD').decision, 'deny')
+    assert.strictEqual(classifyWriteTarget('/repo/package.json').decision, 'force_ask')
+    assert.strictEqual(classifyWriteTarget('/repo/pnpm-lock.yaml').decision, 'force_ask')
+    assert.strictEqual(classifyWriteTarget('/repo/src/app.ts').decision, 'ask')
+
+    // 10. Subagent definition boundaries
+    assert.strictEqual(classifySubagentDefinition('repo_scout_agent', true, false).decision, 'deny')
+    assert.strictEqual(classifySubagentDefinition('repo_scout_agent', false, true).decision, 'deny')
+    assert.strictEqual(classifySubagentDefinition('repo_scout_agent', false, false).decision, 'ask')
+
+    // 11. EvaluatePreToolUse end-to-end payload handling
+    const result = evaluatePreToolUse({
+      toolCall: {
+        name: 'run_command',
+        args: { CommandLine: 'git reset --hard' },
+      },
+    })
+    assert.strictEqual(result.decision, 'deny')
+    assert.ok(result.reason)
+
+    // 12. EvaluatePreToolUse multi_replace_file_content target
+    const multiResult = evaluatePreToolUse({
+      toolCall: {
+        name: 'multi_replace_file_content',
+        args: { TargetFile: path.join(memRoot, 'system', 'test.md') },
+      },
+    })
+    assert.strictEqual(multiResult.decision, 'deny')
   })
 })
