@@ -1,6 +1,6 @@
 {
   "name": "agy-memory-layer",
-  "version": "1.15.4",
+  "version": "1.15.5",
   "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=22"
@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "tsc --noEmit && node --experimental-strip-types --test --test-concurrency=1 tests/layered-memory.test.ts tests/run-test-suite.ts tests/unit-coverage.test.ts",
     "test:coverage": "tsc --noEmit && node --experimental-strip-types --experimental-test-coverage --test --test-concurrency=1 tests/layered-memory.test.ts tests/run-test-suite.ts tests/unit-coverage.test.ts",
-    "check": "tsc --noEmit && biome check .",
+    "check": "tsc --noEmit && node --experimental-strip-types scripts/check-layer-boundaries.ts && biome check .",
+    "check:boundaries": "node --experimental-strip-types scripts/check-layer-boundaries.ts",
     "lint": "biome lint .",
     "format": "biome format --write .",
     "fix": "biome check --write .",

@@ -119,3 +119,19 @@ export const withMemoryWriteLock = <T>(
     releaseMemoryWriteLock(lock)
   }
 }
+
+export const reclaimStaleMemoryWriteLock = (memoryRoot: string): boolean => {
+  const stateRoot = getMemoryStateRoot(memoryRoot)
+  const lockPath = path.join(stateRoot, 'locks', 'memory-write.lock')
+  if (!fs.existsSync(lockPath)) return false
+  const owner = readLockOwner(lockPath)
+  if (!owner || !isProcessAlive(owner.pid)) {
+    try {
+      fs.unlinkSync(lockPath)
+      return true
+    } catch {
+      return false
+    }
+  }
+  return false
+}

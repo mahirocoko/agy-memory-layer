@@ -102,6 +102,30 @@ export function estimateTokens(text: string): number {
 }
 
 /**
+ * Progressive middle-truncation preserving head (user intent) and tail (final outcome)
+ * while dropping low-signal middle text when exceeding budget.
+ */
+export function middleTruncateText(
+  text: string,
+  budgetChars: number,
+  headFrac: number = 0.3,
+  tailFrac: number = 0.3,
+): string {
+  if (budgetChars <= 0 || text.length <= budgetChars) return text
+  const headLength = Math.max(0, Math.floor(budgetChars * headFrac))
+  let tailLength = Math.max(0, Math.floor(budgetChars * tailFrac))
+  if (headLength + tailLength > budgetChars) {
+    tailLength = Math.max(0, budgetChars - headLength)
+  }
+
+  const head = text.slice(0, headLength)
+  const tail = tailLength > 0 ? text.slice(-tailLength) : ''
+  const dropped = Math.max(0, text.length - (head.length + tail.length))
+  const marker = `\n[TRUNCATED: dropped ${dropped} middle chars due to context budget]\n`
+  return `${head}${marker}${tail}`
+}
+
+/**
  * Normalizes and deduplicates Markdown bullet points and directives
  */
 export function compactMarkdownContent(

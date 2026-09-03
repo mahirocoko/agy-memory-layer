@@ -7,6 +7,7 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { createIsolatedWorktree, type IsolatedWorktree } from './worktree-manager.ts'
 
 export type SubagentModelTier = 'inherit' | 'flash_lite' | 'flash' | 'pro'
 
@@ -73,6 +74,33 @@ export function getSubagent(name: string): ResolvedSubagent | null {
   return (
     all.find((a) => a.name === name || a.role.toLowerCase().includes(name.toLowerCase())) || null
   )
+}
+
+export type SubagentExecutionPlan = {
+  subagent: ResolvedSubagent
+  worktree?: IsolatedWorktree
+}
+
+export function prepareSubagentExecution(
+  subagentName: string,
+  options: {
+    repoDir?: string
+    isolateWorktree?: boolean
+  } = {},
+): SubagentExecutionPlan {
+  const subagent = getSubagent(subagentName)
+  if (!subagent) {
+    throw new Error(`Subagent "${subagentName}" not found.`)
+  }
+
+  if (options.isolateWorktree && subagent.enableWriteTools) {
+    const worktree = createIsolatedWorktree(options.repoDir || process.cwd(), {
+      subagentId: subagent.name,
+    })
+    return { subagent, worktree }
+  }
+
+  return { subagent }
 }
 
 if (process.argv[1]?.endsWith('agent-launcher.ts')) {

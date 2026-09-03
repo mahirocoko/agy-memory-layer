@@ -38,7 +38,9 @@ const { getWorkingHypothesisPath, inspectCommittedWorkingHypothesis } = await im
 const { getWorkspaceRootSlug, readConversationWorkspaceMap, resolveProjectSlug } = await import(
   path.join(SCRIPTS_DIR, 'workspace-identity.ts')
 )
-const { listSubagents, getSubagent } = await import(path.join(SCRIPTS_DIR, 'agent-launcher.ts'))
+const { listSubagents, getSubagent, prepareSubagentExecution } = await import(
+  path.join(SCRIPTS_DIR, 'agent-launcher.ts')
+)
 const { createIsolatedWorktree, getWorktreeDiff, cleanupWorktree, listActiveWorktrees } =
   await import(path.join(SCRIPTS_DIR, 'worktree-manager.ts'))
 const {
@@ -51,8 +53,13 @@ const {
   reviewProposal,
 } = await import(path.join(SCRIPTS_DIR, 'memory-approval.ts'))
 const { createTsInspector } = await import(path.join(SCRIPTS_DIR, 'ts-inspector.ts'))
-const { estimateTokens, compactMarkdownContent, compactProjectMemory, runAutoCompaction } =
-  await import(path.join(SCRIPTS_DIR, 'memory-compactor.ts'))
+const {
+  estimateTokens,
+  middleTruncateText,
+  compactMarkdownContent,
+  compactProjectMemory,
+  runAutoCompaction,
+} = await import(path.join(SCRIPTS_DIR, 'memory-compactor.ts'))
 const { reviewMemoryCuration } = await import(path.join(SCRIPTS_DIR, 'memory-curation.ts'))
 const { scanAndSynthesizeSkills, generateDraftSkill } = await import(
   path.join(SCRIPTS_DIR, 'skill-synthesizer.ts')
@@ -803,6 +810,10 @@ describe('Unit Coverage Extensions', () => {
 
     const nonExistent = getSubagent('non_existent_random_agent_xyz')
     assert.strictEqual(nonExistent, null)
+
+    const execPlan = prepareSubagentExecution('recall_agent', { isolateWorktree: false })
+    assert.strictEqual(execPlan.subagent.name, 'recall_agent')
+    assert.strictEqual(execPlan.worktree, undefined)
   })
 
   it('keeps the Evidence Controller Agy-native, model-routed, and human-gated', () => {
@@ -1245,6 +1256,18 @@ describe('Unit Coverage Extensions', () => {
     const est = estimateTokens('Hello world! This is a test markdown content.')
     assert.strictEqual(est > 5, true)
     assert.strictEqual(estimateTokens(''), 0)
+
+    // 1b. Progressive middle-truncation
+    const shortText = 'Short text'
+    assert.strictEqual(middleTruncateText(shortText, 50), shortText)
+    assert.strictEqual(middleTruncateText(shortText, 0), shortText)
+
+    const longText = `HEAD_START_${'A'.repeat(100)}_TAIL_END`
+    const truncated = middleTruncateText(longText, 40, 0.3, 0.3)
+    assert.strictEqual(truncated.includes('[TRUNCATED: dropped'), true)
+    assert.strictEqual(truncated.length < longText.length, true)
+    assert.strictEqual(truncated.startsWith('HEAD_START_'), true)
+    assert.strictEqual(truncated.endsWith('_TAIL_END'), true)
 
     // 2. Markdown deduplication
     const sampleMd = `
@@ -2021,14 +2044,14 @@ describe('Unit Coverage Extensions', () => {
     const pluginJson = JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, 'plugin.json'), 'utf8'))
 
     // 1. Released version intent and mirror equality
-    assert.strictEqual(packageJson.version, '1.15.4')
-    assert.strictEqual(pluginJson.version, '1.15.4')
+    assert.strictEqual(packageJson.version, '1.15.5')
+    assert.strictEqual(pluginJson.version, '1.15.5')
     assert.strictEqual(packageJson.version, pluginJson.version)
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(contractDoc.includes('**Package version:** `1.15.4`'), true)
-    assert.strictEqual(contractDoc.includes('Released as `v1.15.4` on 2026-09-02'), true)
+    assert.strictEqual(contractDoc.includes('**Package version:** `1.15.5`'), true)
+    assert.strictEqual(contractDoc.includes('Released as `v1.15.5` on 2026-09-03'), true)
     assert.strictEqual(
       contractDoc.includes(
         'Every schema-valid invocation that runs to completion within the host hook',
@@ -2066,8 +2089,8 @@ describe('Unit Coverage Extensions', () => {
 
     // 3. README.md current + prior-release distinction
     const readmeDoc = fs.readFileSync(path.join(ROOT_DIR, 'README.md'), 'utf8')
-    assert.strictEqual(readmeDoc.includes('**v1.15.4 (Latest Release):**'), true)
-    assert.strictEqual(readmeDoc.includes('**v1.15.3 (Prior Release):**'), true)
+    assert.strictEqual(readmeDoc.includes('**v1.15.5 (Latest Release):**'), true)
+    assert.strictEqual(readmeDoc.includes('**v1.15.4 (Prior Release):**'), true)
     assert.strictEqual(readmeDoc.includes('| Metric | v1.15.4 release |'), true)
     assert.strictEqual(readmeDoc.includes('| Lines | **81.26%** |'), true)
     assert.strictEqual(readmeDoc.includes('| Branches | **65.86%** |'), true)
@@ -2128,5 +2151,29 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(hostEvidenceDoc.includes('Double compaction'), true)
     assert.strictEqual(hostEvidenceDoc.includes('model-guided compaction resistance'), true)
     assert.strictEqual(hostEvidenceDoc.includes('not deterministic command interception'), true)
+  })
+
+  it('tests process liveness and orphan detection utilities', async () => {
+    const { isProcessAlive, isCurrentProcessOrphan, startOrphanDetection } = await import(
+      path.join(SCRIPTS_DIR, 'process-liveness.ts')
+    )
+    assert.strictEqual(isProcessAlive(process.pid), true)
+    assert.strictEqual(isProcessAlive(-1), false)
+    assert.strictEqual(isProcessAlive(999_999_999), false)
+
+    assert.strictEqual(typeof isCurrentProcessOrphan(), 'boolean')
+    assert.strictEqual(isCurrentProcessOrphan(999_999_999), true)
+
+    let orphanHandled = false
+    const timer = startOrphanDetection({
+      parentPid: 999_999_999,
+      intervalMs: 10,
+      onOrphan: () => {
+        orphanHandled = true
+      },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    clearInterval(timer)
+    assert.strictEqual(orphanHandled, true)
   })
 })

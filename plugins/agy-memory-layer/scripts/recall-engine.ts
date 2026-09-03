@@ -8,6 +8,7 @@
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { middleTruncateText } from './memory-compactor.ts'
 
 export type RecallSearchMode = 'hybrid' | 'semantic' | 'keyword'
 
@@ -242,7 +243,7 @@ export async function searchRecall(
     const bm25Norm = Math.min(1.0, bm25Raw / 15.0)
 
     // 2. Vector Semantic Cosine Score
-    const docVector = buildVectorProfile(doc.text.slice(0, 8000))
+    const docVector = buildVectorProfile(middleTruncateText(doc.text, 8000))
     const vectorScore = cosineSimilarity(queryVector, docVector)
 
     // 3. Score Fusion based on Mode

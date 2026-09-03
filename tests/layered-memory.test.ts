@@ -25,6 +25,7 @@ import {
 } from '../plugins/agy-memory-layer/scripts/memory-curation.ts'
 import {
   acquireMemoryWriteLock,
+  reclaimStaleMemoryWriteLock,
   releaseMemoryWriteLock,
 } from '../plugins/agy-memory-layer/scripts/memory-write-lock.ts'
 
@@ -755,7 +756,9 @@ describe('lossless layered memory migration', () => {
         /Stale memory write lock.*remove .* only after verifying/,
       )
       assert.strictEqual(fs.existsSync(staleLockPath), true)
-      fs.unlinkSync(staleLockPath)
+      assert.strictEqual(reclaimStaleMemoryWriteLock(root), true)
+      assert.strictEqual(fs.existsSync(staleLockPath), false)
+      assert.strictEqual(reclaimStaleMemoryWriteLock(root), false)
     } finally {
       fs.rmSync(root, { recursive: true, force: true })
       fs.rmSync(stateRoot, { recursive: true, force: true })

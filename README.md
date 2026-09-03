@@ -9,7 +9,13 @@
 > **Evidence-Controlled Agy Delegation, Committed Git-Backed Memory, and Scoped Correction Recall for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
 
-> **v1.15.4 (Latest Release):** Model-guided authority boundary and
+> **v1.15.5 (Latest Release):** Progressive middle-truncation for semantic recall
+> and conversation extraction, process resilience with background daemon orphan
+> detection, static AST layer boundary and strict type convention linter in CI,
+> and subagent isolated worktree integration. Active MemFS memory budget consolidated
+> to 1,203 tokens, eliminating budget notice warnings.
+
+> **v1.15.4 (Prior Release):** Model-guided authority boundary and
 > anti-laundering stanza emitted first whenever a schema-valid PreInvocation
 > hook completes, canonical authority doctrine across plugin rules, skills, and
 > authority-sensitive subagent prompts,
@@ -18,12 +24,6 @@
 > A serialized real-Agy authority matrix passed an 8/8 coached baseline and a
 > separate 4/4 uncoached bare-turn remediation with one scored host conversation
 > per scenario; see the [parity evidence](./docs/letta-parity.md#model-guided-authority-host-matrix--2026-09-02).
-
-> **v1.15.3 (Prior Release):** focused layered memory, bounded reference indexing,
-> provenance-preserving curation, a hash-confirmed legacy
-> migration/rollback path. Upgrading the plugin does not automatically migrate
-> an existing MemFS; migration remains an explicit reviewed operation. Memory
-> Palace now renders the committed layered Human subtree as individual files.
 
 ---
 

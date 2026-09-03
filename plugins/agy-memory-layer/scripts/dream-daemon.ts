@@ -10,6 +10,7 @@
 import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { middleTruncateText } from './memory-compactor.ts'
 import {
   assertMemoryRepositoryCleanForWrite,
   commitMemoryPaths,
@@ -206,7 +207,8 @@ export function extractExplicitDurableLessons(logPath: string): string[] {
       const content = step.content || ''
 
       if (step.type === 'USER_INPUT') {
-        const clean = content
+        const rawContent = middleTruncateText(content, 4000)
+        const clean = rawContent
           .replace(/<USER_REQUEST>([\s\S]*?)<\/USER_REQUEST>/, '$1')
           .replace(/\s+/g, ' ')
           .trim()
