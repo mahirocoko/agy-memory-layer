@@ -357,7 +357,7 @@ await runTest('AGY Plugin Schema', "Plugin passes 'agy plugin validate' with zer
     throw new Error(`Validation output did not show success: ${output}`)
   }
 
-  return 'Native AGY plugin validation: 12 skills, 9 agents, 3 hooks processed with 0 errors.'
+  return 'Native AGY plugin validation: 14 skills, 9 agents, 3 hooks processed with 0 errors.'
 })
 
 // -----------------------------------------------------------------------------

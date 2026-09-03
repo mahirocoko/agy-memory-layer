@@ -16,7 +16,7 @@ Host Workspace (learn-letta-code)
   │   ├── agents/                  (9 declarative subagent role manifests)
   │   ├── prompts/                 (Prompt Warehouse: system, persona, subagents)
   │   ├── rules/AGENTS.md          (In-Context Autonomous Directives)
-  │   ├── skills/*/SKILL.md        (12 Slash Command Skills)
+  │   ├── skills/*/SKILL.md        (14 Slash Command Skills)
   │   └── scripts/*.ts, *.sh       (Lifecycle Hooks, Daemon & Palace Generator)
   │
   └── ~/.gemini/memory/            (Independent Git MemFS Repository)
@@ -72,7 +72,7 @@ pnpm test
 ```
 
 Expected output for the current source: **11/11 integration scenarios**
-in `TEST_REPORT.md` and **41 focused Node test-runner cases** passing. Refresh
+in `TEST_REPORT.md` and **45 focused Node test-runner cases** passing. Refresh
 the exact count and coverage after the final full run; do not infer release or
 live-migration readiness from source tests alone.
 - PreInvocation hook schema validation
@@ -105,14 +105,14 @@ also covers them.
 
 ## 📂 Documentation Family Map
 
-Detailed operational documentation is split into modular files under [`docs/`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/):
+Detailed operational documentation is split into modular files under [`docs/`](docs/):
 
-- [`docs/onboarding.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/onboarding.md) — Day 1 setup, installation lifecycle, and environment verification.
-- [`docs/project-overview.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/project-overview.md) — Deep architectural overview and MemFS design.
-- [`docs/letta-parity.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/letta-parity.md) — Canonical Letta behavior → Agy adaptation → implementation status matrix.
-- [`docs/development-commands.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/development-commands.md) — Script runners, testing, and daemon commands.
-- [`docs/file-organization.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/file-organization.md) — Directory layout and responsibility matrix.
-- [`docs/best-practices.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/best-practices.md) — Coding conventions, non-blocking hooks, and memory hygiene.
-- [`docs/commit-guide.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/commit-guide.md) — Review workflow, commit formatting, and release hygiene.
-- [`docs/code-style/typescript.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/code-style/typescript.md) — Strict `type` alias conventions and error boundaries.
-- [`docs/patterns/services-pattern.md`](file:///Users/mahiro/Git/me/sandbox/learn-letta-code/docs/patterns/services-pattern.md) — Hook, daemon, and subagent launcher service patterns.
+- [`docs/onboarding.md`](docs/onboarding.md) — Day 1 setup, installation lifecycle, and environment verification.
+- [`docs/project-overview.md`](docs/project-overview.md) — Deep architectural overview and MemFS design.
+- [`docs/letta-parity.md`](docs/letta-parity.md) — Canonical Letta behavior → Agy adaptation → implementation status matrix.
+- [`docs/development-commands.md`](docs/development-commands.md) — Script runners, testing, and daemon commands.
+- [`docs/file-organization.md`](docs/file-organization.md) — Directory layout and responsibility matrix.
+- [`docs/best-practices.md`](docs/best-practices.md) — Coding conventions, non-blocking hooks, and memory hygiene.
+- [`docs/commit-guide.md`](docs/commit-guide.md) — Review workflow, commit formatting, and release hygiene.
+- [`docs/code-style/typescript.md`](docs/code-style/typescript.md) — Strict `type` alias conventions and error boundaries.
+- [`docs/patterns/services-pattern.md`](docs/patterns/services-pattern.md) — Hook, daemon, and subagent launcher service patterns.
