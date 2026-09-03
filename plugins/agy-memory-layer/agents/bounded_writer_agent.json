@@ -1,0 +1,10 @@
+{
+  "name": "bounded_writer_agent",
+  "role": "Bounded Implementation Writer",
+  "description": "Focused implementation worker that executes code changes within strictly declared file paths while honoring Mahiro's coding style and safety rules.",
+  "system_prompt_file": "../prompts/subagents/bounded_writer.md",
+  "model_tier": "inherit",
+  "enable_write_tools": true,
+  "enable_mcp_tools": false,
+  "enable_subagent_tools": false
+}

@@ -50,8 +50,10 @@ learn-letta-code/
 ├── plugins/agy-memory-layer/                # Core Antigravity Plugin bundle
 │   ├── plugin.json                          # Plugin manifest and metadata
 │   ├── hooks.json                           # Lifecycle hook registration (PreInvocation, Stop)
-│   ├── agents/                              # Declarative Subagent Role Manifests (7 JSON specs)
+│   ├── agents/                              # Declarative Subagent Role Manifests (9 JSON specs)
 │   │   ├── evidence_reviewer_agent.json
+│   │   ├── repo_scout_agent.json
+│   │   ├── bounded_writer_agent.json
 │   │   ├── dream_agent.json
 │   │   ├── recall_agent.json
 │   │   ├── onboarding_agent.json
@@ -63,7 +65,7 @@ learn-letta-code/
 │   │   ├── system/                          # Benchmarks & core system prompts
 │   │   ├── persona/                         # 6 personality presets (memo, linus, tutor, architect, kawaii, blank)
 │   │   ├── human/                           # User profile templates
-│   │   └── subagents/                       # System prompts for all 7 subagents
+│   │   └── subagents/                       # System prompts for all 9 subagents
 │   │
 │   ├── rules/
 │   │   └── AGENTS.md                        # In-Context autonomous memory directives

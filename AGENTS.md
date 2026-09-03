@@ -13,7 +13,7 @@ Host Workspace (learn-letta-code)
   │
   ├── plugins/agy-memory-layer/ (Plugin Bundle symlinked to ~/.gemini/antigravity-cli/plugins/)
   │   ├── plugin.json & hooks.json
-  │   ├── agents/                  (7 declarative subagent role manifests)
+  │   ├── agents/                  (9 declarative subagent role manifests)
   │   ├── prompts/                 (Prompt Warehouse: system, persona, subagents)
   │   ├── rules/AGENTS.md          (In-Context Autonomous Directives)
   │   ├── skills/*/SKILL.md        (12 Slash Command Skills)
@@ -72,7 +72,7 @@ pnpm test
 ```
 
 Expected output for the current source: **11/11 integration scenarios**
-in `TEST_REPORT.md` and **38 focused Node test-runner cases** passing. Refresh
+in `TEST_REPORT.md` and **40 focused Node test-runner cases** passing. Refresh
 the exact count and coverage after the final full run; do not infer release or
 live-migration readiness from source tests alone.
 - PreInvocation hook schema validation

@@ -38,7 +38,7 @@ Antigravity CLI
   ├── Active conversation / explicit skills
   │     ├── Evidence Controller direct/delegated routing
   │     ├── contained targeted memory writers
-  │     ├── 7 declarative subagent role manifests
+  │     ├── 9 declarative subagent role manifests
   │     └── recall / palace / doctor / sync utilities
   │
   └── Stop

@@ -27,13 +27,15 @@
 
 ---
 
-## 🤖 Seven Declarative Subagent Roles
+## 🤖 Nine Declarative Subagent Roles
 
-`agy-memory-layer` ships seven Agy role manifests. They describe intended model and tool capabilities; this repository does not itself prove host-level process or tool confinement. See [`docs/letta-parity.md`](./docs/letta-parity.md) for the source-backed parity boundary.
+`agy-memory-layer` ships nine Agy role manifests. They describe intended model and tool capabilities; this repository does not itself prove host-level process or tool confinement. See [`docs/letta-parity.md`](./docs/letta-parity.md) for the source-backed parity boundary.
 
 | Subagent & Manifest | Role & Responsibilities | Model | Declared Capability Intent |
 | :--- | :--- | :---: | :---: |
-| **`evidence_reviewer_agent`**<br/>↳ [`evidence_reviewer.md`](./plugins/agy-memory-layer/prompts/subagents/evidence_reviewer.md) | **Fresh Evidence Falsification Reviewer**<br/>Independently tries to disprove consequential claims with scoped deterministic evidence. | `flash` | `Read-only` |
+| **`evidence_reviewer_agent`**<br/>↳ [`evidence_reviewer.md`](./plugins/agy-memory-layer/prompts/subagents/evidence_reviewer.md) | **Fresh Evidence Falsification Reviewer**<br/>Independently tries to disprove consequential claims with unbounded whole-repo read-only search and deterministic checks. | `flash` | `Read-only` |
+| **`repo_scout_agent`**<br/>↳ [`repo_scout.md`](./plugins/agy-memory-layer/prompts/subagents/repo_scout.md) | **Repository & Evidence Scout**<br/>Fast read-only explorer that maps codebase reality, conventions, and target anchors before implementation. | `flash` | `Read-only` |
+| **`bounded_writer_agent`**<br/>↳ [`bounded_writer.md`](./plugins/agy-memory-layer/prompts/subagents/bounded_writer.md) | **Bounded Implementation Writer**<br/>Focused worker that executes code changes within strictly declared file paths and 2-strike repair budget. | `inherit` | `Write` (Scoped) |
 | **`dream_agent`**<br/>↳ [`dream_subagent.md`](./plugins/agy-memory-layer/prompts/subagents/dream_subagent.md) | **Dream Reflection Subagent**<br/>Analyzes transcripts, captures user preferences (*The Annoyance Rule*), and updates MemFS. | `inherit` | `Write` (MemFS) |
 | **`recall_agent`**<br/>↳ [`recall_subagent.md`](./plugins/agy-memory-layer/prompts/subagents/recall_subagent.md) | **Episodic Recall Specialist**<br/>Searches available Antigravity transcripts via hybrid local similarity. | `flash` | `Read-only` |
 | **`onboarding_agent`**<br/>↳ [`onboarding.md`](./plugins/agy-memory-layer/prompts/subagents/onboarding.md) | **Codebase Onboarding Specialist**<br/>Explores repositories on Day 1 to bootstrap focused project-system owners. | `flash` | `Write` (MemFS) |

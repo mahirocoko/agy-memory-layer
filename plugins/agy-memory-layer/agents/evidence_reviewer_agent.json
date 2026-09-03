@@ -1,7 +1,7 @@
 {
   "name": "evidence_reviewer_agent",
   "role": "Fresh Evidence Falsification Reviewer",
-  "description": "Independently attempts to disprove a consequential Agy claim using only the supplied scope and current deterministic evidence.",
+  "description": "Independently attempts to disprove a consequential Agy claim using whole-repo read-only search and deterministic evidence.",
   "system_prompt_file": "../prompts/subagents/evidence_reviewer.md",
   "model_tier": "flash",
   "enable_write_tools": false,

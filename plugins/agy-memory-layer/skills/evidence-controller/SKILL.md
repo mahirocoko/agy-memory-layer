@@ -70,10 +70,13 @@ Two escalation conditions are hard delegation triggers for consequential claims:
 - the same repair hypothesis has failed twice; or
 - static checks pass while the required runtime still fails.
 
-When either is present and native subagent tools are available, use the bundled reviewer
-specification to `define_subagent` with the type name `evidence_reviewer_agent`, then
-`invoke_subagent` as at least one fresh read-only falsification lane (`ONE_LANE` or
-`WRITER_REVIEWER`). A provider stop gate still blocks submit/retry, but it does not block a child
+When either is present and native subagent tools are available, use the bundled subagent
+specifications to `define_subagent` (or invoke existing manifests):
+- For `ONE_LANE` exploratory scoping, use `repo_scout_agent` (read-only mapping).
+- For `WRITER_REVIEWER`, use `bounded_writer_agent` as the scoped writer lane and `evidence_reviewer_agent` as at least one fresh read-only falsification lane (`ONE_LANE` or `WRITER_REVIEWER`).
+- For stand-alone falsification, invoke `evidence_reviewer_agent` as at least one fresh read-only lane.
+
+A provider stop gate still blocks submit/retry, but it does not block a child
 from independently reviewing the supplied evidence. Do not call the final route `DIRECT` merely
 because the facts are already summarized.
 

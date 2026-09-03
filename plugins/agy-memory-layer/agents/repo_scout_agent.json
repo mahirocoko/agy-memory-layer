@@ -1,0 +1,10 @@
+{
+  "name": "repo_scout_agent",
+  "role": "Repository & Evidence Scout",
+  "description": "Fast read-only explorer that maps codebase reality, file locations, conventions, and entry points before implementation begins.",
+  "system_prompt_file": "../prompts/subagents/repo_scout.md",
+  "model_tier": "flash",
+  "enable_write_tools": false,
+  "enable_mcp_tools": false,
+  "enable_subagent_tools": false
+}

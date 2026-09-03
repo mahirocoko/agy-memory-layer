@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.15.5`
+**Package version:** `1.15.6`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.15.5` on 2026-09-03
+**Release state:** Released as `v1.15.6` on 2026-09-03
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -207,7 +207,7 @@ Disposable evidence for the exact current live plan is recorded in
 The bundle currently contains:
 
 - 12 skills, including the Agy-native Evidence Controller;
-- 7 declarative subagent role manifests, including a fresh read-only evidence reviewer;
+- 9 declarative subagent role manifests, including a fresh read-only evidence reviewer, repository scout, and bounded implementation writer;
 - 2 lifecycle hooks (`PreInvocation`, `Stop`);
 - TypeScript source executed with Node 22+ type stripping;
 - Evidence Controller routing, Memory Palace, backup/restore, recall, archived

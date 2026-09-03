@@ -808,6 +808,21 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(evidenceReviewer?.systemPrompt.includes('Observed'), true)
     assert.strictEqual(recallAgent?.systemPrompt.length > 0, true)
 
+    const repoScout = getSubagent('repo_scout_agent')
+    assert.strictEqual(Boolean(repoScout), true)
+    assert.strictEqual(repoScout?.modelTier, 'flash')
+    assert.strictEqual(repoScout?.enableWriteTools, false)
+    assert.strictEqual(repoScout?.enableSubagentTools, false)
+    assert.strictEqual(repoScout?.systemPrompt.includes('Repository & Evidence Scout'), true)
+
+    const boundedWriter = getSubagent('bounded_writer_agent')
+    assert.strictEqual(Boolean(boundedWriter), true)
+    assert.strictEqual(boundedWriter?.modelTier, 'inherit')
+    assert.strictEqual(boundedWriter?.enableWriteTools, true)
+    assert.strictEqual(boundedWriter?.enableSubagentTools, false)
+    assert.strictEqual(boundedWriter?.systemPrompt.includes('Bounded Implementation Writer'), true)
+    assert.strictEqual(boundedWriter?.systemPrompt.includes('Stop Condition & Repair Budget'), true)
+
     const nonExistent = getSubagent('non_existent_random_agent_xyz')
     assert.strictEqual(nonExistent, null)
 
@@ -2044,14 +2059,14 @@ describe('Unit Coverage Extensions', () => {
     const pluginJson = JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, 'plugin.json'), 'utf8'))
 
     // 1. Released version intent and mirror equality
-    assert.strictEqual(packageJson.version, '1.15.5')
-    assert.strictEqual(pluginJson.version, '1.15.5')
+    assert.strictEqual(packageJson.version, '1.15.6')
+    assert.strictEqual(pluginJson.version, '1.15.6')
     assert.strictEqual(packageJson.version, pluginJson.version)
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(contractDoc.includes('**Package version:** `1.15.5`'), true)
-    assert.strictEqual(contractDoc.includes('Released as `v1.15.5` on 2026-09-03'), true)
+    assert.strictEqual(contractDoc.includes('**Package version:** `1.15.6`'), true)
+    assert.strictEqual(contractDoc.includes('Released as `v1.15.6` on 2026-09-03'), true)
     assert.strictEqual(
       contractDoc.includes(
         'Every schema-valid invocation that runs to completion within the host hook',
@@ -2129,7 +2144,7 @@ describe('Unit Coverage Extensions', () => {
       versionRuleSection.includes('plugins/agy-memory-layer/scripts/palace-generator.ts'),
       false,
     )
-    assert.strictEqual(rootAgentsDoc.includes('**38 focused Node test-runner cases**'), true)
+    assert.strictEqual(rootAgentsDoc.includes('**40 focused Node test-runner cases**'), true)
 
     // 6. Bounded real-host evidence remains scoped and current
     const hostEvidenceDoc = parityDoc
