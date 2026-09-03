@@ -1,6 +1,6 @@
 # 🧪 Integration Scenario Report: `agy-memory-layer`
 
-**Date**: 2026-09-02 08:32:02 UTC
+**Date**: 2026-09-03 07:15:00 UTC
 **Environment**: macOS (Darwin) · Antigravity CLI 1.1.24 · Node v26.5.1
 **Storage Target**: disposable test HOME (isolated from the user's real `~/.gemini/memory/`)
 **Scope**: Integration scenarios only; aggregate Node test count and coverage come from `pnpm test` / `pnpm test:coverage` and release evidence.
