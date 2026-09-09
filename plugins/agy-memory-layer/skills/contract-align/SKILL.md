@@ -17,7 +17,7 @@ Audits and refactors source code files to strictly conform with the repository's
 ## When to Use
 
 - When implementing or finishing a feature and wanting to ensure compliance with repo patterns before review.
-- When fixing AI drift (e.g. inline translation dictionaries, unextracted constants, `interface` instead of `type`, non-standard comments).
+- When fixing drift from project-owned rules (e.g. naming or declaration conventions explicitly required by that repository).
 - When running a targeted audit on a route or component folder (e.g. `/contract-align app/routes/games`).
 
 ## Execution Workflow
@@ -67,11 +67,15 @@ For every rule in `coverage.unevaluated` whose scope intersects target files:
    The tool mechanically refuses to emit `ALIGNED` if any unevaluated rule lacks a review verdict, if any violation is reported, or if the eval verdict was not clean.
 
 ### Phase 3: Surgical Diff Generation
-For genuine code findings (confirmed deterministic or heuristic violations):
-1. **Centralized Constants & i18n**: Extract inline label dictionaries to `constants/*` wrapped in repo-standard translation descriptors.
-2. **Strict Type Aliases**: Replace `interface` declarations with `export type Foo = { ... }`.
-3. **Route Thinness & Delegation**: Extract heavy JSX trees from route files to `components/modules/*`.
-4. **Primitive Composition**: Remove ad-hoc class overrides from Base UI primitives.
+For each confirmed finding, cite the active project rule ID, owner, and applicable scope before proposing a diff. Review conflicting rules before enforcement; suppress disputed diffs and route them to `/contract-refine`. A preference or mere keyword mention is not a prohibition.
+
+The following are conditional examples, not plugin-imposed project conventions:
+1. Extract dictionaries only when a project-owned constants/i18n rule requires it, using that project's destination and translation format.
+2. Replace `interface` with `type` only when the project explicitly prohibits interfaces. Preserve permitted interfaces and project naming rules (such as an `I` prefix). Use `Check: no-interface` for an explicit mechanical binding; prose preferences remain unevaluated unless reviewed.
+3. Extract route content only under a project-owned delegation rule, using its module boundaries.
+4. Remove primitive overrides only when a project-owned composition rule forbids them.
+
+This plugin's own TypeScript and UI conventions do not become conventions of the host project. Without an applicable project owner, do not generate these refactors.
 
 ### Phase 4: Re-Verification & Review-First Human Gate
 1. **Re-Evaluation**: After applying surgical diffs, re-run Phase 1 (`eval`) and Phase 2 (`verdict`) to verify that violations were resolved without regressions.

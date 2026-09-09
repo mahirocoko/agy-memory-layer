@@ -38,6 +38,10 @@ This scans:
 5. **Deduplication**: Identifies overlapping or duplicate rule IDs.
 
 ### Phase 2: Lossless Curation & Rule Consolidation
+Before code enforcement, review semantic conflicts across active project rules, including hub/spoke disagreements, overlapping scopes, permissions versus prohibitions, and preferences versus requirements. Record each conflicting rule ID, owner, scope, and evidence; propose a resolution for user approval and keep affected diffs suppressed until resolved. Plugin implementation conventions are not host-project rules.
+
+The mechanical verifier checks structural integrity and duplicate IDs; it does not understand semantic contradictions. A clean verification result is not evidence that rules agree. Likewise, the verdict gate checks review coverage and submitted verdicts, not the semantic correctness of the review.
+
 Inspect rules identified with noise or drift. For each rule candidate, assign a lossless disposition:
 
 - `keep`: The rule is lean, reusable, and currently proved by codebase reality.

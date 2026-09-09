@@ -36,6 +36,7 @@ Host Workspace (learn-letta-code)
 
 ### 2. TypeScript & Type Declarations
 - **Strict `type` Aliases**: ทุกครั้งที่เขียน TypeScript ต้องใช้ `type` alias เท่านั้น **ห้ามใช้ `interface` เด็ดขาด** (`export type Foo = { ... }`).
+  Check: no-interface scope=**/*.ts,**/*.tsx
 - Zero `any` where possible; use explicit discriminated unions and robust return types.
 
 ### 3. Review-First Commit Governance (No Auto-Commit)
@@ -72,7 +73,8 @@ pnpm test
 ```
 
 Expected output for the current source: **11/11 integration scenarios**
-in `TEST_REPORT.md` and **45 focused Node test-runner cases** passing. Refresh
+in `TEST_REPORT.md` and **59 focused Node test-runner cases** passing
+(60 tests including the integration runner). Refresh
 the exact count and coverage after the final full run; do not infer release or
 live-migration readiness from source tests alone.
 - PreInvocation hook schema validation

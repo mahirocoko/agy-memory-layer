@@ -673,7 +673,7 @@ ${results.map((r) => `| **${r.suite}** | ${r.name} | ${r.status === 'PASSED' ? '
    - Targeted writers reject unrelated dirty paths; Stop preserves both \`HEAD\` and dirty working-tree content while reporting status.
 
 6. **Native Tooling Compatibility**:
-   - Verified with \`agy plugin validate\` (12 skills, 9 declarative agent roles, 3 hooks active).
+   - See the AGY Plugin Schema row above for the \`agy plugin validate\` result and observed skill, agent, and hook counts.
 `
 
 fs.writeFileSync(TEST_REPORT_FILE, markdown, 'utf-8')

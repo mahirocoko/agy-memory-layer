@@ -657,16 +657,11 @@ export function evaluateCodeAgainstContract(
       boundEvaluators.push(rule.check.evaluator)
     } else {
       // Backward-compatible fallback heuristics
-      const text = `${rule.title} ${rule.action} ${rule.intent}`.toLowerCase()
+      // Only complete, unqualified legacy prohibitions bind implicitly. Mentions,
+      // naming rules, preferences, and compound prose require an explicit Check.
+      const legacyProhibitions = ['never declare interface', 'do not declare interface']
       if (
-        (rule.class === 'deterministic' || text.includes('type') || text.includes('interface')) &&
-        text.includes('interface') &&
-        (text.includes('type') ||
-          text.includes('never declare') ||
-          text.includes('do not declare') ||
-          text.includes('no interface') ||
-          text.includes('zero interface') ||
-          text.includes('prohibit'))
+        [rule.action, rule.intent].some((text) => legacyProhibitions.includes(normalizeText(text)))
       ) {
         boundEvaluators.push('no-interface')
       } else if (

@@ -13,6 +13,100 @@ import {
   verifyContractLedger,
 } from '../plugins/agy-memory-layer/scripts/contract-ledger.ts'
 
+const bindingFixtures = [
+  {
+    name: 'interface permission with I-prefix naming',
+    markdown:
+      '- **Type and interface naming**: Interfaces are permitted. Prefix interface names with I; type aliases need no prefix.',
+    bound: false,
+  },
+  {
+    name: 'type preference is not a prohibition',
+    markdown: '- **Declaration preference**: Prefer type over interface.',
+    bound: false,
+  },
+  {
+    name: 'unrelated prohibition cannot bind interface mentions',
+    markdown: '- **Declaration naming**: Never declare any types. Interfaces must use an I prefix.',
+    bound: false,
+  },
+  {
+    name: 'qualified prohibition requires explicit review',
+    markdown:
+      '- **Declaration policy**: Do not declare interface unless needed for declaration merging.',
+    bound: false,
+  },
+  {
+    name: 'explicit no-interface binding',
+    markdown:
+      '- **Declaration policy**: Use aliases.\n  Check: no-interface scope=**/*.ts,**/*.tsx',
+    bound: true,
+  },
+  {
+    name: 'unambiguous legacy prohibition',
+    markdown: "- **Declaration policy**: Do not declare 'interface'.",
+    bound: true,
+  },
+]
+
+for (const fixture of bindingFixtures) {
+  test(`contract-ledger: isolated CLI binding — ${fixture.name}`, () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'contract-binding-'))
+    try {
+      fs.writeFileSync(path.join(tempDir, 'AGENTS.md'), `${fixture.markdown}\n`)
+      const kw = 'interface'
+      fs.writeFileSync(path.join(tempDir, 'sample.ts'), `export ${kw} IUser { id: string }\n`)
+      const result = spawnSync(
+        process.execPath,
+        [
+          '--experimental-strip-types',
+          path.resolve('plugins/agy-memory-layer/scripts/contract-ledger.ts'),
+          'eval',
+          '--json',
+          'sample.ts',
+        ],
+        { cwd: tempDir, env: { ...process.env, HOME: tempDir }, encoding: 'utf-8' },
+      )
+      assert.equal(result.status, fixture.bound ? 1 : 3, result.stderr || result.stdout)
+      const evaluation: CodeEvaluationResult = JSON.parse(result.stdout)
+      assert.equal(evaluation.coverage.evaluated.length, fixture.bound ? 1 : 0)
+      assert.equal(evaluation.coverage.unevaluated.length, fixture.bound ? 0 : 1)
+      assert.equal(evaluation.codeFindings.length, fixture.bound ? 1 : 0)
+      assert.equal(evaluation.contractFindings.length, 0)
+      assert.equal(evaluation.passed, false)
+      assert.equal(evaluation.deterministicPassed, !fixture.bound)
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true })
+    }
+  })
+}
+
+test('contract-ledger: actual Thai type-only hub rule binds explicitly', () => {
+  const ledger = compileContractLedger(process.cwd())
+  const rule = ledger.rules.find((candidate) => candidate.title === 'Strict `type` Aliases')
+  assert.ok(rule)
+  assert.ok(rule.action.includes('ห้ามใช้ `interface`'))
+  assert.equal(rule.check?.evaluator, 'no-interface')
+  assert.deepEqual(rule.scope, ['**/*.ts', '**/*.tsx'])
+  assert.ok(rule.owner.startsWith('AGENTS.md#L'))
+  const kw = 'interface'
+  const result = evaluateCodeAgainstContract(
+    { ...ledger, rules: [rule] },
+    ['probe.ts', 'probe.tsx', 'probe.js'],
+    () => `export ${kw} IUser { id: string }`,
+  )
+  assert.deepEqual(result.coverage.evaluated[0].evaluators, ['no-interface'])
+  assert.equal(result.coverage.evaluated[0].applicableFiles, 2)
+  assert.equal(result.codeFindings.length, 2)
+  assert.equal(result.verdict, 'deterministic-violations')
+  const clean = evaluateCodeAgainstContract(
+    { ...ledger, rules: [rule] },
+    ['probe.ts'],
+    () => 'export type User = { id: string }',
+  )
+  assert.equal(clean.passed, true)
+})
+
 test('contract-ledger: computeRuleId produces stable deterministic hashes', () => {
   const id1 = computeRuleId(
     'Strict Type Aliases',
@@ -194,6 +288,7 @@ test('contract-ledger: Hub invariants can NEVER be outvoted by majority drift', 
   const sampleMarkdown = `
 # Project Rules
 - **Strict Invariant**: Never declare 'interface' Foo. Always use type.
+  Check: no-interface scope=**/*.ts,**/*.tsx
 `
   const rules = parseRuleUnitsFromMarkdown(sampleMarkdown, 'AGENTS.md')
   const ledger = {
