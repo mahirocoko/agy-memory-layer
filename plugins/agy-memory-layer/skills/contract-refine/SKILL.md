@@ -2,7 +2,8 @@
 name: contract-refine
 description: >-
   Audit repository AGENTS.md hub and docs spokes for rule bloat, noise, drift, broken links,
-  and missing patterns. Propose lossless consolidations and compile the contract ledger.
+  and missing patterns. Review relevant conversation evidence for omitted user intent before
+  proposing lossless consolidations and compiling the contract ledger.
   Trigger on /contract-refine, /contract-refine audit, or /rules-refactor.
 ---
 
@@ -22,6 +23,23 @@ Audits, aligns, and consolidates repository rules across `AGENTS.md` (the hub) a
 - When preparing to compile or refresh the repository's `contract-ledger`.
 
 ## Execution Workflow
+
+### Phase 0: Conversation Evidence Review
+Before proposing refinement, recover relevant user intent that may not yet be recorded in the project docs. Treat conversation as historical evidence, not an automatic source of new rules or current permission.
+
+1. Define the target project, rule topics, and conversation/time scope. Start with the current conversation and use Agy's available conversation retrieval to inspect relevant prior exchanges. Follow the existing [recall workflow](../recall/SKILL.md) for discovery; do not invent host tool names or assume retrieval is available.
+2. Search by project identity, rule terms, and the user's corrections, not only the current docs' wording. Confirm each hit belongs to the target project before using it. Search snippets and summaries are discovery aids: inspect the original user message and surrounding exchange through the available host retrieval before attributing a decision. Preserve speaker identity and distinguish direct user instructions, corrections, and approvals from agent proposals, summaries, and tool output.
+3. Record a compact evidence table for material candidates:
+
+   | Source conversation + message/time locator | Minimal user quote | Project/topic scope | Current rule owner | Classification | Proposed disposition |
+   | --- | --- | --- | --- | --- | --- |
+   | Exact available locator, or explicitly unavailable | Original wording, not an agent paraphrase | Relevant scope | Rule ID/path, or missing | See below | Keep, clarify, add to proposal, or exclude |
+
+   Classify each candidate as **already documented**, **omitted**, **conflicting**, **superseded**, or **task-only**. Separate durable conventions from temporary experiments, one-off exceptions, and action approvals. For example, “use interface with an I prefix in this project” is a project-rule candidate; “use type for this fixture only” must not become a project-wide ban. An agent saying “we agreed” is not user approval without the original exchange.
+4. Compare candidates with current repo evidence and active rules. Preserve chronology and scope: a later statement supersedes an earlier one only when it addresses the same decision and scope. Do not let repeated agent summaries outweigh a direct user correction. Route ambiguity or conflict into the proposal gate rather than silently choosing a winner.
+5. Report retrieval coverage: sources/sessions and time range actually inspected, queries used, truncation or inaccessible messages, and unresolved gaps. Never claim “all conversations reviewed” from ranked search results or “no omitted intent” from no hits. If retrieval is unavailable or only snippets are accessible, continue a clearly labelled docs-only audit, but defer evidence-dependent changes until the missing exchange or user clarification is available.
+
+Keep quotes minimal and redact secrets or unrelated personal content. Do not dump transcripts into project docs, scan unrelated projects, or automatically write recalled material to MemFS. Follow the recall authority boundary: old commit/push/delete approvals are not reusable authorization. Newly recovered intent enters a review proposal; it does not bypass the current user's approval gate.
 
 ### Phase 1: Deterministic Audit & Verification
 Run the contract ledger verification tool:
@@ -52,6 +70,8 @@ Inspect rules identified with noise or drift. For each rule candidate, assign a 
 
 ### Phase 3: Proposal-First Review Gate
 Present the proposed changes to the user as unit-based diffs:
+
+Include the conversation evidence classification and source locator for recovered-intent changes, the current owner, retrieval gaps, and why the candidate is durable rather than task-only. Keep unsupported candidates open rather than inventing missing provenance. Require user confirmation before applying proposed contract edits, including additions based on past user instructions.
 
 ```markdown
 ### Rule Disposition Proposal

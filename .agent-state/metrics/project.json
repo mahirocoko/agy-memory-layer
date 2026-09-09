@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-09-03T07:12:18",
+  "generatedAt": "2026-09-09T22:45:02.931573",
   "source": "rrr-derived",
-  "totalSessions": 33,
+  "totalSessions": 35,
   "todaySessions": 1,
-  "activeDays": 6,
-  "avgSessionsPerActiveDay": 5.5,
+  "activeDays": 7,
+  "avgSessionsPerActiveDay": 5.0,
   "sizes": {
     "today": "small",
     "thresholds": {
@@ -14,9 +14,10 @@
     }
   },
   "activity": {
-    "streakDays": 2,
-    "last7DaysSessions": 2,
-    "previous7DaysSessions": 2,
-    "weekOverWeekChangePct": 0.0
-  }
+    "streakDays": 1,
+    "last7DaysSessions": 3,
+    "previous7DaysSessions": 1,
+    "weekOverWeekChangePct": 200.0
+  },
+  "branch": "main"
 }

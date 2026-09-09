@@ -15,6 +15,11 @@ Use this skill as Agy's controller for claims, delegation, retries, and closeout
 Agy/Gemini-specific and travels with `agy-memory-layer` across workspaces. It does not target
 other agent platforms and does not replace repository tests, receipts, or Mahiro's judgment.
 
+A short `/evidence-controller <task>` is enough; once this controller and task context are
+established, `ทำต่อให้เสร็จ` is enough to continue within existing authorization. The agent
+derives the goal, criteria, and proof methods; the user need not write a checkpoint template.
+This usage guidance does not guarantee automatic skill activation.
+
 ## Non-negotiable evidence language
 
 Every material checkpoint and conclusion separates:
@@ -40,9 +45,57 @@ Before acting:
 4. Name the cheapest check that could disprove it.
 5. Choose one routing mode below.
 
-Then make the smallest in-scope change, run deterministic checks, and close with the three
-evidence classes. If the hypothesis fails twice, mark that direction refuted and change the
+Then make the smallest in-scope change, run deterministic checks, and follow the completion
+loop below before closing with the three evidence classes. If the hypothesis fails twice, mark that direction refuted and change the
 hypothesis or ownership boundary rather than submitting a cosmetic retry.
+
+## Goal checkpoint and bounded completion loop
+
+For non-trivial implementation, derive one goal from the current user request before editing.
+Keep a compact checkpoint in the working conversation, not in durable MemFS:
+
+```text
+Goal: <requested observable outcome>
+Scope / non-goals: <approved boundaries>
+Criteria: <3–5 outcomes, each with proof method and agent/human owner>
+State: working | blocked | needs_human | agent_checked
+Evidence: <criterion → actual artifact/command/result; missing proof stays open>
+Next: <one still-authorized action, or exact blocker/human decision>
+```
+
+Do not replace the user's outcome with an easier proxy. If the goal is a working command,
+exercise its actual entrypoint and output; a passing unit suite alone does not satisfy it.
+For an interaction, verify the actual consumer and relevant reset/error state. Criteria may
+change when the user changes scope, not merely because a check fails.
+
+Loop while approved work remains:
+
+1. Select an open agent-owned criterion and name its cheapest disconfirming check.
+2. Make one bounded change or probe, then inspect its actual result.
+3. Update the checkpoint with evidence and remaining work. Invalidate affected evidence after
+   subsequent edits; do not treat a command being submitted or a child saying done as proof.
+4. If another safe, in-scope action can advance an open criterion, continue in this turn rather
+   than asking for “continue” or issuing a completion response. A progress update is not closeout.
+5. After two failures of the same hypothesis, stop repeating that method and follow the existing
+   escalation route. Name the new hypothesis and a bounded next attempt; if no grounded route
+   remains, report blocked. Do not launch repeated reviewers merely for reassurance.
+
+Before a final response, compare every requested outcome with its evidence, not only changed
+files or green tests. Use exactly one checkpoint state:
+
+- **working**: authorized work remains; continue execution, do not claim completion.
+- **blocked**: identify the concrete obstacle, failed probe, and needed dependency; no safe
+  grounded action currently advances the remaining criteria.
+- **needs_human**: identify the exact approval or acceptance needed. Complete independent
+  authorized work first; do not use this state to offload checks the agent can perform.
+- **agent_checked**: every agent-owned criterion has current evidence and no executable work
+  remains. This is not human acceptance; if a required human gate remains, use needs_human.
+
+After compaction or resume, recover the latest available checkpoint as a navigation aid and
+re-ground its goal, scope, grants, and evidence under the existing authority doctrine. Missing
+or stale proof remains open. This conversation checkpoint is not guaranteed durable state,
+host-enforced completion, a final-response interceptor, or an automatic wake/retry scheduler.
+Do not repurpose the observational Stop hook to continue work or write mission state.
 
 ## Automatic routing decision
 
@@ -170,6 +223,8 @@ and never overwrite existing guidance without explicit approval.
 
 ```text
 Route: <DIRECT | ONE_LANE | WRITER_REVIEWER | PARALLEL_READONLY>
+Goal / state: <requested outcome> / <blocked | needs_human | agent_checked>
+Criteria: <each requested outcome → evidence or remaining gap>
 Observed:
 - <direct evidence and scope>
 Inferred:

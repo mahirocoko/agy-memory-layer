@@ -9,11 +9,11 @@
 > **Evidence-Controlled Agy Delegation, Committed Git-Backed Memory, and Scoped Correction Recall for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
 
-> **v1.18.1 (Latest Release):** Bounded contract-binding correction: interface
-> permissions and type preferences no longer become interface bans. Explicit
-> checks bind project rules; alignment examples require project-owned rule IDs,
-> owners, and scopes. Semantic conflicts still require review.
-> See the [release notes](./docs/releases/v1.18.1.md) for verification and limitations.
+> **v1.18.2 (Latest Release):** Conversation-evidence review for contract refinement
+> and a bounded, model-guided completion loop for the Evidence Controller. The agent
+> derives goals and proof methods from a short task request; passing tests alone do
+> not establish the requested runtime outcome. No host-enforced completion is added.
+> See the [release notes](./docs/releases/v1.18.2.md) for verification and limitations.
 
 > **v1.15.4 (Prior Release):** Model-guided authority boundary and
 > anti-laundering stanza emitted first whenever a schema-valid PreInvocation
@@ -264,7 +264,7 @@ being copied into this README.
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
-> **Latest release**: [`v1.18.1`](./docs/releases/v1.18.1.md) corrects interface-rule binding and makes contract alignment conditional on project-owned conventions. Verification: 60 Node tests and 11 integration scenarios passed; `pnpm check` passed. The coverage table above remains the historical `v1.15.4` snapshot, not coverage evidence for this release.
+> **Latest release**: [`v1.18.2`](./docs/releases/v1.18.2.md) adds conversation-evidence review and bounded goal/proof checkpoints. Verification: 60 Node tests and 11 integration scenarios passed; `pnpm check` passed. One explicitly instructed live Agy trial provides bounded runtime evidence, not automatic-trigger or long-task proof. The coverage table above remains the historical `v1.15.4` snapshot, not coverage evidence for this release.
 
 ---
 
