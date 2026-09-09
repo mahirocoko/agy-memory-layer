@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.17.0`
+**Package version:** `1.18.0`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.17.0` on 2026-09-03
+**Release state:** Released as `v1.18.0` on 2026-09-09
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 

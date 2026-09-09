@@ -29,6 +29,25 @@ export type RuleDisposition =
   | 'duplicate'
   | 'rejected'
 
+export type EvaluatorId =
+  | 'no-interface'
+  | 'inline-dictionary'
+  | 'max-lines'
+  | 'forbidden-pattern'
+  | 'required-pattern'
+  | 'comment-taxonomy'
+
+export type FindingSeverity = 'violation' | 'lead'
+
+export type CheckDirective = {
+  evaluator: EvaluatorId
+  scope?: string
+  limit?: number
+  pattern?: string
+  allow?: string[]
+  severity?: FindingSeverity
+}
+
 export type RuleUnit = {
   id: string // sha256(normalized title + intent + action).slice(0, 16)
   title: string
@@ -41,6 +60,7 @@ export type RuleUnit = {
   action: string
   boundary: string
   rationale: string
+  check?: CheckDirective
   tags: string[]
 }
 
@@ -91,6 +111,7 @@ export type FindingType = 'code-finding' | 'contract-finding'
 
 export type EvaluationFinding = {
   type: FindingType
+  severity: FindingSeverity
   ruleId: string
   ruleTitle: string
   file?: string
@@ -98,11 +119,33 @@ export type EvaluationFinding = {
   message: string
   snippet?: string
   suggestedAction: string
+  diffSuppressed?: boolean
 }
+
+export type RuleCoverage = {
+  ruleId: string
+  title: string
+  owner: string
+  declaredClass: RuleClass
+  evaluators: EvaluatorId[]
+  applicableFiles: number
+}
+
+export type EvaluationVerdict =
+  | 'deterministic-clean'
+  | 'deterministic-violations'
+  | 'contract-dispute'
 
 export type CodeEvaluationResult = {
   totalFilesChecked: number
+  coverage: {
+    evaluated: RuleCoverage[]
+    unevaluated: RuleCoverage[]
+    ratio: number
+  }
+  verdict: EvaluationVerdict
   passed: boolean
+  deterministicPassed: boolean
   contractFindings: EvaluationFinding[]
   codeFindings: EvaluationFinding[]
 }
@@ -173,6 +216,55 @@ function extractStructuredField(text: string, fieldName: string): string | null 
   return match ? match[1].trim() : null
 }
 
+function parseCheckDirective(text: string): CheckDirective | undefined {
+  const match = text.match(/(?:^|[\n\r])\s*(?:\*\*)?Check\s*[:：]\s*([^\n\r]+)/i)
+  if (!match) return undefined
+  let raw = match[1].trim()
+  if (raw.endsWith('**')) raw = raw.slice(0, -2).trim()
+
+  const evalMatch = raw.match(/^([a-z0-9-]+)(?:\s+(.*))?$/i)
+  if (!evalMatch) return undefined
+  const evaluator = evalMatch[1].toLowerCase() as EvaluatorId
+  const validEvaluators: EvaluatorId[] = [
+    'no-interface',
+    'inline-dictionary',
+    'max-lines',
+    'forbidden-pattern',
+    'required-pattern',
+    'comment-taxonomy',
+  ]
+  if (!validEvaluators.includes(evaluator)) return undefined
+
+  const dir: CheckDirective = { evaluator }
+  const rest = evalMatch[2] || ''
+
+  const paramRegex = /(?:^|\s+)(scope|limit|pattern|allow|severity)=(?:"([^"]*)"|'([^']*)'|(\S+))/g
+  let pMatch = paramRegex.exec(rest)
+  while (pMatch !== null) {
+    const key = pMatch[1]
+    const val = pMatch[2] ?? pMatch[3] ?? pMatch[4] ?? ''
+    if (key === 'scope') {
+      dir.scope = val
+    } else if (key === 'limit') {
+      const parsedLimit = parseInt(val, 10)
+      if (!Number.isNaN(parsedLimit)) dir.limit = parsedLimit
+    } else if (key === 'pattern') {
+      dir.pattern = val
+    } else if (key === 'allow') {
+      dir.allow = val
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    } else if (key === 'severity') {
+      if (val === 'violation' || val === 'lead') {
+        dir.severity = val
+      }
+    }
+    pMatch = paramRegex.exec(rest)
+  }
+  return dir
+}
+
 export function parseRuleUnitsFromMarkdown(content: string, filePath: string): RuleUnit[] {
   const lines = content.split(/\r?\n/)
   const rules: RuleUnit[] = []
@@ -197,7 +289,7 @@ export function parseRuleUnitsFromMarkdown(content: string, filePath: string): R
       const title = (bulletMatch[1] || bulletMatch[2] || 'Unnamed Rule').trim()
       const body = bulletMatch[3] ? bulletMatch[3].trim() : ''
 
-      // Look ahead up to 10 lines for structured Intent/Trigger/Action/Boundary/Rationale
+      // Look ahead up to 10 lines for structured Intent/Trigger/Action/Boundary/Rationale/Check
       const extraLines: string[] = []
       let lookahead = i + 1
       while (lookahead < lines.length) {
@@ -218,14 +310,20 @@ export function parseRuleUnitsFromMarkdown(content: string, filePath: string): R
       const action = extractStructuredField(fullText, 'Action') || body || title
       const boundary = extractStructuredField(fullText, 'Boundary') || ''
       const rationale = extractStructuredField(fullText, 'Rationale') || ''
+      const check = parseCheckDirective(fullText)
 
       const ruleId = computeRuleId(title, intent, action)
-      const ruleClass = classifyRule(`${title} ${fullText}`)
+      const ruleClass = check ? 'deterministic' : classifyRule(`${title} ${fullText}`)
       const status = determineStatus(filePath, currentSection, fullText)
 
       // Infer default scope
-      const scope: string[] = ['**/*.ts', '**/*.tsx']
-      if (title.toLowerCase().includes('doc') || title.toLowerCase().includes('markdown')) {
+      let scope: string[] = ['**/*.ts', '**/*.tsx']
+      if (check?.scope) {
+        scope = check.scope
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      } else if (title.toLowerCase().includes('doc') || title.toLowerCase().includes('markdown')) {
         scope.push('**/*.md')
       }
 
@@ -241,6 +339,7 @@ export function parseRuleUnitsFromMarkdown(content: string, filePath: string): R
         action,
         boundary,
         rationale,
+        check,
         tags: [currentSection.toLowerCase().replace(/[^\w-]/g, '_')],
       })
     }
@@ -501,6 +600,26 @@ export function verifyContractLedger(
   }
 }
 
+function matchesGlob(filePath: string, globPattern: string): boolean {
+  const normFile = filePath.replace(/\\/g, '/').replace(/^\.\//, '')
+  const normGlob = globPattern.replace(/\\/g, '/').replace(/^\.\//, '')
+  if (normGlob === '**/*' || normGlob === '*' || normGlob === '') return true
+
+  const regexStr = normGlob
+    .replace(/\*\*\//g, '___GLOBSTAR_SLASH___')
+    .replace(/\*\*/g, '___GLOBSTAR___')
+    .replace(/\*/g, '___STAR___')
+    .replace(/\?/g, '___QUESTION___')
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/___GLOBSTAR_SLASH___/g, '(?:.*/)?')
+    .replace(/___GLOBSTAR___/g, '.*')
+    .replace(/___STAR___/g, '[^/]*')
+    .replace(/___QUESTION___/g, '[^/]')
+
+  const regex = new RegExp(`^${regexStr}$`)
+  return regex.test(normFile)
+}
+
 export function evaluateCodeAgainstContract(
   ledger: ContractLedger,
   filePaths: string[],
@@ -515,73 +634,273 @@ export function evaluateCodeAgainstContract(
   // Rule violation tracker: ruleId -> list of files violating it
   const violationsByRule = new Map<
     string,
-    { rule: RuleUnit; files: { file: string; line: number; snippet: string }[] }
+    {
+      rule: RuleUnit
+      applicableCount: number
+      files: {
+        file: string
+        line: number
+        snippet: string
+        message: string
+        severity: FindingSeverity
+      }[]
+    }
   >()
 
-  // Deterministic checks
-  // 1. Strict 'type' alias rule (no interface)
-  const typeRule = activeRules.find(
-    (r) =>
-      r.class === 'deterministic' &&
-      r.title.toLowerCase().includes('type') &&
-      r.action.toLowerCase().includes('interface'),
-  )
+  const evaluatedCoverage: RuleCoverage[] = []
+  const unevaluatedCoverage: RuleCoverage[] = []
 
-  // 2. Constants / inline dictionary check
-  const constRule = activeRules.find(
-    (r) =>
-      r.title.toLowerCase().includes('constant') ||
-      r.action.toLowerCase().includes('inline dictionary'),
-  )
-
-  for (const filePath of filePaths) {
-    let content = ''
-    try {
-      content = readFileFn(filePath)
-    } catch {
-      continue
+  // Resolve bound evaluators for each active rule
+  for (const rule of activeRules) {
+    const boundEvaluators: EvaluatorId[] = []
+    if (rule.check) {
+      boundEvaluators.push(rule.check.evaluator)
+    } else {
+      // Backward-compatible fallback heuristics
+      const text = `${rule.title} ${rule.action} ${rule.intent}`.toLowerCase()
+      if (
+        (rule.class === 'deterministic' || text.includes('type') || text.includes('interface')) &&
+        text.includes('interface') &&
+        (text.includes('type') ||
+          text.includes('never declare') ||
+          text.includes('do not declare') ||
+          text.includes('no interface') ||
+          text.includes('zero interface') ||
+          text.includes('prohibit'))
+      ) {
+        boundEvaluators.push('no-interface')
+      } else if (
+        rule.title.toLowerCase().includes('constant') ||
+        rule.action.toLowerCase().includes('inline dictionary')
+      ) {
+        boundEvaluators.push('inline-dictionary')
+      }
     }
 
-    const lines = content.split(/\r?\n/)
+    // Determine applicable target files for this rule
+    const applicableTargetFiles = filePaths.filter((fp) => {
+      if (!rule.scope || rule.scope.length === 0) return true
+      const relFp =
+        path.isAbsolute(fp) && ledger.repoRoot
+          ? path.relative(ledger.repoRoot, fp).replace(/\\/g, '/')
+          : fp.replace(/\\/g, '/')
+      const rawFp = fp.replace(/\\/g, '/')
+      return rule.scope.some(
+        (pattern) => matchesGlob(relFp, pattern) || matchesGlob(rawFp, pattern),
+      )
+    })
 
-    for (let i = 0; i < lines.length; i++) {
-      const lineNum = i + 1
-      const line = lines[i].trim()
+    if (boundEvaluators.length > 0) {
+      evaluatedCoverage.push({
+        ruleId: rule.id,
+        title: rule.title,
+        owner: rule.owner,
+        declaredClass: rule.class,
+        evaluators: boundEvaluators,
+        applicableFiles: applicableTargetFiles.length,
+      })
 
-      // Check 1: Interface usage if type rule is active
-      if (typeRule && (filePath.endsWith('.ts') || filePath.endsWith('.tsx'))) {
-        if (!line.startsWith('//') && !line.startsWith('*')) {
-          const match = line.match(/\b(export\s+)?interface\s+([A-Z]\w*)\b/)
-          if (match && !line.includes("'interface'") && !line.includes('"interface"')) {
-            let entry = violationsByRule.get(typeRule.id)
-            if (!entry) {
-              entry = { rule: typeRule, files: [] }
-              violationsByRule.set(typeRule.id, entry)
+      // Run bound evaluators across applicable target files
+      for (const filePath of applicableTargetFiles) {
+        let content = ''
+        try {
+          content = readFileFn(filePath)
+        } catch {
+          continue
+        }
+
+        const cleanContent = content.replace(/\r?\n$/, '')
+        const lines = cleanContent === '' ? [] : cleanContent.split(/\r?\n/)
+
+        for (const evalId of boundEvaluators) {
+          if (evalId === 'no-interface') {
+            if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
+              for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim()
+                if (!line.startsWith('//') && !line.startsWith('*')) {
+                  const match = line.match(/\b(export\s+)?interface\s+([A-Z]\w*)\b/)
+                  if (match && !line.includes("'interface'") && !line.includes('"interface"')) {
+                    let entry = violationsByRule.get(rule.id)
+                    if (!entry) {
+                      entry = { rule, applicableCount: applicableTargetFiles.length, files: [] }
+                      violationsByRule.set(rule.id, entry)
+                    }
+                    entry.files.push({
+                      file: filePath,
+                      line: i + 1,
+                      snippet: line,
+                      message: `Violates '${rule.title}': ${rule.action || 'Do not declare interface'}`,
+                      severity: 'violation',
+                    })
+                  }
+                }
+              }
             }
-            entry.files.push({
-              file: filePath,
-              line: lineNum,
-              snippet: line,
-            })
+          } else if (evalId === 'inline-dictionary') {
+            if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
+              for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim()
+                if (line.match(/const\s+\w+_(?:LABELS|MAP|TITLES)\s*[:=]\s*\{/)) {
+                  let entry = violationsByRule.get(rule.id)
+                  if (!entry) {
+                    entry = { rule, applicableCount: applicableTargetFiles.length, files: [] }
+                    violationsByRule.set(rule.id, entry)
+                  }
+                  entry.files.push({
+                    file: filePath,
+                    line: i + 1,
+                    snippet: line,
+                    message: `Violates '${rule.title}': Inline dictionary detected`,
+                    severity: 'violation',
+                  })
+                }
+              }
+            }
+          } else if (evalId === 'max-lines') {
+            const limit = rule.check?.limit || 100
+            if (lines.length > limit) {
+              let entry = violationsByRule.get(rule.id)
+              if (!entry) {
+                entry = { rule, applicableCount: applicableTargetFiles.length, files: [] }
+                violationsByRule.set(rule.id, entry)
+              }
+              entry.files.push({
+                file: filePath,
+                line: 1,
+                snippet: `Total lines: ${lines.length} (limit: ${limit})`,
+                message: `Violates '${rule.title}': File exceeds line limit (${lines.length} > ${limit})`,
+                severity: rule.check?.severity || 'violation',
+              })
+            }
+          } else if (evalId === 'forbidden-pattern') {
+            if (!rule.check?.pattern) {
+              contractFindings.push({
+                type: 'contract-finding',
+                severity: 'violation',
+                ruleId: rule.id,
+                ruleTitle: rule.title,
+                message: `Rule '${rule.title}' specifies 'forbidden-pattern' but is missing required 'pattern=' attribute in Check directive.`,
+                suggestedAction: `Specify pattern="..." in Check directive.`,
+              })
+            } else {
+              let regex: RegExp
+              try {
+                regex = new RegExp(rule.check.pattern)
+              } catch (err) {
+                contractFindings.push({
+                  type: 'contract-finding',
+                  severity: 'violation',
+                  ruleId: rule.id,
+                  ruleTitle: rule.title,
+                  message: `Rule '${rule.title}' has invalid regex pattern '${rule.check.pattern}': ${err instanceof Error ? err.message : String(err)}`,
+                  suggestedAction: `Fix regex syntax in Check directive.`,
+                })
+                continue
+              }
+              for (let i = 0; i < lines.length; i++) {
+                const line = lines[i]
+                if (regex.test(line)) {
+                  let entry = violationsByRule.get(rule.id)
+                  if (!entry) {
+                    entry = { rule, applicableCount: applicableTargetFiles.length, files: [] }
+                    violationsByRule.set(rule.id, entry)
+                  }
+                  entry.files.push({
+                    file: filePath,
+                    line: i + 1,
+                    snippet: line.trim(),
+                    message: `Violates forbidden pattern '${rule.check.pattern}' in '${rule.title}'`,
+                    severity: rule.check.severity || 'violation',
+                  })
+                }
+              }
+            }
+          } else if (evalId === 'required-pattern') {
+            if (!rule.check?.pattern) {
+              contractFindings.push({
+                type: 'contract-finding',
+                severity: 'violation',
+                ruleId: rule.id,
+                ruleTitle: rule.title,
+                message: `Rule '${rule.title}' specifies 'required-pattern' but is missing required 'pattern=' attribute in Check directive.`,
+                suggestedAction: `Specify pattern="..." in Check directive.`,
+              })
+            } else {
+              let regex: RegExp
+              try {
+                regex = new RegExp(rule.check.pattern)
+              } catch (err) {
+                contractFindings.push({
+                  type: 'contract-finding',
+                  severity: 'violation',
+                  ruleId: rule.id,
+                  ruleTitle: rule.title,
+                  message: `Rule '${rule.title}' has invalid regex pattern '${rule.check.pattern}': ${err instanceof Error ? err.message : String(err)}`,
+                  suggestedAction: `Fix regex syntax in Check directive.`,
+                })
+                continue
+              }
+              if (!regex.test(content)) {
+                let entry = violationsByRule.get(rule.id)
+                if (!entry) {
+                  entry = { rule, applicableCount: applicableTargetFiles.length, files: [] }
+                  violationsByRule.set(rule.id, entry)
+                }
+                entry.files.push({
+                  file: filePath,
+                  line: 1,
+                  snippet: `Missing required pattern: ${rule.check.pattern}`,
+                  message: `Violates '${rule.title}': File missing required pattern '${rule.check.pattern}'`,
+                  severity: rule.check.severity || 'violation',
+                })
+              }
+            }
+          } else if (evalId === 'comment-taxonomy') {
+            const allowed = rule.check?.allow || []
+            if (allowed.length === 0) {
+              contractFindings.push({
+                type: 'contract-finding',
+                severity: 'violation',
+                ruleId: rule.id,
+                ruleTitle: rule.title,
+                message: `Rule '${rule.title}' specifies 'comment-taxonomy' but is missing required 'allow=' attribute in Check directive.`,
+                suggestedAction: `Specify allow=_Tag1,_Tag2 in Check directive.`,
+              })
+            } else {
+              for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim()
+                const match = line.match(/^\/\/\s*(_[A-Za-z0-9_-]+)\s*$/)
+                if (match) {
+                  const tag = match[1].trim()
+                  if (!allowed.includes(tag)) {
+                    let entry = violationsByRule.get(rule.id)
+                    if (!entry) {
+                      entry = { rule, applicableCount: applicableTargetFiles.length, files: [] }
+                      violationsByRule.set(rule.id, entry)
+                    }
+                    entry.files.push({
+                      file: filePath,
+                      line: i + 1,
+                      snippet: line,
+                      message: `Section comment tag '// ${tag}' not in allowed taxonomy: [${allowed.join(', ')}]`,
+                      severity: rule.check?.severity || 'violation',
+                    })
+                  }
+                }
+              }
+            }
           }
         }
       }
-
-      // Check 2: Inline dictionary with raw hardcoded string labels
-      if (constRule && (filePath.endsWith('.ts') || filePath.endsWith('.tsx'))) {
-        if (line.match(/const\s+\w+_(?:LABELS|MAP|TITLES)\s*[:=]\s*\{/)) {
-          let entry = violationsByRule.get(constRule.id)
-          if (!entry) {
-            entry = { rule: constRule, files: [] }
-            violationsByRule.set(constRule.id, entry)
-          }
-          entry.files.push({
-            file: filePath,
-            line: lineNum,
-            snippet: line,
-          })
-        }
-      }
+    } else {
+      unevaluatedCoverage.push({
+        ruleId: rule.id,
+        title: rule.title,
+        owner: rule.owner,
+        declaredClass: rule.class,
+        evaluators: [],
+        applicableFiles: applicableTargetFiles.length,
+      })
     }
   }
 
@@ -590,38 +909,89 @@ export function evaluateCodeAgainstContract(
 
   for (const [ruleId, entry] of violationsByRule.entries()) {
     const violatingFilesCount = new Set(entry.files.map((f) => f.file)).size
-    // Strict majority: strictly more than 50% of files violate the rule, with at least 3 files evaluated
-    const isMajority = totalScanned > 2 && violatingFilesCount * 2 > totalScanned
+    // Hub invariants (from AGENTS.md or tagged invariant) are NEVER outvotable or reclassified!
+    const isHubInvariant =
+      ledger.hub.invariants.includes(entry.rule.title) ||
+      entry.rule.owner.includes('AGENTS.md') ||
+      entry.rule.tags.includes('invariant')
+
+    // Strict majority: strictly more than 50% of applicable files violate the rule, with at least 3 files evaluated
+    const isMajority =
+      !isHubInvariant &&
+      entry.applicableCount > 2 &&
+      violatingFilesCount * 2 > entry.applicableCount
 
     if (isMajority) {
-      // Majority of files violate the rule: this is a CONTRACT finding, not code findings!
+      // Majority of files violate a non-hub spoke rule: this is a CONTRACT finding
       contractFindings.push({
         type: 'contract-finding',
+        severity: 'violation',
         ruleId,
         ruleTitle: entry.rule.title,
-        message: `Rule '${entry.rule.title}' is violated by ${violatingFilesCount}/${totalScanned} files (> 50%). In reality, this pattern is 'preferred-direction', not 'current-reality'.`,
+        message: `Rule '${entry.rule.title}' is violated by ${violatingFilesCount}/${entry.applicableCount} files (> 50%). In reality, this pattern is 'preferred-direction', not 'current-reality'.`,
         suggestedAction: `Reclassify rule status in '${entry.rule.owner}' to 'preferred-direction' or update AGENTS.md via /contract-refine before attempting code refactoring.`,
       })
-    } else {
-      // Minority of files violate the rule: these are actionable code findings
+      // Keep code findings with diffSuppressed: true so findings are never hidden
       for (const f of entry.files) {
         codeFindings.push({
           type: 'code-finding',
+          severity: f.severity,
           ruleId,
           ruleTitle: entry.rule.title,
           file: f.file,
           line: f.line,
           snippet: f.snippet,
-          message: `Violates '${entry.rule.title}': ${entry.rule.action}`,
+          message: f.message,
+          suggestedAction: `Contract in dispute. Await resolution before refactoring.`,
+          diffSuppressed: true,
+        })
+      }
+    } else {
+      for (const f of entry.files) {
+        codeFindings.push({
+          type: 'code-finding',
+          severity: f.severity,
+          ruleId,
+          ruleTitle: entry.rule.title,
+          file: f.file,
+          line: f.line,
+          snippet: f.snippet,
+          message: f.message,
           suggestedAction: `Refactor line ${f.line} in ${f.file} according to ${entry.rule.owner}.`,
+          diffSuppressed: false,
         })
       }
     }
   }
 
+  const activeInScopeCount = evaluatedCoverage.length + unevaluatedCoverage.length
+  const ratio = activeInScopeCount > 0 ? evaluatedCoverage.length / activeInScopeCount : 1.0
+
+  const hasContractDispute = contractFindings.length > 0
+  const hasCodeViolations = codeFindings.some(
+    (f) => f.severity === 'violation' && !f.diffSuppressed,
+  )
+
+  let verdict: EvaluationVerdict = 'deterministic-clean'
+  if (hasCodeViolations) {
+    verdict = 'deterministic-violations'
+  } else if (hasContractDispute) {
+    verdict = 'contract-dispute'
+  }
+
+  const passed = verdict === 'deterministic-clean' && ratio === 1.0
+  const deterministicPassed = verdict === 'deterministic-clean'
+
   return {
     totalFilesChecked: totalScanned,
-    passed: contractFindings.length === 0 && codeFindings.length === 0,
+    coverage: {
+      evaluated: evaluatedCoverage,
+      unevaluated: unevaluatedCoverage,
+      ratio,
+    },
+    verdict,
+    passed,
+    deterministicPassed,
     contractFindings,
     codeFindings,
   }
@@ -714,16 +1084,20 @@ export function runCli(): void {
   if (command === 'eval') {
     const ledgerIndex = args.indexOf('--ledger')
     const ledgerPath = ledgerIndex !== -1 ? args[ledgerIndex + 1] : null
-    const targetArgs = args
-      .slice(1)
-      .filter(
-        (a, idx) =>
-          !a.startsWith('--') &&
-          (ledgerIndex === -1 || (idx + 1 !== ledgerIndex && idx !== ledgerIndex)),
-      )
+    const isJson = args.includes('--json')
+    const isDeterministicOnly = args.includes('--deterministic-only')
+
+    const targetArgs = args.slice(1).filter((a, idx) => {
+      if (a === '--json' || a === '--deterministic-only') return false
+      if (a.startsWith('--')) return false
+      if (ledgerIndex !== -1 && (idx + 1 === ledgerIndex || idx === ledgerIndex)) return false
+      return true
+    })
 
     if (targetArgs.length === 0) {
-      console.error('Usage: contract-ledger.ts eval [--ledger <path>] <files-or-dirs...>')
+      console.error(
+        'Usage: contract-ledger.ts eval [--ledger <path>] [--json] [--deterministic-only] <files-or-dirs...>',
+      )
       process.exit(2)
     }
 
@@ -736,38 +1110,229 @@ export function runCli(): void {
 
     const targetFiles = collectCodeFiles(targetArgs, workspaceDir)
     if (targetFiles.length === 0) {
-      console.log(`🔍 No code files found matching: ${targetArgs.join(', ')}`)
+      if (isJson) {
+        console.log(
+          JSON.stringify({
+            totalFilesChecked: 0,
+            coverage: { evaluated: [], unevaluated: [], ratio: 1.0 },
+            verdict: 'deterministic-clean',
+            passed: true,
+            deterministicPassed: true,
+            contractFindings: [],
+            codeFindings: [],
+          }),
+        )
+      } else {
+        console.log(`🔍 No code files found matching: ${targetArgs.join(', ')}`)
+      }
       process.exit(0)
     }
 
     const result = evaluateCodeAgainstContract(ledger, targetFiles)
 
-    console.log(`🔍 Code Contract Evaluation: ${targetFiles.length} file(s) checked`)
+    if (isJson) {
+      console.log(JSON.stringify(result, null, 2))
+      if (result.verdict === 'deterministic-violations') process.exit(1)
+      if (result.verdict === 'contract-dispute') process.exit(4)
+      if (result.coverage.ratio === 1.0 || isDeterministicOnly) process.exit(0)
+      process.exit(3) // REVIEW_REQUIRED
+    }
+
+    const totalActiveInScope = result.coverage.evaluated.length + result.coverage.unevaluated.length
+    const coveragePct = Math.round(result.coverage.ratio * 100)
+    const violationsCount = result.codeFindings.filter(
+      (f) => f.severity === 'violation' && !f.diffSuppressed,
+    ).length
+    const leadsCount = result.codeFindings.filter(
+      (f) => f.severity === 'lead' && !f.diffSuppressed,
+    ).length
+
+    const heuristicCount = result.coverage.unevaluated.filter(
+      (r) => r.declaredClass === 'heuristic',
+    ).length
+    const humanCount = result.coverage.unevaluated.filter(
+      (r) => r.declaredClass === 'human-only',
+    ).length
+    const declaredDetCount = result.coverage.unevaluated.filter(
+      (r) => r.declaredClass === 'deterministic',
+    ).length
+
+    console.log(
+      `🔍 Code Contract Evaluation: ${targetFiles.length} file(s) checked | ${totalActiveInScope} active rule(s) in scope`,
+    )
+    console.log(
+      `   Deterministic: ${result.coverage.evaluated.length} rule(s) bound to evaluators — ${violationsCount} violation(s), ${leadsCount} lead(s)`,
+    )
+    console.log(
+      `   Unevaluated:   ${result.coverage.unevaluated.length} rule(s) (${heuristicCount} heuristic, ${humanCount} human-only, ${declaredDetCount} declared-deterministic without evaluator)`,
+    )
+    console.log(
+      `   Coverage:      ${coveragePct}% → deterministic pass is NOT a compliance verdict. Heuristic review REQUIRED.`,
+    )
+
     if (result.contractFindings.length > 0) {
       console.log(`\n⚠️ Contract Status Findings (${result.contractFindings.length}):`)
       for (const cf of result.contractFindings) {
-        console.log(`  - ${cf.ruleTitle}: ${cf.message}`)
+        console.log(`  - [${cf.ruleTitle}] ${cf.message}`)
         console.log(`    ↳ Action: ${cf.suggestedAction}`)
       }
     }
 
     if (result.codeFindings.length > 0) {
-      console.log(`\n❌ Code Alignment Findings (${result.codeFindings.length}):`)
+      console.log(`\nFindings (${result.codeFindings.length}):`)
       for (const cf of result.codeFindings) {
-        console.log(`  - ${cf.file}:${cf.line} [${cf.ruleTitle}]`)
-        console.log(`    ${cf.message}`)
+        const icon = cf.diffSuppressed ? '⚠️' : cf.severity === 'violation' ? '❌' : 'ℹ️'
+        const tag = cf.diffSuppressed
+          ? '[DISPUTED]'
+          : cf.severity === 'violation'
+            ? '[VIOLATION]'
+            : '[LEAD]'
+        console.log(`  ${icon} ${tag} ${cf.file}:${cf.line} [${cf.ruleTitle}]`)
+        console.log(`     ${cf.message}`)
+        if (cf.suggestedAction) console.log(`     ↳ ${cf.suggestedAction}`)
       }
     }
 
-    if (result.passed) {
-      console.log('✓ Code is 100% aligned with active contract rules!')
+    if (result.verdict === 'deterministic-violations') {
+      console.log(
+        `\n❌ Deterministic violations found (${violationsCount} violation(s)). Fix code before proceeding.`,
+      )
+      process.exit(1)
+    }
+
+    if (result.verdict === 'contract-dispute') {
+      console.log(
+        `\n⚠️ Contract dispute detected. In reality this pattern is disputed; route to /contract-refine.`,
+      )
+      process.exit(4)
+    }
+
+    // Deterministic clean
+    if (result.coverage.ratio === 1.0 || isDeterministicOnly) {
+      console.log(`\n✓ Deterministic rules evaluated cleanly (Coverage: ${coveragePct}%).`)
       process.exit(0)
     }
 
-    process.exit(result.codeFindings.length > 0 ? 1 : 0)
+    console.log(
+      `\nℹ️ Deterministic checks passed for evaluated rules, but ${result.coverage.unevaluated.length} unevaluated rule(s) require model heuristic review.`,
+    )
+    console.log(
+      `   Run model review on unevaluated rules and verify with 'contract-ledger.ts verdict'.`,
+    )
+    process.exit(3) // REVIEW_REQUIRED
   }
 
-  console.error(`Unknown command: ${command}. Use 'compile', 'verify', or 'eval'.`)
+  if (command === 'verdict') {
+    const evalIndex = args.indexOf('--eval')
+    const reviewIndex = args.indexOf('--review')
+    const evalPath = evalIndex !== -1 ? args[evalIndex + 1] : null
+    const reviewPath = reviewIndex !== -1 ? args[reviewIndex + 1] : null
+
+    if (!evalPath || !reviewPath) {
+      console.error(
+        'Usage: contract-ledger.ts verdict --eval <eval-result.json> --review <heuristic-review.json>',
+      )
+      process.exit(2)
+    }
+
+    const absEval = path.isAbsolute(evalPath) ? evalPath : path.resolve(workspaceDir, evalPath)
+    const absReview = path.isAbsolute(reviewPath)
+      ? reviewPath
+      : path.resolve(workspaceDir, reviewPath)
+
+    if (!fs.existsSync(absEval)) {
+      console.error(`Error: eval file not found at ${absEval}`)
+      process.exit(2)
+    }
+    if (!fs.existsSync(absReview)) {
+      console.error(`Error: review file not found at ${absReview}`)
+      process.exit(2)
+    }
+
+    const evalResult: CodeEvaluationResult = JSON.parse(fs.readFileSync(absEval, 'utf-8'))
+    const reviewData: {
+      assessedBy?: string
+      reviews: Array<{
+        ruleId: string
+        ruleTitle?: string
+        verdict: 'pass' | 'violation' | 'not-applicable' | 'cannot-assess'
+        rationale?: string
+      }>
+    } = JSON.parse(fs.readFileSync(absReview, 'utf-8'))
+
+    if (!reviewData || !Array.isArray(reviewData.reviews)) {
+      console.error("Error: review file must contain a 'reviews' array.")
+      process.exit(2)
+    }
+
+    if (evalResult.totalFilesChecked === 0) {
+      console.error('Error: eval result checked 0 files; cannot grant ALIGNED.')
+      process.exit(2)
+    }
+
+    const seenReviewRules = new Set<string>()
+    for (const r of reviewData.reviews) {
+      if (seenReviewRules.has(r.ruleId)) {
+        console.error(
+          `Error: duplicate review entry for rule ID '${r.ruleId}' detected in review file.`,
+        )
+        process.exit(2)
+      }
+      seenReviewRules.add(r.ruleId)
+    }
+
+    if (evalResult.verdict !== 'deterministic-clean') {
+      console.log(
+        `❌ Evaluation verdict is '${evalResult.verdict}'; cannot declare aligned until violations/disputes are resolved.`,
+      )
+      process.exit(evalResult.verdict === 'contract-dispute' ? 4 : 1)
+    }
+
+    const reviewsByRuleId = new Map(reviewData.reviews.map((r) => [r.ruleId, r]))
+    const unassessed: RuleCoverage[] = []
+    const heuristicViolations: string[] = []
+
+    for (const unevaluated of evalResult.coverage.unevaluated) {
+      const review = reviewsByRuleId.get(unevaluated.ruleId)
+      if (
+        !review ||
+        review.verdict === 'cannot-assess' ||
+        !['pass', 'not-applicable', 'violation'].includes(review.verdict)
+      ) {
+        unassessed.push(unevaluated)
+      } else if (review.verdict === 'violation') {
+        heuristicViolations.push(
+          `${unevaluated.title}: ${review.rationale || 'Violation reported'}`,
+        )
+      }
+    }
+
+    if (heuristicViolations.length > 0) {
+      console.log(`\n❌ Heuristic review reported ${heuristicViolations.length} violation(s):`)
+      for (const hv of heuristicViolations) {
+        console.log(`  - ${hv}`)
+      }
+      process.exit(1)
+    }
+
+    if (unassessed.length > 0) {
+      console.log(`\n⚠️ INCOMPLETE REVIEW: ${unassessed.length} rule(s) lack a definitive verdict:`)
+      for (const u of unassessed) {
+        console.log(`  - [${u.ruleId}] ${u.title} (${u.owner})`)
+      }
+      console.log(`   Tool refuses to grant ALIGNED until all active rules are assessed.`)
+      process.exit(3)
+    }
+
+    const totalEvaluatedCount = evalResult.coverage.evaluated.length
+    const totalHeuristicCount = evalResult.coverage.unevaluated.length
+    console.log(
+      `\n✓ VERDICT: ALIGNED (${totalEvaluatedCount + totalHeuristicCount} rules assessed: ${totalEvaluatedCount} deterministic, ${totalHeuristicCount} heuristic)`,
+    )
+    process.exit(0)
+  }
+
+  console.error(`Unknown command: ${command}. Use 'compile', 'verify', 'eval', or 'verdict'.`)
   process.exit(2)
 }
 

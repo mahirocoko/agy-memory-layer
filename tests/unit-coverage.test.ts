@@ -2060,14 +2060,14 @@ describe('Unit Coverage Extensions', () => {
     const pluginJson = JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, 'plugin.json'), 'utf8'))
 
     // 1. Released version intent and mirror equality
-    assert.strictEqual(packageJson.version, '1.17.0')
-    assert.strictEqual(pluginJson.version, '1.17.0')
+    assert.strictEqual(packageJson.version, '1.18.0')
+    assert.strictEqual(pluginJson.version, '1.18.0')
     assert.strictEqual(packageJson.version, pluginJson.version)
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(contractDoc.includes('**Package version:** `1.17.0`'), true)
-    assert.strictEqual(contractDoc.includes('Released as `v1.17.0` on 2026-09-03'), true)
+    assert.strictEqual(contractDoc.includes('**Package version:** `1.18.0`'), true)
+    assert.strictEqual(contractDoc.includes('Released as `v1.18.0` on 2026-09-09'), true)
     assert.strictEqual(
       contractDoc.includes(
         'Every schema-valid invocation that runs to completion within the host hook',
