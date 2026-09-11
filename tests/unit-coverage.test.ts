@@ -2115,6 +2115,127 @@ describe('Unit Coverage Extensions', () => {
       readmeDoc.includes('docs/letta-parity.md#model-guided-authority-host-matrix--2026-09-02'),
       true,
     )
+    assert.strictEqual(
+      readmeDoc.includes('[execution-continuity pilot](./docs/execution-continuity-pilot.md)'),
+      true,
+    )
+
+    const continuityPilotDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'execution-continuity-pilot.md'),
+      'utf8',
+    )
+    const continuityStage1EvidenceDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'execution-continuity-stage1-evidence-2026-09-11.md'),
+      'utf8',
+    )
+    assert.strictEqual(
+      continuityStage1EvidenceDoc.includes('15 distinct scored Agy sessions'),
+      true,
+    )
+    assert.strictEqual(
+      continuityStage1EvidenceDoc.includes('audited Stage 1 result is **1/5**'),
+      true,
+    )
+    assert.strictEqual(
+      continuityStage1EvidenceDoc.includes('audited Stage 1 result is **0/5**'),
+      true,
+    )
+    assert.strictEqual(
+      continuityStage1EvidenceDoc.includes('Stage 2: **not started and not authorized**'),
+      true,
+    )
+    const assertContinuityPilotContract = (content: string) => {
+      assert.strictEqual(
+        content.includes(
+          'Stage 0 deterministic fixture-preflight PASS; Stage 1 completed 15 scored runs and disqualified both candidate modes; Stage 2 and runtime implementation remain unauthorized.',
+        ),
+        true,
+      )
+      assert.strictEqual(content.includes('Do not add new subagent definitions'), true)
+      assert.strictEqual(content.includes('Exactly one controller owns a mission.'), true)
+      assert.strictEqual(content.includes('artifact or dirty-diff fingerprint'), true)
+      assert.strictEqual(
+        content.includes('No active product worktree may be used as the harness.'),
+        true,
+      )
+      assert.strictEqual(content.includes('15 scored runs maximum'), true)
+      assert.strictEqual(content.includes('20 additional runs'), true)
+      assert.strictEqual(
+        content.includes('C1, C2, and C3 each reach `agent_checked` in all three scored runs'),
+        true,
+      )
+      assert.strictEqual(content.includes('Stage 1 used the complete approved 15-run'), true)
+      assert.strictEqual(content.includes('completed with neither candidate advancing'), true)
+      assert.strictEqual(
+        content.includes('**Result (2026-09-11): deterministic fixture-preflight PASS.**'),
+        true,
+      )
+
+      for (const forbiddenClaim of [
+        'Runtime implementation is complete.',
+        'Automatic continuation is guaranteed.',
+        'Compaction recovery is guaranteed.',
+        'Provider calls are authorized by this document.',
+      ]) {
+        assert.strictEqual(content.includes(forbiddenClaim), false)
+      }
+    }
+
+    assertContinuityPilotContract(continuityPilotDoc)
+    assert.throws(() =>
+      assertContinuityPilotContract(
+        continuityPilotDoc.replace(
+          'Exactly one controller owns a mission.',
+          'Controllers may overlap.',
+        ),
+      ),
+    )
+    assert.throws(() =>
+      assertContinuityPilotContract(
+        continuityPilotDoc.replace('15 scored runs maximum', '150 scored runs maximum'),
+      ),
+    )
+    assert.throws(() =>
+      assertContinuityPilotContract(
+        continuityPilotDoc.replaceAll('artifact or dirty-diff fingerprint', 'Git HEAD'),
+      ),
+    )
+    assert.throws(() =>
+      assertContinuityPilotContract(
+        continuityPilotDoc.replace(
+          'No active product worktree may be used as the harness.',
+          'An active product worktree may be used as the harness.',
+        ),
+      ),
+    )
+    assert.throws(() =>
+      assertContinuityPilotContract(
+        continuityPilotDoc.replace(
+          'C1, C2, and C3 each reach `agent_checked` in all three scored runs',
+          'C1, C2, and C3 may remain blocked in all three scored runs',
+        ),
+      ),
+    )
+    assert.throws(() =>
+      assertContinuityPilotContract(
+        `${continuityPilotDoc}\nProvider calls are authorized by this document.`,
+      ),
+    )
+    assert.strictEqual(
+      contractDoc.includes('design-and-evidence plan, not an active runtime contract'),
+      true,
+    )
+    const exactContractPilotLink =
+      '[`execution-continuity pilot`](./docs/execution-continuity-pilot.md)'
+    assert.strictEqual(contractDoc.includes(exactContractPilotLink), true)
+    assert.throws(() =>
+      assert.strictEqual(
+        contractDoc
+          .replace('./docs/execution-continuity-pilot.md', './docs/misdirected-continuity-pilot.md')
+          .includes(exactContractPilotLink),
+        true,
+      ),
+    )
 
     // 4. docs/letta-parity.md canonical owner and bounded model-guided compaction resistance
     const parityDoc = fs.readFileSync(path.join(ROOT_DIR, 'docs', 'letta-parity.md'), 'utf8')
@@ -2145,7 +2266,56 @@ describe('Unit Coverage Extensions', () => {
       versionRuleSection.includes('plugins/agy-memory-layer/scripts/palace-generator.ts'),
       false,
     )
-    assert.strictEqual(rootAgentsDoc.includes('**59 focused Node test-runner cases**'), true)
+    assert.strictEqual(rootAgentsDoc.includes('**72 focused Node test-runner cases**'), true)
+    assert.strictEqual(
+      rootAgentsDoc.includes(
+        '[`docs/execution-continuity-pilot.md`](docs/execution-continuity-pilot.md)',
+      ),
+      true,
+    )
+
+    const projectOverviewDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'project-overview.md'),
+      'utf8',
+    )
+    assert.strictEqual(
+      projectOverviewDoc.includes(
+        '| Execution-continuity pilot | `docs/execution-continuity-pilot.md` |',
+      ),
+      false,
+    )
+    assert.strictEqual(
+      projectOverviewDoc.includes(
+        '| Execution-continuity pilot | `docs/execution-continuity-pilot.md`, `docs/execution-continuity-stage1-evidence-2026-09-11.md`, `scripts/execution-continuity-stage1.ts`, `tests/execution-continuity*.test.ts`, `tests/support/execution-continuity-*.ts` |',
+      ),
+      true,
+    )
+    assert.strictEqual(
+      packageJson.scripts.test.includes('tests/execution-continuity.test.ts'),
+      true,
+    )
+    assert.strictEqual(
+      packageJson.scripts['test:coverage'].includes('tests/execution-continuity.test.ts'),
+      true,
+    )
+    assert.strictEqual(
+      packageJson.scripts.test.includes('tests/execution-continuity-stage1.test.ts'),
+      true,
+    )
+    assert.strictEqual(
+      packageJson.scripts['test:coverage'].includes('tests/execution-continuity-stage1.test.ts'),
+      true,
+    )
+    const executionContinuityTest = fs.readFileSync(
+      path.join(ROOT_DIR, 'tests', 'execution-continuity.test.ts'),
+      'utf8',
+    )
+    assert.strictEqual(
+      executionContinuityTest.includes(
+        "test('exclusive ownership, stale revisions, and malformed identity produce no fixture effect'",
+      ),
+      true,
+    )
 
     // 6. Bounded real-host evidence remains scoped and current
     const hostEvidenceDoc = parityDoc

@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-09-09T22:45:02.931573",
+  "generatedAt": "2026-09-11T20:53:13",
   "source": "rrr-derived",
-  "totalSessions": 35,
+  "totalSessions": 36,
   "todaySessions": 1,
-  "activeDays": 7,
-  "avgSessionsPerActiveDay": 5.0,
+  "activeDays": 8,
+  "avgSessionsPerActiveDay": 4.5,
   "sizes": {
     "today": "small",
     "thresholds": {
@@ -13,11 +13,10 @@
       "largeMin": 4
     }
   },
-  "activity": {
-    "streakDays": 1,
-    "last7DaysSessions": 3,
-    "previous7DaysSessions": 1,
-    "weekOverWeekChangePct": 200.0
-  },
-  "branch": "main"
+  "branches": {
+    "current": {
+      "name": "main",
+      "recentCommits30d": 64
+    }
+  }
 }

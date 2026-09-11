@@ -15,6 +15,14 @@
 > not establish the requested runtime outcome. No host-enforced completion is added.
 > See the [release notes](./docs/releases/v1.18.2.md) for verification and limitations.
 
+> **Current development candidate:** The approved
+> [execution-continuity pilot](./docs/execution-continuity-pilot.md) compares the released
+> conversation-only controller with standalone durable-checkpoint and Letta-led bounded-Agy modes.
+> Stage 1 used its complete 15-run ceiling and disqualified both candidate modes: standalone state
+> retained stale candidate fingerprints, while the Letta-led scorer closed missions with agent
+> criteria still open. The harness now rejects those shapes, but it adds no runtime state,
+> supervisor, automatic continuation, or new subagent definition.
+
 > **v1.15.4 (Prior Release):** Model-guided authority boundary and
 > anti-laundering stanza emitted first whenever a schema-valid PreInvocation
 > hook completes, canonical authority doctrine across plugin rules, skills, and
@@ -265,6 +273,8 @@ being copied into this README.
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
 > **Latest release**: [`v1.18.2`](./docs/releases/v1.18.2.md) adds conversation-evidence review and bounded goal/proof checkpoints. Verification: 60 Node tests and 11 integration scenarios passed; `pnpm check` passed. One explicitly instructed live Agy trial provides bounded runtime evidence, not automatic-trigger or long-task proof. The coverage table above remains the historical `v1.15.4` snapshot, not coverage evidence for this release.
+
+> **Current development candidate**: the [execution-continuity pilot](./docs/execution-continuity-pilot.md) has a nine-case deterministic Stage 0 fixture-preflight PASS and an audited 15-run Stage 1 no-advance result. The current source passes 73 Node tests and 11 integration scenarios. This remains bounded source/model evidence only: no Stage 2 repeat, automatic continuation, compaction recovery, runtime supervisor, or OS sandbox is implemented or authorized.
 
 ---
 

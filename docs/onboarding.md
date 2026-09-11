@@ -45,7 +45,8 @@ Run the complete test suite:
 pnpm test
 ```
 
-You should see all 11 integration scenarios and 23 Node test-runner tests pass.
+You should see all 11 integration scenarios pass and the current Node test count reported by the
+runner with zero failures. `AGENTS.md` owns the exact current-source count.
 
 ---
 

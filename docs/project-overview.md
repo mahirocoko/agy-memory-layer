@@ -53,6 +53,7 @@ Antigravity CLI
 | Committed prompt projection | `scripts/layered-memory.ts` | Selects layered/legacy ownership from `HEAD`; dirty content is not active |
 | Working hypothesis | `scripts/active-learning.ts` | One canonical protected hypothesis; malformed/stray active state fails closed |
 | Evidence Controller | `skills/evidence-controller/SKILL.md` | Agy-native claim, delegation, retry, and human-gate procedure |
+| Execution-continuity pilot | `docs/execution-continuity-pilot.md`, `docs/execution-continuity-stage1-evidence-2026-09-11.md`, `scripts/execution-continuity-stage1.ts`, `tests/execution-continuity*.test.ts`, `tests/support/execution-continuity-*.ts` | Stage 0 deterministic fixture preflight plus audited Stage 1 no-advance evidence and corrected test-only scorer; no runtime state or supervisor |
 | Memory repository contract | `scripts/memory-repository.ts`, `scripts/memory-write-lock.ts` | Containment, status, serialization, atomic writes, targeted commits |
 | Workspace identity | `scripts/workspace-identity.ts` | Shared child/root/remote scope resolution and history mapping |
 | Stop status | `scripts/hook-memory-status.ts` | Observational only |
@@ -69,6 +70,11 @@ Antigravity CLI
 
 ## Known Gaps
 
+- durable mission state, finite completion supervision, compaction recovery,
+  and final-response blocking remain unimplemented; the approved
+  [`execution-continuity pilot`](./execution-continuity-pilot.md) completed Stage 0 and a separately
+  authorized 15-run Stage 1 screen, but neither candidate advanced; no Stage 2 rerun or runtime
+  design is selected or authorized;
 - isolated, cursor-based model reflection with a clean memory worktree;
 - a release-acquiring updater with validation and rollback;
 - self-contained runtime artifacts for remote TypeScript execution;

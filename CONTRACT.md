@@ -338,14 +338,23 @@ See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 
 ## Deferred Before Production-Ready Parity
 
-1. Isolated Dream/reflection worktree, per-conversation cursor, one-active-run
+1. Durable mission state, finite completion supervision, compaction recovery,
+   and final-response blocking remain unimplemented. The approved
+   [`execution-continuity pilot`](./docs/execution-continuity-pilot.md) is a
+   design-and-evidence plan, not an active runtime contract or standing provider-call authorization.
+   Stage 0 has a reviewed deterministic fixture-preflight PASS. A separately authorized 15-run
+   Stage 1 screen then disqualified standalone continuity for stale persisted fingerprints and the
+   Letta-led mode for terminal missions with open agent criteria. The corrected test-only scorer now
+   rejects both shapes, but no model rerun, Stage 2 repeat, runtime supervisor, OS sandbox, compaction
+   recovery, or human-acceptance proof is authorized or implemented.
+2. Isolated Dream/reflection worktree, per-conversation cursor, one-active-run
    lock, merge policy, and activation after successful integration.
-2. Source-aware release acquisition, validation, atomic link switch, and
+3. Source-aware release acquisition, validation, atomic link switch, and
    rollback for remote installations.
-3. Built JavaScript artifacts or installed runtime dependencies for remote
+4. Built JavaScript artifacts or installed runtime dependencies for remote
    TypeScript-dependent utilities.
-4. Host-level proof or narrower claims for subagent tool restrictions.
-5. An automated release workflow remains deferred. Releases use the existing
+5. Host-level proof or narrower claims for subagent tool restrictions.
+6. An automated release workflow remains deferred. Releases use the existing
    manual tag/GitHub Release path only after source, host, and human gates pass;
    current release evidence lives in
    [`docs/releases/v1.15.4.md`](./docs/releases/v1.15.4.md).

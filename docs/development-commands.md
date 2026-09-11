@@ -13,7 +13,7 @@ Run the primary Node.js test runner suite:
 pnpm test
 
 # Run tests directly with Node 22+ type stripping
-node --experimental-strip-types --test --test-concurrency=1 tests/run-test-suite.ts tests/unit-coverage.test.ts
+node --experimental-strip-types --test --test-concurrency=1 tests/layered-memory.test.ts tests/run-test-suite.ts tests/unit-coverage.test.ts tests/contract-ledger.test.ts tests/execution-continuity.test.ts tests/execution-continuity-stage1.test.ts
 ```
 
 ---

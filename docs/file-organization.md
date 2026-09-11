@@ -24,6 +24,8 @@ learn-letta-code/
 │   ├── agy-host-e2e-2026-08-20.md           # Real interactive AGY host evidence and cleanup
 │   ├── onboarding.md                        # Day 1 setup and verification
 │   ├── project-overview.md                  # Architecture and subsystem overview
+│   ├── execution-continuity-pilot.md        # Stage 0 plus audited Stage 1 decision owner
+│   ├── execution-continuity-stage1-evidence-2026-09-11.md # Exact scored receipts and no-advance evidence
 │   ├── letta-parity.md                      # Canonical Letta behavior/adaptation/status matrix
 │   ├── layered-memory.md                    # Focused layout, curation, migration, and rollback contract
 │   ├── v1.15-layered-memory-evidence.md     # v1.15 plan/apply/rollback and host evidence
@@ -70,7 +72,9 @@ learn-letta-code/
 │   ├── rules/
 │   │   └── AGENTS.md                        # In-Context autonomous memory directives
 │   │
-│   ├── skills/                              # 12 Slash command skill definitions
+│   ├── skills/                              # 14 Slash command skill definitions
+│   │   ├── contract-align/SKILL.md
+│   │   ├── contract-refine/SKILL.md
 │   │   ├── evidence-controller/SKILL.md
 │   │   ├── init/SKILL.md
 │   │   ├── memory/SKILL.md
@@ -125,5 +129,15 @@ learn-letta-code/
     ├── run-test-suite.ts                    # Integration scenario runner and report generator
     ├── test-memory-backup.ts                # Backup integrity and path-containment tests
     ├── layered-memory.test.ts               # Projection, migration, rollback, curation, and lock cases
+    ├── execution-continuity.test.ts         # Disposable Stage 0 mission/lifecycle and C1-C5 fixtures
+    ├── execution-continuity-stage1.test.ts  # Stage 1 root safety, scoring, fingerprint, and finalization guards
+    ├── support/
+    │   ├── execution-continuity-state.ts    # Persisted schema, budgets, evidence, and terminal decisions
+    │   ├── execution-continuity-harness.ts  # Closed dispatcher, lock, fingerprint, and disposable roots
+    │   └── execution-continuity-fixtures.ts # Fixed C1-C5 defects, probes, repairs, and outcomes
     └── unit-coverage.test.ts                # Focused engine unit cases
 ```
+
+The repository root `scripts/execution-continuity-stage1.ts` creates, scores, and removes only
+prefix-bound disposable Stage 1 Git fixtures under the system temporary directory. It is test and
+evidence tooling, not a production supervisor.

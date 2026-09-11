@@ -73,8 +73,8 @@ pnpm test
 ```
 
 Expected output for the current source: **11/11 integration scenarios**
-in `TEST_REPORT.md` and **59 focused Node test-runner cases** passing
-(60 tests including the integration runner). Refresh
+in `TEST_REPORT.md` and **72 focused Node test-runner cases** passing
+(73 tests including the integration runner). Refresh
 the exact count and coverage after the final full run; do not infer release or
 live-migration readiness from source tests alone.
 - PreInvocation hook schema validation
@@ -84,6 +84,8 @@ live-migration readiness from source tests alone.
 - Hybrid Semantic Recall engine (BM25 + Cosine Similarity)
 - Explicit/manual Dream daemon scanner and 20-step count logic
 - Agent launcher subagent manifest resolution
+- Test-only execution-continuity Stage 0 fixtures plus the Stage 1 disposable runner, scorer, and
+  stale-state regressions
 
 Topology or schema changes that affect Memory Palace require consumer-level
 acceptance, not only source, projection, health, or file-generation checks.
@@ -112,6 +114,8 @@ Detailed operational documentation is split into modular files under [`docs/`](d
 - [`docs/onboarding.md`](docs/onboarding.md) — Day 1 setup, installation lifecycle, and environment verification.
 - [`docs/project-overview.md`](docs/project-overview.md) — Deep architectural overview and MemFS design.
 - [`docs/letta-parity.md`](docs/letta-parity.md) — Canonical Letta behavior → Agy adaptation → implementation status matrix.
+- [`docs/execution-continuity-pilot.md`](docs/execution-continuity-pilot.md) — Stage 0 fixture-preflight and audited Stage 1 results; both candidate modes are disqualified and production continuity remains unimplemented.
+- [`docs/execution-continuity-stage1-evidence-2026-09-11.md`](docs/execution-continuity-stage1-evidence-2026-09-11.md) — Exact 15-run receipts, false-PASS findings, cleanup, and the no-advance decision.
 - [`docs/development-commands.md`](docs/development-commands.md) — Script runners, testing, and daemon commands.
 - [`docs/file-organization.md`](docs/file-organization.md) — Directory layout and responsibility matrix.
 - [`docs/best-practices.md`](docs/best-practices.md) — Coding conventions, non-blocking hooks, and memory hygiene.
