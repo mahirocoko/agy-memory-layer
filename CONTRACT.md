@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.18.2`
+**Package version:** `1.19.0`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.18.2` on 2026-09-09
+**Release state:** Released as `v1.19.0` on 2026-09-11
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -130,6 +130,30 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
   `memory-curation.ts`, whose exhaustive source-unit ledger and exact source
   archive are approved as one hash-bound plan.
 
+#### Approval-bound repository contract alignment
+
+- `/contract-refine` may edit only `AGENTS.md` plus non-historical
+  `docs/**/*.md`. Before approval it prepares exact proposed owner bytes outside
+  active owners and places the complete sorted path/role/content-hash manifest
+  in `proposal.finalOwners`.
+- Every first baseline adoption and later contract change requires an explicit
+  proposal/approval pair. Git cleanliness or a committed contract is repository
+  state, not human acceptance.
+- Snapshot creation requires live active-owner identity to equal the approved
+  final manifest exactly. Verification binds that manifest, proposal hash,
+  selected item IDs, approval locator, compiled source hash, rule digest, and
+  embedded ledger. Approval metadata records cooperative evidence; it is not
+  cryptographic authentication.
+- `/contract-align` evaluates only an already verified snapshot. Every explicit
+  target must exist, resolve inside the repository, and be a regular code file
+  before content evaluation. Evaluation receipts bind exact target paths and
+  bytes; verdict rejects changed targets, changed owners, mismatched review
+  hashes, missing evidence, incomplete review, and reported violations.
+- A fresh read-only reviewer is required when the current parent authored,
+  refined, disputed, or implemented the claim under review. Reviewer output is
+  evidence rather than authority or a vote, and recorded reviewer IDs are not
+  host-attested identity proof.
+
 ### 5. Project identity
 
 - Project slugs are lowercase `a-z`, digits, and hyphens, up to 100 characters.
@@ -206,7 +230,8 @@ Disposable evidence for the exact current live plan is recorded in
 
 The bundle currently contains:
 
-- 12 skills, including the Agy-native Evidence Controller;
+- 14 skills, including the Agy-native Evidence Controller and approval-bound
+  contract refinement/alignment pair;
 - 9 declarative subagent role manifests, including a fresh read-only evidence reviewer, repository scout, and bounded implementation writer;
 - 3 lifecycle hooks (`PreInvocation`, `PreToolUse`, `Stop`);
 - TypeScript source executed with Node 22+ type stripping;
@@ -275,6 +300,13 @@ current Node test count and coverage must be refreshed by the full verification
 run before each release. Remote sync is exercised against a disposable
 local bare repository. Neither report alone proves cron, external network,
 automatic model routing, or AGY host-enforcement behavior.
+
+Released `v1.19.0` measures **83.76% lines**, **70.76% branches**, and
+**88.12% functions**, with 80/80 Node tests passing (one integration runner
+containing 11/11 scenarios plus 79 focused cases). The contract workflow's
+source tests are complemented by one disposable real-Agy refine-to-align run
+and fail-closed owner/target drift controls; these remain bounded evidence, not
+authenticated approval, reviewer identity, or universal semantic correctness.
 
 One pane-first Agy `1.1.20` direct-CLI sandbox establishes a bounded automatic
 hard-trigger path: with static checks passing, runtime tests failing, and the
@@ -357,7 +389,7 @@ See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 6. An automated release workflow remains deferred. Releases use the existing
    manual tag/GitHub Release path only after source, host, and human gates pass;
    current release evidence lives in
-   [`docs/releases/v1.15.4.md`](./docs/releases/v1.15.4.md).
+   [`docs/releases/v1.19.0.md`](./docs/releases/v1.19.0.md).
 
 ## Distribution
 

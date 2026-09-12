@@ -1,6 +1,6 @@
 # 🧠 agy-memory-layer
 
-[![Coverage](https://img.shields.io/badge/Coverage-81.23%25-green.svg)](./CONTRACT.md)
+[![Coverage](https://img.shields.io/badge/Coverage-83.76%25-green.svg)](./CONTRACT.md)
 [![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
@@ -9,11 +9,11 @@
 > **Evidence-Controlled Agy Delegation, Committed Git-Backed Memory, and Scoped Correction Recall for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
 
-> **v1.18.2 (Latest Release):** Conversation-evidence review for contract refinement
-> and a bounded, model-guided completion loop for the Evidence Controller. The agent
-> derives goals and proof methods from a short task request; passing tests alone do
-> not establish the requested runtime outcome. No host-enforced completion is added.
-> See the [release notes](./docs/releases/v1.18.2.md) for verification and limitations.
+> **v1.19.0 (Latest Release):** Approval-bound contract refinement and snapshot-bound
+> source alignment. Exact final owner bytes, explicit baseline adoption, target-byte
+> receipts, and bounded heuristic review now fail closed on stale or reduced scope.
+> Approval and reviewer identity remain cooperative rather than authenticated.
+> See the [release notes](./docs/releases/v1.19.0.md) for verification and limitations.
 
 > **Current development candidate:** The approved
 > [execution-continuity pilot](./docs/execution-continuity-pilot.md) compares the released
@@ -257,13 +257,13 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.15.4 release |
+| Metric | v1.19.0 release |
 | :--- | ---: |
-| Lines | **81.26%** |
-| Branches | **65.86%** |
-| Functions | **85.45%** |
+| Lines | **83.76%** |
+| Branches | **70.76%** |
+| Functions | **88.12%** |
 
-This is the aggregate Node/V8 snapshot for the released `v1.15.4` source.
+This is the aggregate Node/V8 snapshot for the released `v1.19.0` source.
 Run `pnpm test:coverage` after source changes and update this snapshot in the
 same candidate/release change; per-file percentages remain in command output rather than
 being copied into this README.
@@ -272,9 +272,9 @@ being copied into this README.
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
-> **Latest release**: [`v1.18.2`](./docs/releases/v1.18.2.md) adds conversation-evidence review and bounded goal/proof checkpoints. Verification: 60 Node tests and 11 integration scenarios passed; `pnpm check` passed. One explicitly instructed live Agy trial provides bounded runtime evidence, not automatic-trigger or long-task proof. The coverage table above remains the historical `v1.15.4` snapshot, not coverage evidence for this release.
+> **Latest release**: [`v1.19.0`](./docs/releases/v1.19.0.md) binds contract approval to exact final owner bytes and binds alignment to verified snapshot and target identities. Verification: 80 Node tests and 11 integration scenarios passed; `pnpm check` passed. One disposable real Agy refine-to-align trial plus fail-closed negative controls provide bounded host evidence, not authenticated approval, reviewer identity, or universal semantic correctness. Aggregate coverage is recorded in the table above.
 
-> **Current development candidate**: the [execution-continuity pilot](./docs/execution-continuity-pilot.md) has a nine-case deterministic Stage 0 fixture-preflight PASS and an audited 15-run Stage 1 no-advance result. The current source passes 73 Node tests and 11 integration scenarios. This remains bounded source/model evidence only: no Stage 2 repeat, automatic continuation, compaction recovery, runtime supervisor, or OS sandbox is implemented or authorized.
+> **Current development candidate**: the [execution-continuity pilot](./docs/execution-continuity-pilot.md) has a nine-case deterministic Stage 0 fixture-preflight PASS and an audited 15-run Stage 1 no-advance result. The current source passes 80 Node tests and 11 integration scenarios. This remains bounded source/model evidence only: no Stage 2 repeat, automatic continuation, compaction recovery, runtime supervisor, or OS sandbox is implemented or authorized.
 
 ---
 

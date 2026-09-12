@@ -73,8 +73,8 @@ pnpm test
 ```
 
 Expected output for the current source: **11/11 integration scenarios**
-in `TEST_REPORT.md` and **72 focused Node test-runner cases** passing
-(73 tests including the integration runner). Refresh
+in `TEST_REPORT.md` and **79 focused Node test-runner cases** passing
+(80 tests including the integration runner). Refresh
 the exact count and coverage after the final full run; do not infer release or
 live-migration readiness from source tests alone.
 - PreInvocation hook schema validation

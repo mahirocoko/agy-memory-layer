@@ -14,6 +14,12 @@
 import * as crypto from 'node:crypto'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { matchesGlob, normalizeText } from './contract-matching.ts'
+import { computeSourcesHash } from './contract-snapshot.ts'
+
+export { computeRuleId } from './contract-matching.ts'
+
+import { computeRuleId } from './contract-matching.ts'
 
 export type RuleClass = 'deterministic' | 'heuristic' | 'human-only'
 export type RuleStatus =
@@ -148,19 +154,6 @@ export type CodeEvaluationResult = {
   deterministicPassed: boolean
   contractFindings: EvaluationFinding[]
   codeFindings: EvaluationFinding[]
-}
-
-function normalizeText(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-export function computeRuleId(title: string, intent: string, action: string): string {
-  const norm = `${normalizeText(title)}|${normalizeText(intent)}|${normalizeText(action)}`
-  return crypto.createHash('sha256').update(norm).digest('hex').slice(0, 16)
 }
 
 function classifyRule(text: string): RuleClass {
@@ -353,14 +346,12 @@ export function compileContractLedger(workspaceDir: string): ContractLedger {
   const docsDir = path.join(workspaceDir, 'docs')
   const hubExists = fs.existsSync(hubPath)
 
-  let combinedContent = ''
   const rules: RuleUnit[] = []
   const invariants: string[] = []
 
   // 1. Process Hub (AGENTS.md)
   if (hubExists) {
     const hubContent = fs.readFileSync(hubPath, 'utf-8')
-    combinedContent += hubContent
     const hubRules = parseRuleUnitsFromMarkdown(hubContent, 'AGENTS.md')
     rules.push(...hubRules)
 
@@ -393,8 +384,6 @@ export function compileContractLedger(workspaceDir: string): ContractLedger {
         rel.includes('releases/') || rel.includes('history/') || rel.includes('archive/')
 
       const content = fs.readFileSync(docFile, 'utf-8')
-      combinedContent += content
-
       const docRules = isHistorical ? [] : parseRuleUnitsFromMarkdown(content, rel)
       rules.push(...docRules)
 
@@ -411,8 +400,33 @@ export function compileContractLedger(workspaceDir: string): ContractLedger {
     }
   }
 
-  // Compute overall sources hash
-  const sourcesHash = crypto.createHash('sha256').update(combinedContent).digest('hex')
+  // Bind source identity to sorted owner path, role, and content bytes.
+  const sourcesHash = computeSourcesHash(
+    [
+      ...(hubExists
+        ? [
+            {
+              path: 'AGENTS.md',
+              role: 'hub' as const,
+              contentHash: crypto
+                .createHash('sha256')
+                .update(fs.readFileSync(hubPath))
+                .digest('hex'),
+            },
+          ]
+        : []),
+      ...spokes
+        .filter((spoke) => !spoke.isHistorical)
+        .map((spoke) => ({
+          path: spoke.path.replace(/\\/g, '/'),
+          role: 'spoke' as const,
+          contentHash: crypto
+            .createHash('sha256')
+            .update(fs.readFileSync(path.join(workspaceDir, spoke.path)))
+            .digest('hex'),
+        })),
+    ].sort((a, b) => a.path.localeCompare(b.path) || a.role.localeCompare(b.role)),
+  )
 
   return {
     version: '1.0.0',
@@ -598,26 +612,6 @@ export function verifyContractLedger(
     totalSpokes: ledger.spokes.length,
     findings,
   }
-}
-
-function matchesGlob(filePath: string, globPattern: string): boolean {
-  const normFile = filePath.replace(/\\/g, '/').replace(/^\.\//, '')
-  const normGlob = globPattern.replace(/\\/g, '/').replace(/^\.\//, '')
-  if (normGlob === '**/*' || normGlob === '*' || normGlob === '') return true
-
-  const regexStr = normGlob
-    .replace(/\*\*\//g, '___GLOBSTAR_SLASH___')
-    .replace(/\*\*/g, '___GLOBSTAR___')
-    .replace(/\*/g, '___STAR___')
-    .replace(/\?/g, '___QUESTION___')
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/___GLOBSTAR_SLASH___/g, '(?:.*/)?')
-    .replace(/___GLOBSTAR___/g, '.*')
-    .replace(/___STAR___/g, '[^/]*')
-    .replace(/___QUESTION___/g, '[^/]')
-
-  const regex = new RegExp(`^${regexStr}$`)
-  return regex.test(normFile)
 }
 
 export function evaluateCodeAgainstContract(
@@ -992,345 +986,6 @@ export function evaluateCodeAgainstContract(
   }
 }
 
-function collectCodeFiles(targets: string[], repoRoot: string): string[] {
-  const result: string[] = []
-  const extensions = ['.ts', '.tsx', '.js', '.jsx']
-
-  for (const t of targets) {
-    const absPath = path.isAbsolute(t) ? t : path.resolve(repoRoot, t)
-    if (!fs.existsSync(absPath)) continue
-
-    const stat = fs.statSync(absPath)
-    if (stat.isFile()) {
-      if (extensions.some((ext) => absPath.endsWith(ext))) {
-        result.push(absPath)
-      }
-    } else if (stat.isDirectory()) {
-      const walk = (dir: string) => {
-        const entries = fs.readdirSync(dir, { withFileTypes: true })
-        for (const entry of entries) {
-          if (entry.name === 'node_modules' || entry.name === '.git') continue
-          const full = path.join(dir, entry.name)
-          if (entry.isDirectory()) {
-            walk(full)
-          } else if (entry.isFile() && extensions.some((ext) => full.endsWith(ext))) {
-            result.push(full)
-          }
-        }
-      }
-      walk(absPath)
-    }
-  }
-
-  return result
-}
-
-// CLI runner
-export function runCli(): void {
-  const args = process.argv.slice(2)
-  const command = args[0] || 'verify'
-  const workspaceDir = process.cwd()
-
-  if (command === 'compile') {
-    const ledger = compileContractLedger(workspaceDir)
-    const outputPath = args.includes('--output') ? args[args.indexOf('--output') + 1] : null
-
-    if (outputPath) {
-      fs.writeFileSync(
-        path.resolve(workspaceDir, outputPath),
-        JSON.stringify(ledger, null, 2),
-        'utf-8',
-      )
-      console.log(`✓ Compiled contract ledger with ${ledger.rules.length} rules to ${outputPath}`)
-    } else {
-      console.log(JSON.stringify(ledger, null, 2))
-    }
-    process.exit(0)
-  }
-
-  if (command === 'verify') {
-    const ledger = compileContractLedger(workspaceDir)
-    const result = verifyContractLedger(ledger, workspaceDir)
-
-    console.log(`📋 Contract Ledger Verification for: ${path.basename(workspaceDir)}`)
-    console.log(
-      `   Rules: ${result.totalRules} | Spokes: ${result.totalSpokes} | Hash: ${ledger.sourcesHash.slice(0, 8)}`,
-    )
-
-    if (result.passed && result.findings.length === 0) {
-      console.log('✓ All hub-and-spoke links, paths, and rule definitions are clean!\n')
-      process.exit(0)
-    }
-
-    if (result.findings.length > 0) {
-      console.log(`\nFindings (${result.findings.length}):`)
-      for (const f of result.findings) {
-        const icon = f.severity === 'error' ? '❌' : f.severity === 'warning' ? '⚠️' : 'ℹ️'
-        console.log(`  ${icon} [${f.code}] ${f.file}${f.line ? `:${f.line}` : ''}`)
-        console.log(`     ${f.message}`)
-        if (f.suggestion) console.log(`     ↳ Suggestion: ${f.suggestion}`)
-      }
-      console.log('')
-    }
-
-    process.exit(result.passed ? 0 : 1)
-  }
-
-  if (command === 'eval') {
-    const ledgerIndex = args.indexOf('--ledger')
-    const ledgerPath = ledgerIndex !== -1 ? args[ledgerIndex + 1] : null
-    const isJson = args.includes('--json')
-    const isDeterministicOnly = args.includes('--deterministic-only')
-
-    const targetArgs = args.slice(1).filter((a, idx) => {
-      if (a === '--json' || a === '--deterministic-only') return false
-      if (a.startsWith('--')) return false
-      if (ledgerIndex !== -1 && (idx + 1 === ledgerIndex || idx === ledgerIndex)) return false
-      return true
-    })
-
-    if (targetArgs.length === 0) {
-      console.error(
-        'Usage: contract-ledger.ts eval [--ledger <path>] [--json] [--deterministic-only] <files-or-dirs...>',
-      )
-      process.exit(2)
-    }
-
-    let ledger: ContractLedger
-    if (ledgerPath && fs.existsSync(path.resolve(workspaceDir, ledgerPath))) {
-      ledger = JSON.parse(fs.readFileSync(path.resolve(workspaceDir, ledgerPath), 'utf-8'))
-    } else {
-      ledger = compileContractLedger(workspaceDir)
-    }
-
-    const targetFiles = collectCodeFiles(targetArgs, workspaceDir)
-    if (targetFiles.length === 0) {
-      if (isJson) {
-        console.log(
-          JSON.stringify({
-            totalFilesChecked: 0,
-            coverage: { evaluated: [], unevaluated: [], ratio: 1.0 },
-            verdict: 'deterministic-clean',
-            passed: true,
-            deterministicPassed: true,
-            contractFindings: [],
-            codeFindings: [],
-          }),
-        )
-      } else {
-        console.log(`🔍 No code files found matching: ${targetArgs.join(', ')}`)
-      }
-      process.exit(0)
-    }
-
-    const result = evaluateCodeAgainstContract(ledger, targetFiles)
-
-    if (isJson) {
-      console.log(JSON.stringify(result, null, 2))
-      if (result.verdict === 'deterministic-violations') process.exit(1)
-      if (result.verdict === 'contract-dispute') process.exit(4)
-      if (result.coverage.ratio === 1.0 || isDeterministicOnly) process.exit(0)
-      process.exit(3) // REVIEW_REQUIRED
-    }
-
-    const totalActiveInScope = result.coverage.evaluated.length + result.coverage.unevaluated.length
-    const coveragePct = Math.round(result.coverage.ratio * 100)
-    const violationsCount = result.codeFindings.filter(
-      (f) => f.severity === 'violation' && !f.diffSuppressed,
-    ).length
-    const leadsCount = result.codeFindings.filter(
-      (f) => f.severity === 'lead' && !f.diffSuppressed,
-    ).length
-
-    const heuristicCount = result.coverage.unevaluated.filter(
-      (r) => r.declaredClass === 'heuristic',
-    ).length
-    const humanCount = result.coverage.unevaluated.filter(
-      (r) => r.declaredClass === 'human-only',
-    ).length
-    const declaredDetCount = result.coverage.unevaluated.filter(
-      (r) => r.declaredClass === 'deterministic',
-    ).length
-
-    console.log(
-      `🔍 Code Contract Evaluation: ${targetFiles.length} file(s) checked | ${totalActiveInScope} active rule(s) in scope`,
-    )
-    console.log(
-      `   Deterministic: ${result.coverage.evaluated.length} rule(s) bound to evaluators — ${violationsCount} violation(s), ${leadsCount} lead(s)`,
-    )
-    console.log(
-      `   Unevaluated:   ${result.coverage.unevaluated.length} rule(s) (${heuristicCount} heuristic, ${humanCount} human-only, ${declaredDetCount} declared-deterministic without evaluator)`,
-    )
-    console.log(
-      `   Coverage:      ${coveragePct}% → deterministic pass is NOT a compliance verdict. Heuristic review REQUIRED.`,
-    )
-
-    if (result.contractFindings.length > 0) {
-      console.log(`\n⚠️ Contract Status Findings (${result.contractFindings.length}):`)
-      for (const cf of result.contractFindings) {
-        console.log(`  - [${cf.ruleTitle}] ${cf.message}`)
-        console.log(`    ↳ Action: ${cf.suggestedAction}`)
-      }
-    }
-
-    if (result.codeFindings.length > 0) {
-      console.log(`\nFindings (${result.codeFindings.length}):`)
-      for (const cf of result.codeFindings) {
-        const icon = cf.diffSuppressed ? '⚠️' : cf.severity === 'violation' ? '❌' : 'ℹ️'
-        const tag = cf.diffSuppressed
-          ? '[DISPUTED]'
-          : cf.severity === 'violation'
-            ? '[VIOLATION]'
-            : '[LEAD]'
-        console.log(`  ${icon} ${tag} ${cf.file}:${cf.line} [${cf.ruleTitle}]`)
-        console.log(`     ${cf.message}`)
-        if (cf.suggestedAction) console.log(`     ↳ ${cf.suggestedAction}`)
-      }
-    }
-
-    if (result.verdict === 'deterministic-violations') {
-      console.log(
-        `\n❌ Deterministic violations found (${violationsCount} violation(s)). Fix code before proceeding.`,
-      )
-      process.exit(1)
-    }
-
-    if (result.verdict === 'contract-dispute') {
-      console.log(
-        `\n⚠️ Contract dispute detected. In reality this pattern is disputed; route to /contract-refine.`,
-      )
-      process.exit(4)
-    }
-
-    // Deterministic clean
-    if (result.coverage.ratio === 1.0 || isDeterministicOnly) {
-      console.log(`\n✓ Deterministic rules evaluated cleanly (Coverage: ${coveragePct}%).`)
-      process.exit(0)
-    }
-
-    console.log(
-      `\nℹ️ Deterministic checks passed for evaluated rules, but ${result.coverage.unevaluated.length} unevaluated rule(s) require model heuristic review.`,
-    )
-    console.log(
-      `   Run model review on unevaluated rules and verify with 'contract-ledger.ts verdict'.`,
-    )
-    process.exit(3) // REVIEW_REQUIRED
-  }
-
-  if (command === 'verdict') {
-    const evalIndex = args.indexOf('--eval')
-    const reviewIndex = args.indexOf('--review')
-    const evalPath = evalIndex !== -1 ? args[evalIndex + 1] : null
-    const reviewPath = reviewIndex !== -1 ? args[reviewIndex + 1] : null
-
-    if (!evalPath || !reviewPath) {
-      console.error(
-        'Usage: contract-ledger.ts verdict --eval <eval-result.json> --review <heuristic-review.json>',
-      )
-      process.exit(2)
-    }
-
-    const absEval = path.isAbsolute(evalPath) ? evalPath : path.resolve(workspaceDir, evalPath)
-    const absReview = path.isAbsolute(reviewPath)
-      ? reviewPath
-      : path.resolve(workspaceDir, reviewPath)
-
-    if (!fs.existsSync(absEval)) {
-      console.error(`Error: eval file not found at ${absEval}`)
-      process.exit(2)
-    }
-    if (!fs.existsSync(absReview)) {
-      console.error(`Error: review file not found at ${absReview}`)
-      process.exit(2)
-    }
-
-    const evalResult: CodeEvaluationResult = JSON.parse(fs.readFileSync(absEval, 'utf-8'))
-    const reviewData: {
-      assessedBy?: string
-      reviews: Array<{
-        ruleId: string
-        ruleTitle?: string
-        verdict: 'pass' | 'violation' | 'not-applicable' | 'cannot-assess'
-        rationale?: string
-      }>
-    } = JSON.parse(fs.readFileSync(absReview, 'utf-8'))
-
-    if (!reviewData || !Array.isArray(reviewData.reviews)) {
-      console.error("Error: review file must contain a 'reviews' array.")
-      process.exit(2)
-    }
-
-    if (evalResult.totalFilesChecked === 0) {
-      console.error('Error: eval result checked 0 files; cannot grant ALIGNED.')
-      process.exit(2)
-    }
-
-    const seenReviewRules = new Set<string>()
-    for (const r of reviewData.reviews) {
-      if (seenReviewRules.has(r.ruleId)) {
-        console.error(
-          `Error: duplicate review entry for rule ID '${r.ruleId}' detected in review file.`,
-        )
-        process.exit(2)
-      }
-      seenReviewRules.add(r.ruleId)
-    }
-
-    if (evalResult.verdict !== 'deterministic-clean') {
-      console.log(
-        `❌ Evaluation verdict is '${evalResult.verdict}'; cannot declare aligned until violations/disputes are resolved.`,
-      )
-      process.exit(evalResult.verdict === 'contract-dispute' ? 4 : 1)
-    }
-
-    const reviewsByRuleId = new Map(reviewData.reviews.map((r) => [r.ruleId, r]))
-    const unassessed: RuleCoverage[] = []
-    const heuristicViolations: string[] = []
-
-    for (const unevaluated of evalResult.coverage.unevaluated) {
-      const review = reviewsByRuleId.get(unevaluated.ruleId)
-      if (
-        !review ||
-        review.verdict === 'cannot-assess' ||
-        !['pass', 'not-applicable', 'violation'].includes(review.verdict)
-      ) {
-        unassessed.push(unevaluated)
-      } else if (review.verdict === 'violation') {
-        heuristicViolations.push(
-          `${unevaluated.title}: ${review.rationale || 'Violation reported'}`,
-        )
-      }
-    }
-
-    if (heuristicViolations.length > 0) {
-      console.log(`\n❌ Heuristic review reported ${heuristicViolations.length} violation(s):`)
-      for (const hv of heuristicViolations) {
-        console.log(`  - ${hv}`)
-      }
-      process.exit(1)
-    }
-
-    if (unassessed.length > 0) {
-      console.log(`\n⚠️ INCOMPLETE REVIEW: ${unassessed.length} rule(s) lack a definitive verdict:`)
-      for (const u of unassessed) {
-        console.log(`  - [${u.ruleId}] ${u.title} (${u.owner})`)
-      }
-      console.log(`   Tool refuses to grant ALIGNED until all active rules are assessed.`)
-      process.exit(3)
-    }
-
-    const totalEvaluatedCount = evalResult.coverage.evaluated.length
-    const totalHeuristicCount = evalResult.coverage.unevaluated.length
-    console.log(
-      `\n✓ VERDICT: ALIGNED (${totalEvaluatedCount + totalHeuristicCount} rules assessed: ${totalEvaluatedCount} deterministic, ${totalHeuristicCount} heuristic)`,
-    )
-    process.exit(0)
-  }
-
-  console.error(`Unknown command: ${command}. Use 'compile', 'verify', 'eval', or 'verdict'.`)
-  process.exit(2)
-}
-
-if (process.argv[1]?.endsWith('contract-ledger.ts')) {
-  runCli()
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(import.meta.filename)) {
+  void import('./contract-ledger-cli.ts').then(({ runCli }) => runCli())
 }

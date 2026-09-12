@@ -6,12 +6,23 @@ import * as path from 'node:path'
 import { test } from 'node:test'
 import {
   type CodeEvaluationResult,
+  type ContractLedger,
   compileContractLedger,
   computeRuleId,
   evaluateCodeAgainstContract,
   parseRuleUnitsFromMarkdown,
   verifyContractLedger,
 } from '../plugins/agy-memory-layer/scripts/contract-ledger.ts'
+import {
+  buildOwnerManifest,
+  buildTargetManifest,
+  computeEvaluationHash,
+  computeProposalHash,
+  createContractSnapshot,
+  sha256,
+  stableJson,
+  verifyContractSnapshot,
+} from '../plugins/agy-memory-layer/scripts/contract-snapshot.ts'
 
 const bindingFixtures = [
   {
@@ -62,6 +73,7 @@ for (const fixture of bindingFixtures) {
           '--experimental-strip-types',
           path.resolve('plugins/agy-memory-layer/scripts/contract-ledger.ts'),
           'eval',
+          '--unsafe-live-contract',
           '--json',
           'sample.ts',
         ],
@@ -388,8 +400,8 @@ const ok = true
   assert.ok(taxonomyFinding.message.includes('_UnknownTag'))
 })
 
-test('contract-ledger: verdict subcommand mechanically enforces complete heuristic review', () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'contract-verdict-test-'))
+test('contract-ledger: snapshot-bound verdict enforces complete heuristic review', () => {
+  const tempDir = initializeSnapshotRepo('# Rules\n- **Naming**: Keep names clear.')
 
   try {
     const evalPath = path.join(tempDir, 'eval.json')
@@ -439,15 +451,25 @@ test('contract-ledger: verdict subcommand mechanically enforces complete heurist
       contractFindings: [],
       codeFindings: [],
     }
-    fs.writeFileSync(evalPath, JSON.stringify(evalData, null, 2))
+    const { boundEvaluation, snapshotPath } = bindEvaluationFixture(tempDir, evalData)
+    fs.writeFileSync(evalPath, JSON.stringify(boundEvaluation, null, 2))
+    const evidence = [{ source: 'sample.ts', detail: 'Inspected the exact target bytes.' }]
 
     // Case 1: Incomplete review (missing rule-heur-2) -> must reject with exit 3
     fs.writeFileSync(
       reviewPath,
       JSON.stringify(
         {
+          evaluationHash: boundEvaluation.workflow.evaluationHash,
           assessedBy: 'model-reviewer',
-          reviews: [{ ruleId: 'rule-heur-1', verdict: 'pass' }],
+          reviews: [
+            {
+              ruleId: 'rule-heur-1',
+              verdict: 'pass',
+              rationale: 'The first heuristic is satisfied.',
+              evidence,
+            },
+          ],
         },
         null,
         2,
@@ -457,8 +479,18 @@ test('contract-ledger: verdict subcommand mechanically enforces complete heurist
     const runVerdict = (ePath: string, rPath: string) => {
       return spawnSync(
         process.execPath,
-        ['--experimental-strip-types', scriptPath, 'verdict', '--eval', ePath, '--review', rPath],
-        { encoding: 'utf-8' },
+        [
+          '--experimental-strip-types',
+          scriptPath,
+          'verdict',
+          '--snapshot',
+          snapshotPath,
+          '--eval',
+          ePath,
+          '--review',
+          rPath,
+        ],
+        { cwd: tempDir, encoding: 'utf-8' },
       )
     }
 
@@ -472,13 +504,20 @@ test('contract-ledger: verdict subcommand mechanically enforces complete heurist
       reviewPath,
       JSON.stringify(
         {
+          evaluationHash: boundEvaluation.workflow.evaluationHash,
           assessedBy: 'model-reviewer',
           reviews: [
-            { ruleId: 'rule-heur-1', verdict: 'pass' },
+            {
+              ruleId: 'rule-heur-1',
+              verdict: 'pass',
+              rationale: 'The first heuristic is satisfied.',
+              evidence,
+            },
             {
               ruleId: 'rule-heur-2',
               verdict: 'violation',
               rationale: 'Route file has too much business logic',
+              evidence,
             },
           ],
         },
@@ -496,10 +535,21 @@ test('contract-ledger: verdict subcommand mechanically enforces complete heurist
       reviewPath,
       JSON.stringify(
         {
+          evaluationHash: boundEvaluation.workflow.evaluationHash,
           assessedBy: 'model-reviewer',
           reviews: [
-            { ruleId: 'rule-heur-1', verdict: 'pass' },
-            { ruleId: 'rule-heur-2', verdict: 'not-applicable' },
+            {
+              ruleId: 'rule-heur-1',
+              verdict: 'pass',
+              rationale: 'The first heuristic is satisfied.',
+              evidence,
+            },
+            {
+              ruleId: 'rule-heur-2',
+              verdict: 'not-applicable',
+              rationale: 'The target does not expose the second heuristic surface.',
+              evidence,
+            },
           ],
         },
         null,
@@ -621,8 +671,8 @@ test('contract-ledger: F2 comma-separated scope in Check directive matches multi
   assert.deepEqual(rules[0].scope, ['app/routes/**/*.tsx', 'lib/**/*.ts'])
 })
 
-test('contract-ledger: B3, B4, B8, F3, F4 verdict subcommand rejects disputes, unknown verdicts, duplicates, and zero files', () => {
-  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'contract-verdict-reject-'))
+test('contract-ledger: snapshot-bound verdict rejects invalid evaluations and reviews', () => {
+  const tempDir = initializeSnapshotRepo('# Rules\n- **Naming**: Keep names clear.')
   const scriptPath = path.resolve(
     process.cwd(),
     'plugins/agy-memory-layer/scripts/contract-ledger.ts',
@@ -651,8 +701,16 @@ test('contract-ledger: B3, B4, B8, F3, F4 verdict subcommand rejects disputes, u
       ],
       codeFindings: [],
     }
-    fs.writeFileSync(evalPath, JSON.stringify(disputeEval, null, 2))
-    fs.writeFileSync(reviewPath, JSON.stringify({ reviews: [] }, null, 2))
+    const initialBinding = bindEvaluationFixture(tempDir, disputeEval)
+    const snapshotPath = initialBinding.snapshotPath
+    fs.writeFileSync(evalPath, JSON.stringify(initialBinding.boundEvaluation, null, 2))
+    fs.writeFileSync(
+      reviewPath,
+      JSON.stringify({
+        evaluationHash: initialBinding.boundEvaluation.workflow.evaluationHash,
+        reviews: [],
+      }),
+    )
 
     const resDispute = spawnSync(
       'node',
@@ -660,80 +718,107 @@ test('contract-ledger: B3, B4, B8, F3, F4 verdict subcommand rejects disputes, u
         '--experimental-strip-types',
         scriptPath,
         'verdict',
+        '--snapshot',
+        snapshotPath,
         '--eval',
         evalPath,
         '--review',
         reviewPath,
       ],
-      { encoding: 'utf-8' },
+      { cwd: tempDir, encoding: 'utf-8' },
     )
     assert.equal(resDispute.status, 4)
     assert.ok(resDispute.stdout.includes("Evaluation verdict is 'contract-dispute'"))
 
     // B8: review without reviews array rejects with exit 2
-    fs.writeFileSync(
-      evalPath,
-      JSON.stringify({ ...disputeEval, verdict: 'deterministic-clean' }, null, 2),
+    const malformedBinding = bindEvaluationFixture(
+      tempDir,
+      { ...disputeEval, verdict: 'deterministic-clean' },
+      snapshotPath,
     )
-    fs.writeFileSync(reviewPath, JSON.stringify({ invalidKey: true }, null, 2))
+    fs.writeFileSync(evalPath, JSON.stringify(malformedBinding.boundEvaluation, null, 2))
+    fs.writeFileSync(
+      reviewPath,
+      JSON.stringify({
+        evaluationHash: malformedBinding.boundEvaluation.workflow.evaluationHash,
+        invalidKey: true,
+      }),
+    )
     const resMalformed = spawnSync(
       'node',
       [
         '--experimental-strip-types',
         scriptPath,
         'verdict',
+        '--snapshot',
+        snapshotPath,
         '--eval',
         evalPath,
         '--review',
         reviewPath,
       ],
-      { encoding: 'utf-8' },
+      { cwd: tempDir, encoding: 'utf-8' },
     )
     assert.equal(resMalformed.status, 2)
     assert.ok(resMalformed.stderr.includes("reviews' array"))
 
     // F4: eval result with 0 files rejects with exit 2
-    fs.writeFileSync(
-      evalPath,
-      JSON.stringify(
-        { ...disputeEval, totalFilesChecked: 0, verdict: 'deterministic-clean' },
-        null,
-        2,
-      ),
+    const zeroBinding = bindEvaluationFixture(
+      tempDir,
+      { ...disputeEval, totalFilesChecked: 0, verdict: 'deterministic-clean' },
+      snapshotPath,
     )
-    fs.writeFileSync(reviewPath, JSON.stringify({ reviews: [] }, null, 2))
+    fs.writeFileSync(evalPath, JSON.stringify(zeroBinding.boundEvaluation, null, 2))
+    fs.writeFileSync(
+      reviewPath,
+      JSON.stringify({
+        evaluationHash: zeroBinding.boundEvaluation.workflow.evaluationHash,
+        reviews: [],
+      }),
+    )
     const resZeroFiles = spawnSync(
       'node',
       [
         '--experimental-strip-types',
         scriptPath,
         'verdict',
+        '--snapshot',
+        snapshotPath,
         '--eval',
         evalPath,
         '--review',
         reviewPath,
       ],
-      { encoding: 'utf-8' },
+      { cwd: tempDir, encoding: 'utf-8' },
     )
     assert.equal(resZeroFiles.status, 2)
     assert.ok(resZeroFiles.stderr.includes('checked 0 files'))
 
     // F3: duplicate reviews for same ruleId rejects with exit 2
-    fs.writeFileSync(
-      evalPath,
-      JSON.stringify(
-        { ...disputeEval, totalFilesChecked: 1, verdict: 'deterministic-clean' },
-        null,
-        2,
-      ),
+    const duplicateBinding = bindEvaluationFixture(
+      tempDir,
+      { ...disputeEval, totalFilesChecked: 1, verdict: 'deterministic-clean' },
+      snapshotPath,
     )
+    fs.writeFileSync(evalPath, JSON.stringify(duplicateBinding.boundEvaluation, null, 2))
     fs.writeFileSync(
       reviewPath,
       JSON.stringify(
         {
+          evaluationHash: duplicateBinding.boundEvaluation.workflow.evaluationHash,
           reviews: [
-            { ruleId: 'rule-dup', verdict: 'violation' },
-            { ruleId: 'rule-dup', verdict: 'pass' },
+            {
+              ruleId: 'rule-dup',
+              verdict: 'violation',
+              rationale: 'First assessment.',
+              evidence: [{ source: 'sample.ts', detail: 'Exact target.' }],
+            },
+            {
+              ruleId: 'rule-dup',
+              verdict: 'pass',
+              rationale: 'Second assessment.',
+              evidence: [{ source: 'sample.ts', detail: 'Exact target.' }],
+            },
           ],
         },
         null,
@@ -746,12 +831,14 @@ test('contract-ledger: B3, B4, B8, F3, F4 verdict subcommand rejects disputes, u
         '--experimental-strip-types',
         scriptPath,
         'verdict',
+        '--snapshot',
+        snapshotPath,
         '--eval',
         evalPath,
         '--review',
         reviewPath,
       ],
-      { encoding: 'utf-8' },
+      { cwd: tempDir, encoding: 'utf-8' },
     )
     assert.equal(resDup.status, 2)
     assert.ok(resDup.stderr.includes('duplicate review entry'))
@@ -779,11 +866,13 @@ test('contract-ledger: B3, B4, B8, F3, F4 verdict subcommand rejects disputes, u
       contractFindings: [],
       codeFindings: [],
     }
-    fs.writeFileSync(evalPath, JSON.stringify(unevaluatedEval, null, 2))
+    const unknownBinding = bindEvaluationFixture(tempDir, unevaluatedEval, snapshotPath)
+    fs.writeFileSync(evalPath, JSON.stringify(unknownBinding.boundEvaluation, null, 2))
     fs.writeFileSync(
       reviewPath,
       JSON.stringify(
         {
+          evaluationHash: unknownBinding.boundEvaluation.workflow.evaluationHash,
           reviews: [{ ruleId: 'rule-unknown-test', verdict: 'looks-good' }],
         },
         null,
@@ -796,15 +885,710 @@ test('contract-ledger: B3, B4, B8, F3, F4 verdict subcommand rejects disputes, u
         '--experimental-strip-types',
         scriptPath,
         'verdict',
+        '--snapshot',
+        snapshotPath,
         '--eval',
         evalPath,
         '--review',
         reviewPath,
       ],
-      { encoding: 'utf-8' },
+      { cwd: tempDir, encoding: 'utf-8' },
     )
     assert.equal(resLaxVerdict.status, 3)
     assert.ok(resLaxVerdict.stdout.includes('INCOMPLETE REVIEW'))
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  }
+})
+
+function initializeSnapshotRepo(rule: string): string {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'contract-snapshot-test-'))
+  fs.writeFileSync(path.join(tempDir, 'AGENTS.md'), `${rule}\n`)
+  fs.mkdirSync(path.join(tempDir, 'docs'))
+  fs.writeFileSync(path.join(tempDir, 'docs', 'guide.md'), '# Guide\n')
+  fs.writeFileSync(path.join(tempDir, 'sample.ts'), 'export type Sample = { id: string }\n')
+  assert.equal(spawnSync('git', ['init', '-q'], { cwd: tempDir }).status, 0)
+  assert.equal(
+    spawnSync('git', ['add', 'AGENTS.md', 'docs/guide.md', 'sample.ts'], { cwd: tempDir }).status,
+    0,
+  )
+  assert.equal(
+    spawnSync(
+      'git',
+      [
+        '-c',
+        'user.name=Test',
+        '-c',
+        'user.email=test@example.invalid',
+        'commit',
+        '-qm',
+        'baseline',
+      ],
+      { cwd: tempDir },
+    ).status,
+    0,
+  )
+  return tempDir
+}
+
+function baselineProposalApproval(tempDir: string) {
+  const proposal = {
+    version: '1.0.0' as const,
+    id: 'baseline-adoption',
+    retrieval: {
+      sources: ['current repository'],
+      timeRange: 'current checkout',
+      queries: ['active owners'],
+      gaps: [],
+    },
+    finalOwners: buildOwnerManifest(tempDir),
+    items: [
+      {
+        id: 'adopt-baseline',
+        paths: ['AGENTS.md'],
+        summary: 'Adopt the current contract baseline',
+        truthClass: 'accepted-requirement' as const,
+        disposition: 'keep' as const,
+        evidence: [
+          {
+            class: 'current-user' as const,
+            source: 'baseline approval',
+            locator: 'conversation:baseline-approval',
+          },
+        ],
+      },
+    ],
+  }
+  const approval = {
+    version: '1.0.0' as const,
+    proposalId: proposal.id,
+    proposalHash: computeProposalHash(proposal),
+    decision: 'approved' as const,
+    approvedItemIds: ['adopt-baseline'],
+    approvedBy: 'recorded-user',
+    decisionLocator: 'conversation:baseline-approval',
+  }
+  return { proposal, approval }
+}
+
+function createBaselineSnapshot(tempDir: string) {
+  const { proposal, approval } = baselineProposalApproval(tempDir)
+  return createContractSnapshot(tempDir, compileContractLedger(tempDir), proposal, approval)
+}
+
+function writeBaselineApprovalFiles(tempDir: string) {
+  const { proposal, approval } = baselineProposalApproval(tempDir)
+  const proposalPath = path.join(tempDir, 'proposal.json')
+  const approvalPath = path.join(tempDir, 'approval.json')
+  fs.writeFileSync(proposalPath, JSON.stringify(proposal, null, 2))
+  fs.writeFileSync(approvalPath, JSON.stringify(approval, null, 2))
+  return { proposalPath, approvalPath }
+}
+
+function bindEvaluationFixture(
+  tempDir: string,
+  evaluation: CodeEvaluationResult,
+  existingSnapshotPath?: string,
+) {
+  const snapshotPath = existingSnapshotPath ?? path.join(tempDir, 'snapshot.json')
+  const snapshot = existingSnapshotPath
+    ? (JSON.parse(fs.readFileSync(existingSnapshotPath, 'utf-8')) as {
+        snapshotHash: string
+        contractHash: string
+      })
+    : createBaselineSnapshot(tempDir)
+  if (!existingSnapshotPath) fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2))
+  const targets = buildTargetManifest(tempDir, [path.join(tempDir, 'sample.ts')])
+  return {
+    snapshotPath,
+    boundEvaluation: {
+      ...evaluation,
+      workflow: {
+        compliant: true,
+        snapshotHash: snapshot.snapshotHash,
+        contractHash: snapshot.contractHash,
+        targets,
+        evaluationHash: computeEvaluationHash(
+          snapshot.snapshotHash,
+          snapshot.contractHash,
+          targets,
+          evaluation,
+        ),
+      },
+    },
+  }
+}
+
+const contractScript = path.resolve(
+  process.cwd(),
+  'plugins/agy-memory-layer/scripts/contract-ledger.ts',
+)
+
+function runContractCli(cwd: string, args: string[]) {
+  return spawnSync(process.execPath, ['--experimental-strip-types', contractScript, ...args], {
+    cwd,
+    encoding: 'utf-8',
+  })
+}
+
+test('contract snapshot: approved baseline adoption and owner byte/path freshness', () => {
+  const tempDir = initializeSnapshotRepo('# Rules\n- **Naming**: Keep names clear.')
+  try {
+    const ledger = compileContractLedger(tempDir)
+    const snapshot = createBaselineSnapshot(tempDir)
+    assert.equal(snapshot.approvalAuthentication, 'not-authenticated')
+    assert.equal(snapshot.approvedDirtyPaths.length, 0)
+    assert.equal(verifyContractSnapshot(tempDir, snapshot, ledger).passed, true)
+    fs.writeFileSync(path.join(tempDir, 'sample.ts'), 'export type SourceOnly = { id: string }\n')
+    assert.equal(
+      verifyContractSnapshot(tempDir, snapshot, compileContractLedger(tempDir)).passed,
+      true,
+    )
+
+    fs.writeFileSync(path.join(tempDir, 'docs', 'guide.md'), '# Changed Guide\n')
+    assert.equal(
+      verifyContractSnapshot(tempDir, snapshot, compileContractLedger(tempDir)).passed,
+      false,
+    )
+    fs.renameSync(path.join(tempDir, 'docs', 'guide.md'), path.join(tempDir, 'docs', 'renamed.md'))
+    const renamed = verifyContractSnapshot(tempDir, snapshot, compileContractLedger(tempDir))
+    assert.equal(renamed.passed, false)
+    assert.ok(renamed.errors.some((error) => error.includes('path, role, or bytes')))
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  }
+})
+
+test('contract snapshot: approved final owner bytes reject substitutions and ignored owners', () => {
+  const tempDir = initializeSnapshotRepo('# Rules\n- **Naming**: Candidate A.')
+  try {
+    const first = baselineProposalApproval(tempDir)
+    fs.writeFileSync(path.join(tempDir, 'AGENTS.md'), '# Rules\n- **Naming**: Candidate B.\n')
+    assert.throws(
+      () =>
+        createContractSnapshot(
+          tempDir,
+          compileContractLedger(tempDir),
+          first.proposal,
+          first.approval,
+        ),
+      /does not match proposal.finalOwners/,
+    )
+
+    fs.writeFileSync(path.join(tempDir, 'AGENTS.md'), '# Rules\n- **Naming**: Candidate A. \n')
+    assert.throws(
+      () =>
+        createContractSnapshot(
+          tempDir,
+          compileContractLedger(tempDir),
+          first.proposal,
+          first.approval,
+        ),
+      /does not match proposal.finalOwners/,
+    )
+
+    fs.writeFileSync(path.join(tempDir, 'AGENTS.md'), '# Rules\n- **Naming**: Candidate A.\n')
+    const beforeIgnoredOwner = baselineProposalApproval(tempDir)
+    fs.writeFileSync(path.join(tempDir, '.gitignore'), 'docs/ignored.md\n')
+    fs.writeFileSync(path.join(tempDir, 'docs', 'ignored.md'), '# Ignored but active owner\n')
+    assert.throws(
+      () =>
+        createContractSnapshot(
+          tempDir,
+          compileContractLedger(tempDir),
+          beforeIgnoredOwner.proposal,
+          beforeIgnoredOwner.approval,
+        ),
+      /does not match proposal.finalOwners/,
+    )
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  }
+})
+
+test('contract snapshot: verification rejects removed approval and tampered embedded ledger', () => {
+  const tempDir = initializeSnapshotRepo('# Rules\n- **Naming**: Keep names clear.')
+  try {
+    const snapshot = createBaselineSnapshot(tempDir)
+    const withoutApproval = {
+      ...snapshot,
+      proposal: undefined,
+      approval: undefined,
+      approvedDirtyPaths: [],
+    }
+    const { snapshotHash: ignoredHash, ...approvalPayload } = withoutApproval
+    void ignoredHash
+    const recomputedWithoutApproval = {
+      ...withoutApproval,
+      snapshotHash: sha256(stableJson(approvalPayload)),
+    }
+    assert.equal(
+      verifyContractSnapshot(
+        tempDir,
+        recomputedWithoutApproval as unknown as typeof snapshot,
+        compileContractLedger(tempDir),
+      ).passed,
+      false,
+    )
+
+    const tamperedLedger = JSON.parse(JSON.stringify(snapshot)) as typeof snapshot
+    const ledger = tamperedLedger.ledger as ContractLedger
+    ledger.rules = []
+    const { snapshotHash: previousHash, ...ledgerPayload } = tamperedLedger
+    void previousHash
+    tamperedLedger.snapshotHash = sha256(stableJson(ledgerPayload))
+    const verification = verifyContractSnapshot(
+      tempDir,
+      tamperedLedger,
+      compileContractLedger(tempDir),
+    )
+    assert.equal(verification.passed, false)
+    assert.ok(verification.errors.some((error) => error.includes('embedded ledger rules digest')))
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  }
+})
+
+test('contract snapshot: approved dirty owner requires approved primary evidence', () => {
+  const tempDir = initializeSnapshotRepo('# Rules\n- **Naming**: Keep names clear.')
+  try {
+    fs.appendFileSync(path.join(tempDir, 'AGENTS.md'), '\n- **Exports**: Export public types.\n')
+    const supportingProposal = {
+      version: '1.0.0' as const,
+      id: 'proposal-exports',
+      retrieval: {
+        sources: ['current conversation'],
+        timeRange: 'current turn',
+        queries: ['export guidance'],
+        gaps: [],
+      },
+      finalOwners: buildOwnerManifest(tempDir),
+      items: [
+        {
+          id: 'rule-exports',
+          paths: ['AGENTS.md'],
+          summary: 'Add export guidance',
+          truthClass: 'accepted-requirement' as const,
+          disposition: 'add' as const,
+          evidence: [{ class: 'agent-summary' as const, source: 'agent recap' }],
+        },
+      ],
+    }
+    const approval = {
+      version: '1.0.0' as const,
+      proposalId: supportingProposal.id,
+      proposalHash: computeProposalHash(supportingProposal),
+      decision: 'approved' as const,
+      approvedItemIds: ['rule-exports'],
+      approvedBy: 'recorded-user',
+      decisionLocator: 'conversation:approval-message',
+    }
+    assert.throws(
+      () =>
+        createContractSnapshot(
+          tempDir,
+          compileContractLedger(tempDir),
+          supportingProposal,
+          approval,
+        ),
+      /lacks primary evidence/,
+    )
+
+    const substitutedProposal = { ...supportingProposal, id: 'substituted-proposal' }
+    assert.throws(
+      () =>
+        createContractSnapshot(
+          tempDir,
+          compileContractLedger(tempDir),
+          substitutedProposal,
+          approval,
+        ),
+      /exact proposal ID and hash/,
+    )
+    assert.throws(
+      () =>
+        createContractSnapshot(tempDir, compileContractLedger(tempDir), supportingProposal, {
+          ...approval,
+          approvedItemIds: ['unknown-item'],
+        }),
+      /unknown item/,
+    )
+
+    const missingLocatorProposal = {
+      ...supportingProposal,
+      items: [
+        {
+          ...supportingProposal.items[0],
+          evidence: [{ class: 'current-user' as const, source: 'current request' }],
+        },
+      ],
+    }
+    assert.throws(
+      () =>
+        createContractSnapshot(tempDir, compileContractLedger(tempDir), missingLocatorProposal, {
+          ...approval,
+          proposalHash: computeProposalHash(missingLocatorProposal),
+        }),
+      /exact locator/,
+    )
+
+    const unresolvedProposal = {
+      ...missingLocatorProposal,
+      items: [
+        {
+          ...missingLocatorProposal.items[0],
+          truthClass: 'unresolved-direction' as const,
+          evidence: [{ class: 'repo-current' as const, source: 'AGENTS.md' }],
+        },
+      ],
+    }
+    assert.throws(
+      () =>
+        createContractSnapshot(tempDir, compileContractLedger(tempDir), unresolvedProposal, {
+          ...approval,
+          proposalHash: computeProposalHash(unresolvedProposal),
+        }),
+      /unresolved direction/,
+    )
+
+    const proposal = {
+      ...supportingProposal,
+      items: [
+        {
+          ...supportingProposal.items[0],
+          evidence: [
+            {
+              class: 'current-user' as const,
+              source: 'current request',
+              locator: 'conversation:request-message',
+            },
+          ],
+        },
+      ],
+    }
+    const boundApproval = { ...approval, proposalHash: computeProposalHash(proposal) }
+    const snapshot = createContractSnapshot(
+      tempDir,
+      compileContractLedger(tempDir),
+      proposal,
+      boundApproval,
+    )
+    assert.deepEqual(snapshot.approvedDirtyPaths, ['AGENTS.md'])
+    assert.equal(
+      verifyContractSnapshot(tempDir, snapshot, compileContractLedger(tempDir)).passed,
+      true,
+    )
+    assert.equal(spawnSync('git', ['add', 'AGENTS.md'], { cwd: tempDir }).status, 0)
+    assert.equal(
+      spawnSync(
+        'git',
+        [
+          '-c',
+          'user.name=Test',
+          '-c',
+          'user.email=test@example.invalid',
+          'commit',
+          '-qm',
+          'approve',
+        ],
+        { cwd: tempDir },
+      ).status,
+      0,
+    )
+    assert.equal(
+      verifyContractSnapshot(tempDir, snapshot, compileContractLedger(tempDir)).passed,
+      true,
+    )
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  }
+})
+
+test('contract snapshot: deleted and renamed owner sides require approval coverage', () => {
+  const tempDir = initializeSnapshotRepo('# Rules\n- **Naming**: Keep names clear.')
+  try {
+    const guidePath = path.join(tempDir, 'docs', 'guide.md')
+    fs.rmSync(guidePath)
+    assert.throws(() => createBaselineSnapshot(tempDir), /not covered by an approved proposal item/)
+
+    fs.writeFileSync(guidePath, '# Guide\n')
+    const renamedPath = path.join(tempDir, 'docs', 'renamed.md')
+    fs.renameSync(guidePath, renamedPath)
+    const proposal = {
+      version: '1.0.0' as const,
+      id: 'rename-guide',
+      retrieval: {
+        sources: ['repository'],
+        timeRange: 'current checkout',
+        queries: ['renamed guide'],
+        gaps: [],
+      },
+      finalOwners: buildOwnerManifest(tempDir),
+      items: [
+        {
+          id: 'rename-destination-only',
+          paths: ['docs/renamed.md'],
+          summary: 'Rename the guide',
+          truthClass: 'observed-reality' as const,
+          disposition: 'move' as const,
+          evidence: [{ class: 'repo-current' as const, source: 'Git rename' }],
+        },
+      ],
+    }
+    const approval = {
+      version: '1.0.0' as const,
+      proposalId: proposal.id,
+      proposalHash: computeProposalHash(proposal),
+      decision: 'approved' as const,
+      approvedItemIds: ['rename-destination-only'],
+      approvedBy: 'recorded-user',
+      decisionLocator: 'conversation:rename-approval',
+    }
+    assert.throws(
+      () => createContractSnapshot(tempDir, compileContractLedger(tempDir), proposal, approval),
+      /docs\/guide.md/,
+    )
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  }
+})
+
+test('contract CLI: snapshot is mandatory and explicit ledgers fail closed', () => {
+  const tempDir = initializeSnapshotRepo(
+    '# Rules\n- **Aliases**: Use aliases.\n  Check: no-interface scope=**/*.ts',
+  )
+  try {
+    const snapshotPath = path.join(tempDir, 'snapshot.json')
+    const unapprovedBaseline = runContractCli(tempDir, ['snapshot', '--output', snapshotPath])
+    assert.equal(unapprovedBaseline.status, 2)
+    assert.match(unapprovedBaseline.stderr, /--proposal/)
+    const { proposalPath, approvalPath } = writeBaselineApprovalFiles(tempDir)
+    assert.equal(
+      runContractCli(tempDir, [
+        'snapshot',
+        '--output',
+        snapshotPath,
+        '--proposal',
+        proposalPath,
+        '--approval',
+        approvalPath,
+      ]).status,
+      0,
+    )
+    const missingSnapshot = runContractCli(tempDir, ['eval', '--json', 'sample.ts'])
+    assert.equal(missingSnapshot.status, 2)
+    assert.match(missingSnapshot.stderr, /--snapshot/)
+
+    const zeroTargets = runContractCli(tempDir, [
+      'eval',
+      '--snapshot',
+      snapshotPath,
+      '--json',
+      'missing-target.ts',
+    ])
+    assert.equal(zeroTargets.status, 2)
+    assert.match(zeroTargets.stderr, /target does not exist/)
+
+    const mixedMissingTarget = runContractCli(tempDir, [
+      'eval',
+      '--snapshot',
+      snapshotPath,
+      '--json',
+      'sample.ts',
+      'missing-target.ts',
+    ])
+    assert.equal(mixedMissingTarget.status, 2)
+    assert.match(mixedMissingTarget.stderr, /target does not exist/)
+
+    const outsideTarget = path.join(os.tmpdir(), `contract-outside-${path.basename(tempDir)}.ts`)
+    fs.writeFileSync(outsideTarget, 'export const outside = true\n')
+    try {
+      const escapedTarget = runContractCli(tempDir, [
+        'eval',
+        '--snapshot',
+        snapshotPath,
+        '--json',
+        outsideTarget,
+      ])
+      assert.equal(escapedTarget.status, 2)
+      assert.match(escapedTarget.stderr, /target is outside repository/)
+    } finally {
+      fs.rmSync(outsideTarget, { force: true })
+    }
+
+    const missingLedger = runContractCli(tempDir, [
+      'eval',
+      '--snapshot',
+      snapshotPath,
+      '--ledger',
+      'missing-ledger.json',
+      '--json',
+      'sample.ts',
+    ])
+    assert.equal(missingLedger.status, 2)
+    assert.match(missingLedger.stderr, /ledger file not found/)
+
+    const staleLedger = compileContractLedger(tempDir)
+    staleLedger.sourcesHash = 'stale'
+    fs.writeFileSync(path.join(tempDir, 'stale-ledger.json'), JSON.stringify(staleLedger))
+    const stale = runContractCli(tempDir, [
+      'eval',
+      '--snapshot',
+      snapshotPath,
+      '--ledger',
+      'stale-ledger.json',
+      '--json',
+      'sample.ts',
+    ])
+    assert.equal(stale.status, 2)
+    assert.match(stale.stderr, /stale or does not match/)
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true })
+  }
+})
+
+test('contract verdict: rejects stale targets, mismatched hash, and ungrounded review', () => {
+  const tempDir = initializeSnapshotRepo('# Rules\n- **Naming**: Keep names clear.')
+  try {
+    const snapshotPath = path.join(tempDir, 'snapshot.json')
+    const evalPath = path.join(tempDir, 'eval.json')
+    const reviewPath = path.join(tempDir, 'review.json')
+    const { proposalPath, approvalPath } = writeBaselineApprovalFiles(tempDir)
+    assert.equal(
+      runContractCli(tempDir, [
+        'snapshot',
+        '--output',
+        snapshotPath,
+        '--proposal',
+        proposalPath,
+        '--approval',
+        approvalPath,
+      ]).status,
+      0,
+    )
+    const evaluation = runContractCli(tempDir, [
+      'eval',
+      '--snapshot',
+      snapshotPath,
+      '--json',
+      'sample.ts',
+    ])
+    assert.equal(evaluation.status, 3, evaluation.stderr)
+    fs.writeFileSync(evalPath, evaluation.stdout)
+    const receipt = JSON.parse(evaluation.stdout) as CodeEvaluationResult & {
+      workflow: {
+        evaluationHash: string
+        targets: Array<{ path: string; contentHash: string }>
+      }
+    }
+
+    const escapedReceipt = {
+      ...receipt,
+      workflow: {
+        ...receipt.workflow,
+        targets: [{ ...receipt.workflow.targets[0], path: '../outside.ts' }],
+      },
+    }
+    fs.writeFileSync(evalPath, JSON.stringify(escapedReceipt))
+    fs.writeFileSync(
+      reviewPath,
+      JSON.stringify({ evaluationHash: receipt.workflow.evaluationHash, reviews: [] }),
+    )
+    const escapedTarget = runContractCli(tempDir, [
+      'verdict',
+      '--snapshot',
+      snapshotPath,
+      '--eval',
+      evalPath,
+      '--review',
+      reviewPath,
+    ])
+    assert.equal(escapedTarget.status, 2)
+    assert.match(escapedTarget.stderr, /outside repository/)
+    fs.writeFileSync(evalPath, evaluation.stdout)
+
+    fs.writeFileSync(
+      reviewPath,
+      JSON.stringify({
+        evaluationHash: 'mismatch',
+        reviews: [
+          {
+            ruleId: receipt.coverage.unevaluated[0].ruleId,
+            verdict: 'pass',
+            rationale: 'Inspected the target name.',
+            evidence: [{ source: 'sample.ts', detail: 'Sample name is scoped and readable.' }],
+          },
+        ],
+      }),
+    )
+    const mismatch = runContractCli(tempDir, [
+      'verdict',
+      '--snapshot',
+      snapshotPath,
+      '--eval',
+      evalPath,
+      '--review',
+      reviewPath,
+    ])
+    assert.equal(mismatch.status, 2)
+    assert.match(mismatch.stderr, /exact evaluation hash/)
+
+    fs.writeFileSync(
+      reviewPath,
+      JSON.stringify({
+        evaluationHash: receipt.workflow.evaluationHash,
+        reviews: [{ ruleId: receipt.coverage.unevaluated[0].ruleId, verdict: 'pass' }],
+      }),
+    )
+    const ungrounded = runContractCli(tempDir, [
+      'verdict',
+      '--snapshot',
+      snapshotPath,
+      '--eval',
+      evalPath,
+      '--review',
+      reviewPath,
+    ])
+    assert.equal(ungrounded.status, 2)
+    assert.match(ungrounded.stderr, /non-empty rationale/)
+
+    fs.writeFileSync(
+      reviewPath,
+      JSON.stringify({
+        evaluationHash: receipt.workflow.evaluationHash,
+        reviews: [
+          {
+            ruleId: receipt.coverage.unevaluated[0].ruleId,
+            verdict: 'pass',
+            rationale: 'Inspected the exact target.',
+          },
+        ],
+      }),
+    )
+    const missingEvidence = runContractCli(tempDir, [
+      'verdict',
+      '--snapshot',
+      snapshotPath,
+      '--eval',
+      evalPath,
+      '--review',
+      reviewPath,
+    ])
+    assert.equal(missingEvidence.status, 2)
+    assert.match(missingEvidence.stderr, /evidence entries/)
+
+    fs.writeFileSync(path.join(tempDir, 'sample.ts'), 'export type Changed = { id: string }\n')
+    const staleTarget = runContractCli(tempDir, [
+      'verdict',
+      '--snapshot',
+      snapshotPath,
+      '--eval',
+      evalPath,
+      '--review',
+      reviewPath,
+    ])
+    assert.equal(staleTarget.status, 2)
+    assert.match(staleTarget.stderr, /target path or bytes changed/)
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true })
   }

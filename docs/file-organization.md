@@ -37,7 +37,8 @@ learn-letta-code/
 │   ├── releases/v1.15.1.md                  # Runtime spec-id validation patch
 │   ├── releases/v1.15.2.md                  # Prior descendant-safe rollback release
 │   ├── releases/v1.15.3.md                  # Prior layered Palace topology release
-│   ├── releases/v1.15.4.md                  # Current model-guided authority boundary release
+│   ├── releases/v1.15.4.md                  # Prior model-guided authority boundary release
+│   ├── releases/v1.19.0.md                  # Approval-bound contract snapshot and alignment release
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene
@@ -97,6 +98,10 @@ learn-letta-code/
 │       ├── hook-memory-status.sh             # Strict Stop wrapper
 │       ├── hook-memory-status.ts             # Non-mutating Stop status owner
 │       ├── active-learning.ts                 # Canonical committed working-hypothesis selector
+│       ├── contract-ledger.ts                 # Contract compiler and deterministic evaluator core
+│       ├── contract-ledger-cli.ts             # Snapshot-bound compile/verify/eval/verdict CLI
+│       ├── contract-matching.ts               # Stable rule IDs and scope matching
+│       ├── contract-snapshot.ts               # Proposal/approval, owner, target, and snapshot identity
 │       ├── layered-memory.ts                  # Committed layered/legacy projection compiler
 │       ├── layered-memory-migration.ts        # Lossless legacy migration planner/apply/rollback
 │       ├── memory-repository.ts              # Containment, Git state, atomic write, targeted commit

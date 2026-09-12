@@ -53,6 +53,7 @@ Antigravity CLI
 | Committed prompt projection | `scripts/layered-memory.ts` | Selects layered/legacy ownership from `HEAD`; dirty content is not active |
 | Working hypothesis | `scripts/active-learning.ts` | One canonical protected hypothesis; malformed/stray active state fails closed |
 | Evidence Controller | `skills/evidence-controller/SKILL.md` | Agy-native claim, delegation, retry, and human-gate procedure |
+| Repository contract refinement and alignment | `skills/contract-refine/SKILL.md`, `skills/contract-align/SKILL.md`, `scripts/contract-ledger*.ts`, `scripts/contract-snapshot.ts` | Explicit approval binds complete final owner bytes; evaluation and verdict bind verified snapshot plus exact targets; heuristic review remains bounded evidence |
 | Execution-continuity pilot | `docs/execution-continuity-pilot.md`, `docs/execution-continuity-stage1-evidence-2026-09-11.md`, `scripts/execution-continuity-stage1.ts`, `tests/execution-continuity*.test.ts`, `tests/support/execution-continuity-*.ts` | Stage 0 deterministic fixture preflight plus audited Stage 1 no-advance evidence and corrected test-only scorer; no runtime state or supervisor |
 | Memory repository contract | `scripts/memory-repository.ts`, `scripts/memory-write-lock.ts` | Containment, status, serialization, atomic writes, targeted commits |
 | Workspace identity | `scripts/workspace-identity.ts` | Shared child/root/remote scope resolution and history mapping |
