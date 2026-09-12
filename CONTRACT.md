@@ -226,6 +226,120 @@ Disposable evidence for the exact current live plan is recorded in
   new commit restoring the pre-migration active layout while preserving
   migration, rollback, and later curation archives.
 
+### 9. Current-source offline host-evidence receipt store
+
+The current checkout, not the released `v1.19.0` plugin runtime, contains a
+POSIX-only test/evidence subsystem for deriving host-evidence aggregates from
+immutable persisted receipts. `tools/host-evidence-contract.ts` remains the
+canonical owner of manifest, frozen bindings, aggregate evidence, scoring,
+hashes, and retrieval accounting. `tools/host-evidence-receipts.ts` owns pure
+exact receipt parsing, the closed lifecycle, hash-chain replay/admission, and
+aggregate derivation. `tools/host-evidence-store.ts` alone owns filesystem
+persistence, cooperative active handles, sealing, and independent verification.
+The execution-continuity pilot remains a separate domain and is not imported as
+a type or authority.
+
+This subsystem has these formal boundaries:
+
+- It is **offline-only**. Authorization receipts bind descriptor, manifest,
+  bindings, owner-lock, and `scope: offline-only`; they never authorize an Agy,
+  Herdr, provider, browser, network, trust-automation, child-process, HOME, or
+  MemFS action. Tests use only the in-memory fake transport.
+- `createRun` alone chooses a fresh direct child of canonical `os.tmpdir()` with
+  the fixed `host-evidence-v1-` prefix. It creates and identity-freezes a
+  synthetic workspace. There is no caller-selected base, writable import, stale
+  lock takeover, PID/timeout reclaim, or unsealed writer reopen path.
+- Root/workspace directories are exact mode `0700`; immutable files are exact
+  mode `0600`, expected uid/gid, regular, single-link files. Canonical root and
+  workspace containment, device/inode identity, symlink/special-file rejection,
+  unknown-entry rejection, and bounded canonical JSON are rechecked before use.
+- Each canonical file is exact `stableJson(parsedValue)` UTF-8 without a newline.
+  Reads open once with no-follow/nonblocking flags where available, validate the
+  descriptor before and after a bounded read from that same descriptor, then
+  decode, parse, and canonical-check. Append, authorization, and seal publication
+  APIs use exclusive creation and durable same-filesystem publication; they never
+  overwrite, truncate, repair, or delete an existing file. A partial/inconsistent
+  publication poisons the active handle and fails closed. `disposeRun` is the sole
+  removal API and removes only the exact active disposable root after the same
+  opaque-handle ownership, root identity, and integrity checks pass.
+- The immutable owner lock records one cooperative owner/session token and stays
+  after logical close. Owner identifiers are coordination labels, not
+  authentication. Mutation requires the exact opaque handle present in private
+  module state; cloned or forged objects fail. That state pins root identity,
+  immutable file inode/size/content hashes, original parsed values, and the
+  current receipt count/head. Every mutation rechecks those pins, so suffix
+  deletion, coherent active-history rewrite, byte-identical inode replacement,
+  foreign lock drift, and externally introduced seal artifacts fail closed.
+  Mutations are serialized and sealed runs reject further receipt mutation.
+- Authorization precedes attempts. Readiness, optional exact-workspace trust,
+  host identity, conversation, structured input, typed effect
+  reservation/submission, observations, reconciliation, and close follow the
+  closed receipt lifecycle. Attempt/effect reservations consume predictable
+  admission budget permanently; retrieval charges both retrieval and aggregate
+  tool admission. Effect submission and failure uncertainty are sticky facts:
+  only an exact `effect.submitted` marks submission, and later observations or
+  reconciliation never erase either fact. Conversation creation, user input,
+  tool result, and retrieval result are single-terminal operations whose first
+  terminal sequence is retained and whose second terminal result is rejected,
+  including while unresolved; planner responses remain a multi-observation drain.
+- Effect reconciliation is exact. `completed` requires sticky submission plus
+  prior operation-compatible substantive evidence; for a single-terminal
+  operation it must cite exactly the retained terminal-result sequence.
+  `not-submitted` requires no submission, no substantive or terminal observation,
+  and an empty observation list. `unknown` accepts no observation references and
+  remains unresolved. Duplicate references and self, future, nonexistent,
+  wrong-effect, wrong-attempt, or wrong-operation references are rejected. A
+  well-formed terminal result after a before-submission failure remains persisted
+  as contradictory adverse evidence but cannot make completion, close, or seal
+  successful. A correlated observation arriving after `not-submitted`
+  reconciliation is likewise persisted as a permanent contradiction rather
+  than discarded. Observed tool and planner-continuation counts come only from exact
+  submission receipts, so a valid `not-submitted` reservation is charged but
+  contributes no observed call.
+- An attempt reconciled `not-submitted` is retired. The same attempt cannot resume
+  readiness, trust, host observation, effect work, result/provider/memory drain,
+  or another failure; retry requires a newly charged and admitted
+  `attempt.reserved`. A failed attempt reconciled `completed` cannot reserve or
+  submit new work and may only drain already correlated adverse observations.
+  Unknown or unreconciled attempt failure remains blocked as before.
+  Attempt reconciliation also preserves the exact failure uncertainty:
+  `not-submitted` requires a before-submission failure, while `completed`
+  requires an after-submission failure plus unique prior substantive evidence.
+- A final response closes admission immediately: no new effect reservation or
+  submission may occur afterward. Results and adverse provider/memory facts may
+  still drain only from effects that were already submitted before that final.
+- Evidence is derived only from a replay value produced by exact validated
+  replay. Missing final response is incomplete and never fabricated as
+  `UNKNOWN`. The first final is representative while all finals and intermediate
+  completions remain counted. Returned UTF-8 bytes, normalized repeated queries,
+  and no-progress steps reuse the canonical Phase 1 derivation.
+- `sealRun` requires closed observations and no unresolved reservation, derives
+  and runtime-parses evidence, computes its own score, and exclusively writes
+  evidence, score, and seal. A complete failing score may be sealed; sealed does
+  not mean `PASS`. `verifySealedRun` rereads the immutable tree, replays the full
+  chain, re-derives and re-scores from frozen artifacts, compares canonical
+  bytes, and optionally rejects checkpoint substitution.
+- A `host.observed` receipt is the aggregate's live-host-execution observation;
+  fake tests therefore use an allow-live-host-observation manifest while the
+  fake transport itself performs zero host calls. Arbitrary fake callback audit
+  counters are fixture observations, not capability instrumentation or proof.
+  Provider action remains a separate sticky fact. Provider request count is
+  numeric only when the close receipt declares complete capture visibility;
+  provider input bytes are always
+  unavailable. Same-stream planner/provider/memory drain observations remain
+  visible to the Phase 1 safety and protocol scorer rather than being discarded.
+- `scorerHash` still binds a declared frozen value. This store does not establish
+  executable scorer provenance, code signing, authenticated owner identity,
+  hostile same-UID integrity, or trusted external timestamping. Its local hash
+  chain plus active private pins is tamper-evident against inconsistent or
+  active-history mutation. A fully coherent same-UID rewrite of an entire stored
+  run remains detectable only when verification receives an externally retained
+  sealed checkpoint.
+
+This is current-source offline evidence infrastructure only. It is not a live
+adapter, CLI runner, plugin integration, scheduler, generic event framework, or
+released/live host capability.
+
 ## Plugin Surface
 
 The bundle currently contains:

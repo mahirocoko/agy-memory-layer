@@ -73,8 +73,8 @@ pnpm test
 ```
 
 Expected output for the current source: **11/11 integration scenarios**
-in `TEST_REPORT.md` and **79 focused Node test-runner cases** passing
-(80 tests including the integration runner). Refresh
+in `TEST_REPORT.md` and **149 focused Node test-runner cases** passing
+(150 tests including the integration runner). Refresh
 the exact count and coverage after the final full run; do not infer release or
 live-migration readiness from source tests alone.
 - PreInvocation hook schema validation
@@ -86,6 +86,8 @@ live-migration readiness from source tests alone.
 - Agent launcher subagent manifest resolution
 - Test-only execution-continuity Stage 0 fixtures plus the Stage 1 disposable runner, scorer, and
   stale-state regressions
+- Current-source offline host-evidence contract, receipt lifecycle, immutable system-temp store,
+  fake transport, independent replay, derivation, sealing, and tamper regressions
 
 Topology or schema changes that affect Memory Palace require consumer-level
 acceptance, not only source, projection, health, or file-generation checks.
@@ -94,6 +96,11 @@ and a real browser: layered child paths and counts, per-node content/metadata/Gi
 detail, legacy flat fallback, mixed-layout fail-closed behavior, current-project
 scope, and click selection. A test that only proves the HTML file exists is not
 Palace topology coverage.
+
+When evidence points to harness, retrieval, projection, host transport, or
+scoring weakness, fix and verify that owner first. Do not default to curating
+user memory. Propose memory mutation only after isolating a defect in canonical
+memory content and obtaining approval.
 
 Do not infer real Agy memory understanding from projection, hook, health,
 Palace, or browser checks. Before claiming a layered-memory change works

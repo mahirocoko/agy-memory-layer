@@ -45,6 +45,11 @@ Before acting:
 4. Name the cheapest check that could disprove it.
 5. Choose one routing mode below.
 
+When evidence points to harness, retrieval, projection, host transport, or
+scoring weakness, fix and verify that owner first. Do not default to curating
+user memory. Propose memory mutation only after isolating a defect in canonical
+memory content and obtaining approval.
+
 Then make the smallest in-scope change, run deterministic checks, and follow the completion
 loop below before closing with the three evidence classes. If the hypothesis fails twice, mark that direction refuted and change the
 hypothesis or ownership boundary rather than submitting a cosmetic retry.

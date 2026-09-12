@@ -126,8 +126,11 @@ learn-letta-code/
 │       └── uninstall.sh                     # Uninstaller script
 │
 ├── tools/
-│   ├── memory-backup.ts                     # Complete verified backup/restore bundle
-│   └── memory-health.ts                     # Deterministic active-memory health gate
+│   ├── host-evidence-contract.ts             # Manifest, aggregate evidence, scoring, and accounting owner
+│   ├── host-evidence-receipts.ts             # Pure exact receipt parser, replay, admission, and derivation
+│   ├── host-evidence-store.ts                # POSIX system-temp immutable run store and sealing boundary
+│   ├── memory-backup.ts                      # Complete verified backup/restore bundle
+│   └── memory-health.ts                      # Deterministic active-memory health gate
 │
 └── tests/                                   # Automated test harness
     ├── test-environment.ts                  # Disposable HOME/MemFS fixture
@@ -136,7 +139,12 @@ learn-letta-code/
     ├── layered-memory.test.ts               # Projection, migration, rollback, curation, and lock cases
     ├── execution-continuity.test.ts         # Disposable Stage 0 mission/lifecycle and C1-C5 fixtures
     ├── execution-continuity-stage1.test.ts  # Stage 1 root safety, scoring, fingerprint, and finalization guards
+    ├── host-evidence.test.ts                 # Phase 1 manifest, aggregate evidence, and scorer contract
+    ├── host-evidence-lifecycle.test.ts       # Pure receipt parsing, replay, lifecycle, and derivation cases
+    ├── host-evidence-store.test.ts           # Immutable system-temp persistence, seal, and tamper cases
     ├── support/
+    │   ├── host-evidence-fixtures.ts         # Frozen Phase 1 manifest/evidence fixtures
+    │   ├── host-evidence-fake-transport.ts   # Offline deterministic transport with zero live capabilities
     │   ├── execution-continuity-state.ts    # Persisted schema, budgets, evidence, and terminal decisions
     │   ├── execution-continuity-harness.ts  # Closed dispatcher, lock, fingerprint, and disposable roots
     │   └── execution-continuity-fixtures.ts # Fixed C1-C5 defects, probes, repairs, and outcomes

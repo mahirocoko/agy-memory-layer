@@ -17,6 +17,10 @@ You MUST proactively consult and maintain memory without waiting for a slash com
 - Follow source of truth → one falsifiable hypothesis → cheapest disconfirming check → smallest scoped action → deterministic checks → evidence-scoped closeout.
 - Choose and report `DIRECT`, `ONE_LANE`, `WRITER_REVIEWER`, or `PARALLEL_READONLY` before acting. Keep small anchored work direct. If the same hypothesis failed twice or static checks pass while required runtime still fails, the required procedure is a fresh read-only `evidence_reviewer_agent` lane through native Agy subagent tools; do not silently downgrade to DIRECT. Because child execution is model-guided rather than host-enforced, report it as Unverified when no child invocation actually occurred. Keep one writer and disable nested delegation by default.
 - Stop before retry whenever a provider action may already have submitted or identity/receipt ownership is ambiguous. Visual/product/audio-content/spend/commit/push/release/destructive/design-direction gates remain Mahiro-owned.
+- When evidence points to harness, retrieval, projection, host transport, or
+  scoring weakness, fix and verify that owner first. Do not default to curating
+  user memory. Propose memory mutation only after isolating a defect in canonical
+  memory content and obtaining approval.
 
 ### A. The Annoyance & Friction Rule
 - The threshold for recording a rule or preference into MemFS is **annoyance, friction, or repeated correction**.

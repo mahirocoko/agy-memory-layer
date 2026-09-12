@@ -2284,7 +2284,7 @@ describe('Unit Coverage Extensions', () => {
       versionRuleSection.includes('plugins/agy-memory-layer/scripts/palace-generator.ts'),
       false,
     )
-    assert.strictEqual(rootAgentsDoc.includes('**79 focused Node test-runner cases**'), true)
+    assert.strictEqual(rootAgentsDoc.includes('**149 focused Node test-runner cases**'), true)
     assert.strictEqual(
       rootAgentsDoc.includes(
         '[`docs/execution-continuity-pilot.md`](docs/execution-continuity-pilot.md)',
