@@ -8,9 +8,9 @@ The project is inspired by Letta Code, but adapts the behavior to one Agy user
 repository rather than copying Letta's per-agent storage and service APIs. The
 canonical boundary is [`letta-parity.md`](./letta-parity.md).
 
-**Latest published release:** `v1.19.0`
+**Latest published release:** `v1.20.0` (interactive and human-supervised)
 
-**Current development candidate:** `v1.20.0` (unreleased; interactive and human-supervised)
+**Current development state:** matches `v1.20.0`; no newer candidate is declared
 
 ## Core Value
 
@@ -92,8 +92,9 @@ Antigravity CLI
 - host-level evidence for subagent capability enforcement.
 
 The [Phase 4A external-product attribution baseline](./agy-main-phase4a-external-product-attribution-2026-09-13.md)
-is historical evidence, not the current implementation owner. The [canonical Phase 4B readiness
-report](./agy-main-phase4b-readiness-2026-09-13.md) records the completed `v1.20.0` candidate and
-[retained canary packet](./evidence/agy-main-phase4b-canary-2026-09-13/README.md). The strongest
-supported boundary is interactive, human-supervised use: Herdr can report stale `done` while a pane
-awaits permission, and the reviewer model may not observe that UI.
+is historical evidence, not the current implementation owner. The [Phase 4B readiness
+report](./agy-main-phase4b-readiness-2026-09-13.md) and [retained canary
+packet](./evidence/agy-main-phase4b-canary-2026-09-13/README.md) preserve the bounded pre-release
+evidence for [`v1.20.0`](./releases/v1.20.0.md). The strongest supported boundary remains
+interactive, human-supervised use: Herdr can report stale `done` while a pane awaits permission,
+and the reviewer model may not observe that UI.

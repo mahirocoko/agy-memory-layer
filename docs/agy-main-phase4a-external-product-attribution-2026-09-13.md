@@ -1,11 +1,12 @@
-> **Historical baseline — not the current candidate owner.** This dated external-product attribution
-> evidence remains unchanged as historical input. The canonical current `v1.20.0` development-candidate
-> owner is [`agy-main-phase4b-readiness-2026-09-13.md`](./agy-main-phase4b-readiness-2026-09-13.md).
+> **Historical baseline — not the current release owner.** This dated external-product attribution
+> evidence remains historical input. The current `v1.20.0` release boundary lives in
+> [`releases/v1.20.0.md`](./releases/v1.20.0.md), with pre-release evidence retained in
+> [`agy-main-phase4b-readiness-2026-09-13.md`](./agy-main-phase4b-readiness-2026-09-13.md).
 
 # Agy Main Phase 4A: External Product Failure Attribution Baseline
 
 **Date:** 2026-09-13  
-**Status:** Retrospective evidence complete; Phase 4B not started  
+**Historical status at capture:** Retrospective evidence complete; Phase 4B not started
 **Verdict:** The retained history supports Agy/Gemini 3.8 Flash High as a high-throughput primary
 implementation lane, but does not establish it as an unsupervised safety-trusted main.
 

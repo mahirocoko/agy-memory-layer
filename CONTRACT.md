@@ -1,11 +1,11 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.20.0` development candidate
+**Package version:** `1.20.0`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Latest published release is `v1.19.0` from 2026-09-11;
-`v1.20.0` is an unreleased local readiness candidate
+**Release state:** Released as `v1.20.0` on 2026-09-13 for interactive,
+human-supervised use
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -259,10 +259,9 @@ Disposable evidence for the exact current live plan is recorded in
   new commit restoring the pre-migration active layout while preserving
   migration, rollback, and later curation archives.
 
-### 9. Current-source offline host-evidence receipt store
+### 9. Offline host-evidence receipt store
 
-The current checkout, not the released `v1.19.0` plugin runtime, contains a
-POSIX-only test/evidence subsystem for deriving host-evidence aggregates from
+The `v1.20.0` source contains a POSIX-only test/evidence subsystem for deriving host-evidence aggregates from
 immutable persisted receipts. `tools/host-evidence-contract.ts` remains the
 canonical owner of manifest, frozen bindings, aggregate evidence, scoring,
 hashes, and retrieval accounting. `tools/host-evidence-receipts.ts` owns pure
@@ -408,8 +407,8 @@ repository and MemFS snapshot invariance.
 
 The Phase 3 regression suite retains **30/30 focused Phase 3 tests** and
 **108/108 aggregate host-evidence tests**. Main owns the separately authorized
-canary run. This is current source after released v1.19.0, not a release-history
-amendment or live proof.
+canary run. This subsystem was developed after `v1.19.0` and released in
+`v1.20.0`; it does not amend `v1.19.0` history or become live host proof.
 
 ## Plugin Surface
 
@@ -486,11 +485,11 @@ Current direct regression coverage includes:
 `TEST_REPORT.md` is generated evidence for the 11 integration scenarios. The
 current Node test count and coverage must be refreshed by the full verification
 run before each release. The Phase 3 Direct CLI verifier retains 30/30
-focused Phase 3 and 108/108 aggregate host-evidence tests. Final `v1.20.0` candidate
-verification on 2026-09-13 passed 206/206 Node tests and 11/11 generated
+focused Phase 3 and 108/108 aggregate host-evidence tests. Final `v1.20.0`
+release verification on 2026-09-13 passed 206/206 Node tests and 11/11 generated
 integration scenarios, with plugin validation at 14 skills, 9 agents, 3 hooks,
-and zero errors; aggregate coverage measured 86.71% lines, 74.97% branches, and
-90.66% functions. These candidate results are not the released v1.19.0 snapshot. Remote sync is exercised against a disposable local bare
+and zero errors; aggregate coverage measured 86.56% lines, 74.75% branches, and
+90.66% functions. Remote sync is exercised against a disposable local bare
 repository. Neither report alone proves cron, external network, automatic model
 routing, or AGY host-enforcement behavior.
 
@@ -561,14 +560,14 @@ targeted `/remember`, scoped `/init`, non-mutating Stop, fresh-session
 persistence, and cleanup.
 See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 
-## Current candidate readiness boundary
+## Current release readiness boundary
 
-The canonical local readiness owner is
+The retained pre-release readiness owner is
 [`docs/agy-main-phase4b-readiness-2026-09-13.md`](./docs/agy-main-phase4b-readiness-2026-09-13.md),
 with bounded retained evidence under
 [`docs/evidence/agy-main-phase4b-canary-2026-09-13/`](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md).
 The strongest supported verdict is an interactive, human-supervised `v1.20.0`
-release candidate, not an unsupervised safety-trusted main. Herdr may report
+release, not an unsupervised safety-trusted main. Herdr may report
 `done` while its pane still awaits permission, and the reviewer model may not
 observe that permission UI; interactive pane supervision remains required.
 
@@ -593,7 +592,7 @@ observe that permission UI; interactive pane supervision remains required.
 6. An automated release workflow remains deferred. Releases use the existing
    manual tag/GitHub Release path only after source, host, and human gates pass;
    current release evidence lives in
-   [`docs/releases/v1.19.0.md`](./docs/releases/v1.19.0.md).
+   [`docs/releases/v1.20.0.md`](./docs/releases/v1.20.0.md).
 
 ## Distribution
 

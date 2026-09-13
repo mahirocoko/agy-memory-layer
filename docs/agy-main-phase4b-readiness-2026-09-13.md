@@ -1,16 +1,16 @@
-# Agy Main Phase 4B: v1.20.0 Local Readiness Candidate
+# Agy Main Phase 4B: v1.20.0 Release Readiness Evidence
 
 **Date:** 2026-09-13
 
-**Latest published release:** `v1.19.0`
+**Evidence state:** Retained pre-release readiness evidence for released `v1.20.0`
 
-**Current development candidate:** `v1.20.0` (unreleased)
+**Latest published release:** `v1.20.0` (released 2026-09-13)
 
-**Verdict:** Ready only as an interactive, human-supervised release candidate; not established as an unsupervised safety-trusted main.
+**Gate verdict:** Accepted for release only as interactive and human-supervised; not established as an unsupervised safety-trusted main.
 
 ## Scope and ownership
 
-This is the canonical current-candidate readiness report. The dated Phase 4A external-product attribution baseline remains historical input rather than a current implementation owner. The retained canary packet under `docs/evidence/agy-main-phase4b-canary-2026-09-13/` is bounded reproducible evidence; raw diagnostics remain outside Git.
+This is the retained pre-release readiness report supporting the current `v1.20.0` release notes. The dated Phase 4A external-product attribution baseline remains historical input rather than a current implementation owner. The retained canary packet under `docs/evidence/agy-main-phase4b-canary-2026-09-13/` is bounded reproducible evidence; raw diagnostics remain outside Git.
 
 The candidate changes two narrow control surfaces:
 
@@ -19,7 +19,7 @@ The candidate changes two narrow control surfaces:
 
 Neither surface is an authorization authority or a semantic-proof system.
 
-## Candidate verification
+## Pre-release candidate verification
 
 The completed candidate checks recorded before this documentation pass were:
 
@@ -31,7 +31,8 @@ The completed candidate checks recorded before this documentation pass were:
 - `git diff --check`: passed; and
 - plugin validation inside integration: **14 skills, 9 agents, 3 hooks, zero errors**.
 
-These are local `v1.20.0` candidate results. They do not alter the published `v1.19.0` release evidence or make `v1.20.0` released.
+These local `v1.20.0` candidate results were later accepted by Mahiro and promoted unchanged into
+the `v1.20.0` release snapshot. They do not alter the historical `v1.19.0` release evidence.
 
 ## Atomic confirmation-request gate
 
@@ -90,10 +91,14 @@ Two canary observations prevent an unsupervised-readiness claim:
 1. Herdr `agent prompt/wait` reported `done` while the pane was still awaiting permission. Main pane inspection exposed and resolved the exact prompt. Interactive pane supervision remains required.
 2. The reviewer model could not observe the permission UI. Main's separate pane observation cannot be laundered into reviewer-observed evidence, so that material claim correctly remained `blocked`.
 
-The candidate therefore cannot be described as a lifecycle supervisor, permission authority, or unattended execution safety boundary.
+The release therefore cannot be described as a lifecycle supervisor, permission authority, or unattended execution safety boundary.
 
 ## Readiness disposition
 
-The strongest honest boundary is an **interactive, human-supervised `v1.20.0` release candidate**. Within that boundary, current automated tests, plugin validation, atomic confirmation-request behavior, material-claim packet validation, and one bounded negative-control canary support local readiness review.
+The strongest honest boundary at the gate was an **interactive, human-supervised `v1.20.0` release candidate**. Within that boundary, current automated tests, plugin validation, atomic confirmation-request behavior, material-claim packet validation, and one bounded negative-control canary supported release readiness review.
 
-Promotion beyond that boundary requires at minimum host lifecycle behavior that does not report stale completion while permission is pending, an evidence route that lets the responsible reviewer observe the relevant UI/runtime claim, and explicit human release approval. Until then, the latest published release remains `v1.19.0`.
+Mahiro explicitly accepted this boundary on 2026-09-13, after the canary's expected negative-control
+failure and deferred host/runtime gaps were explained in operational language. The source was then
+released as `v1.20.0`. Promotion beyond the accepted boundary still requires host lifecycle
+behavior that does not report stale completion while permission is pending and an evidence route
+that lets the responsible reviewer observe the relevant UI/runtime claim.

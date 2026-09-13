@@ -2,8 +2,8 @@
 
 ## Status
 
-This document describes **current source after released v1.19.0**. Phase 3 is
-not part of the v1.19.0 release history. On 2026-09-13, one bounded Agy 1.2.2 /
+This document describes evidence developed after `v1.19.0` and incorporated in
+released `v1.20.0`. Phase 3 is not part of the `v1.19.0` release history. On 2026-09-13, one bounded Agy 1.2.2 /
 Gemini 3.8 Flash High canary completed through the installed Direct CLI v2
 callback path: the exact target report was delivered, acknowledged by the
 receipt-bound parent, collected, independently ingested, Phase 2-scored PASS,
@@ -20,7 +20,8 @@ Phase 3 execution decouples runtime lifecycle execution from evidence verificati
 | **Direct CLI runtime/lifecycle owner** | `/Users/mahiro/.letta/skills/direct-cli` (`scripts/herdr-jobs.py`) | Owns Herdr shell readiness, trust prompt handling, prompt dispatch, wait/callback lifecycle, target result collection, and workspace cleanup. This repository must not implement a parallel Herdr transport. |
 | **This repository** | `learn-letta-code` (`tools/host-evidence-direct-cli.ts`) | Pure receipt/replay/scoring/checkpoint verifier. It verifies already-terminal retained Direct CLI job bundles and callback messages, validates before/after repository and MemFS snapshots, translates evidence into Phase 2 immutable store receipts, derives scoring, and seals Phase 3 checkpoints. It never spawns Herdr or Agy, sends keys/prompts, waits, closes panes/tabs, or mutates Direct CLI state. |
 | **Phase 2 immutable store** | `tools/host-evidence-store.ts`, `tools/host-evidence-receipts.ts` | Supporting owner providing immutable filesystem store, append-only receipt hashing, replay verification, run derivation, scoring, and sealing. |
-| **Released v1.19.0** | `docs/releases/v1.19.0.md`, `CONTRACT.md` | Historical release baseline strictly preserved without rewriting history. |
+| **Released v1.20.0** | `docs/releases/v1.20.0.md`, `CONTRACT.md` | Current release boundary that includes this evidence-only adapter. |
+| **Released v1.19.0** | `docs/releases/v1.19.0.md` | Historical release baseline strictly preserved without rewriting history. |
 
 ## Contract & Bundle Verification
 
@@ -96,15 +97,15 @@ The Phase 3 test suite consists of **30 focused unit and counterexample tests** 
 
 Total host-evidence tests across the repository: **108 tests** (27 contract + 33 lifecycle + 18 store + 30 direct-cli).
 
-Final current-source verification on 2026-09-13 passed **188/188 Node tests**,
+Phase 3 closeout verification on 2026-09-13 passed **188/188 Node tests**,
 **11/11 isolated integration scenarios**, `pnpm check`, plugin validation, and
 `git diff --check`. Aggregate coverage passed at **86.32% lines**, **73.63%
-branches**, and **90.00% functions**. These figures describe the development
-candidate, not released v1.19.0.
+branches**, and **90.00% functions**. These retained pre-release figures were
+superseded by the final `v1.20.0` release checks and were never part of `v1.19.0`.
 
 ## Non-claims
 
-Current source does not claim:
+The `v1.20.0` source does not claim:
 - that this repository implements Herdr transport, shell interaction, trust prompts, or cleanup (owned exclusively by Direct CLI);
 - that Phase 2 compatibility events are native Direct CLI shell/conversation/provider receipts;
 - provider request counts or provider-visible input bytes;

@@ -1,6 +1,6 @@
 # 🧠 agy-memory-layer
 
-[![Candidate Coverage](https://img.shields.io/badge/Candidate%20Coverage-86.71%25-green.svg)](./CONTRACT.md)
+[![Release Coverage](https://img.shields.io/badge/Release%20Coverage-86.56%25-green.svg)](./CONTRACT.md)
 [![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
@@ -9,19 +9,19 @@
 > **Evidence-Controlled Agy Delegation, Committed Git-Backed Memory, and Scoped Correction Recall for Antigravity CLI (`agy`)**
 > *Inspired by the dual-memory architecture of [Letta Code](https://github.com/letta-ai/letta-code).*
 
-> **v1.19.0 (Latest Release):** Approval-bound contract refinement and snapshot-bound
-> source alignment. Exact final owner bytes, explicit baseline adoption, target-byte
-> receipts, and bounded heuristic review now fail closed on stale or reduced scope.
-> Approval and reviewer identity remain cooperative rather than authenticated.
-> See the [release notes](./docs/releases/v1.19.0.md) for verification and limitations.
-
-> **v1.20.0 (Current development candidate; unreleased):** Adds atomic
+> **v1.20.0 (Latest Release):** Adds atomic
 > confirmation-request gating for recognized tool mutations and hash-bound material-claim review
-> packets. The candidate is ready only for interactive, human-supervised use—not as an unsupervised
+> packets. The release is ready only for interactive, human-supervised use—not as an unsupervised
 > safety-trusted main. It has no authenticated authorization/grant authority, universal shell
 > coverage, compaction interceptor, mission supervisor, deterministic conversation rotation, or
-> automatic continuation. See the [canonical readiness report](./docs/agy-main-phase4b-readiness-2026-09-13.md)
-> and its [bounded canary evidence](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md).
+> automatic continuation. See the [release notes](./docs/releases/v1.20.0.md),
+> [retained readiness evidence](./docs/agy-main-phase4b-readiness-2026-09-13.md), and
+> [bounded canary packet](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md).
+
+> **v1.19.0 (Prior Release):** Approval-bound contract refinement and snapshot-bound
+> source alignment. Exact final owner bytes, explicit baseline adoption, target-byte
+> receipts, and bounded heuristic review fail closed on stale or reduced scope.
+> Approval and reviewer identity remain cooperative rather than authenticated.
 
 > **v1.15.4 (Prior Release):** Model-guided authority boundary and
 > anti-laundering stanza emitted first whenever a schema-valid PreInvocation
@@ -258,25 +258,25 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.19.0 release | v1.20.0 development candidate |
+| Metric | v1.19.0 prior release | v1.20.0 latest release |
 | :--- | ---: | ---: |
-| Lines | **83.76%** | **86.71%** |
-| Branches | **70.76%** | **74.97%** |
+| Lines | **83.76%** | **86.56%** |
+| Branches | **70.76%** | **74.75%** |
 | Functions | **88.12%** | **90.66%** |
 
-The first column is the published `v1.19.0` aggregate Node/V8 snapshot. The second is the
-unreleased local `v1.20.0` candidate snapshot from 206/206 passing Node tests; the generated
+The first column is the prior `v1.19.0` aggregate Node/V8 snapshot. The second is the
+published `v1.20.0` release snapshot from 206/206 passing Node tests; the generated
 integration suite passed 11/11 scenarios. Run `pnpm test:coverage` after source changes and
-update only the applicable candidate or release snapshot; per-file percentages remain in
+update only the applicable development or release snapshot; per-file percentages remain in
 command output rather than being copied into this README.
 
 > 📋 **Detailed integration evidence**: See [TEST_REPORT.md](./TEST_REPORT.md) for the latest isolated scenario results and measured timings.
 
 > 🧪 **Real host evidence**: See [Live Antigravity Host E2E — 2026-08-20](./docs/agy-host-e2e-2026-08-20.md) for interactive AGY injection, `/memory`, `/remember`, `/init`, restart persistence, Stop, and cleanup proof.
 
-> **Latest release**: [`v1.19.0`](./docs/releases/v1.19.0.md) binds contract approval to exact final owner bytes and binds alignment to verified snapshot and target identities. Verification: 80 Node tests and 11 integration scenarios passed; `pnpm check` passed. One disposable real Agy refine-to-align trial plus fail-closed negative controls provide bounded host evidence, not authenticated approval, reviewer identity, or universal semantic correctness. Aggregate coverage is recorded in the table above.
+> **Latest release**: [`v1.20.0`](./docs/releases/v1.20.0.md) passed **206/206 Node tests**, **11/11 generated integration scenarios**, `pnpm check`, plugin validation (**14 skills, 9 agents, 3 hooks, zero errors**), and aggregate coverage at **86.56% lines / 74.75% branches / 90.66% functions**. The [readiness report](./docs/agy-main-phase4b-readiness-2026-09-13.md) and [retained canary packet](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md) preserve the bounded pre-release evidence and deferred host boundaries. The release remains interactive and human-supervised; it has no authenticated authorization authority, semantic-proof verifier, compaction interceptor, mission supervisor, deterministic rotation, or automatic continuation.
 
-> **Current development candidate**: `v1.20.0` passed **206/206 Node tests**, **11/11 generated integration scenarios**, `pnpm check`, plugin validation (**14 skills, 9 agents, 3 hooks, zero errors**), and aggregate coverage at **86.71% lines / 74.97% branches / 90.66% functions**. The [readiness report](./docs/agy-main-phase4b-readiness-2026-09-13.md) and [retained canary packet](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md) record the bounded evidence and deferred host boundaries. These are not the released v1.19.0 metrics. The candidate remains interactive and human-supervised; it has no authenticated authorization authority, semantic-proof verifier, compaction interceptor, mission supervisor, deterministic rotation, or automatic continuation.
+> **Prior release**: [`v1.19.0`](./docs/releases/v1.19.0.md) introduced approval-bound contract snapshots and target-bound alignment. Its 80/80 Node test and 83.76% / 70.76% / 88.12% coverage snapshot remains historical release evidence.
 
 ---
 

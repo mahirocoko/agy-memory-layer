@@ -32,7 +32,7 @@ The project targets **contract parity**, not architecture parity:
 | Project initialization | `scripts/init-project-memory.ts` | `/init` |
 | Letta import | `scripts/letta-sync.ts` | `/sync-letta` |
 | Explicit-intent transcript-note generation | `scripts/dream-daemon.ts` | `/dream` |
-| Candidate version intent | `package.json` | `plugin.json` (palace-generator derives dynamically), `CONTRACT.md` |
+| Current version intent | `package.json` | `plugin.json` (palace-generator derives dynamically), `CONTRACT.md` |
 | Runtime and release-state contract | `CONTRACT.md` | `docs/letta-parity.md` |
 | Engineering rules and version sync | Root `AGENTS.md` | `tests/unit-coverage.test.ts` drift guard |
 | Public source and release summary | `README.md` | `CONTRACT.md` |

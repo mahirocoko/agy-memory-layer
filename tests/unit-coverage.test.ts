@@ -2103,14 +2103,8 @@ describe('Unit Coverage Extensions', () => {
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(
-      contractDoc.includes('**Package version:** `1.20.0` development candidate'),
-      true,
-    )
-    assert.strictEqual(
-      contractDoc.includes('Latest published release is `v1.19.0` from 2026-09-11'),
-      true,
-    )
+    assert.strictEqual(contractDoc.includes('**Package version:** `1.20.0`'), true)
+    assert.strictEqual(contractDoc.includes('Released as `v1.20.0` on 2026-09-13'), true)
     assert.strictEqual(
       contractDoc.includes(
         'Every schema-valid invocation that runs to completion within the host hook',
@@ -2150,18 +2144,15 @@ describe('Unit Coverage Extensions', () => {
 
     // 3. README.md current + prior-release distinction
     const readmeDoc = fs.readFileSync(path.join(ROOT_DIR, 'README.md'), 'utf8')
-    assert.strictEqual(readmeDoc.includes('**v1.19.0 (Latest Release):**'), true)
-    assert.strictEqual(
-      readmeDoc.includes('**v1.20.0 (Current development candidate; unreleased):**'),
-      true,
-    )
+    assert.strictEqual(readmeDoc.includes('**v1.20.0 (Latest Release):**'), true)
+    assert.strictEqual(readmeDoc.includes('**v1.19.0 (Prior Release):**'), true)
     assert.strictEqual(readmeDoc.includes('**v1.15.4 (Prior Release):**'), true)
     assert.strictEqual(
-      readmeDoc.includes('| Metric | v1.19.0 release | v1.20.0 development candidate |'),
+      readmeDoc.includes('| Metric | v1.19.0 prior release | v1.20.0 latest release |'),
       true,
     )
-    assert.strictEqual(readmeDoc.includes('| Lines | **83.76%** | **86.71%** |'), true)
-    assert.strictEqual(readmeDoc.includes('| Branches | **70.76%** | **74.97%** |'), true)
+    assert.strictEqual(readmeDoc.includes('| Lines | **83.76%** | **86.56%** |'), true)
+    assert.strictEqual(readmeDoc.includes('| Branches | **70.76%** | **74.75%** |'), true)
     assert.strictEqual(readmeDoc.includes('| Functions | **88.12%** | **90.66%** |'), true)
     assert.strictEqual(readmeDoc.includes('206/206 Node tests'), true)
     assert.strictEqual(readmeDoc.includes('11/11 generated integration scenarios'), true)
@@ -2190,19 +2181,26 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(phase3Doc.includes('direct-cli.callback-message.v1'), true)
     assert.strictEqual(phase3Doc.includes('Direct CLI runtime/lifecycle owner'), true)
     assert.strictEqual(phase3Doc.includes('Phase 2 immutable store'), true)
-    assert.strictEqual(phase3Doc.includes('not part of the v1.19.0 release history'), true)
-
-    const currentReleaseDoc = fs.readFileSync(
-      path.join(ROOT_DIR, 'docs', 'releases', 'v1.19.0.md'),
-      'utf8',
-    )
-    assert.strictEqual(currentReleaseDoc.includes('**State:** Released as `v1.19.0`.'), true)
     assert.strictEqual(
-      currentReleaseDoc.includes('Focused contract workflow suite: **26/26**'),
+      phase3Doc.includes('incorporated in\nreleased `v1.20.0`') &&
+        phase3Doc.includes('not part of the `v1.19.0` release history'),
       true,
     )
-    assert.strictEqual(currentReleaseDoc.includes('cooperative records'), true)
-    assert.strictEqual(currentReleaseDoc.includes('**83.76% lines**'), true)
+
+    const currentReleaseDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'releases', 'v1.20.0.md'),
+      'utf8',
+    )
+    assert.strictEqual(
+      currentReleaseDoc.includes(
+        '**State:** Released as `v1.20.0` for interactive, human-supervised use.',
+      ),
+      true,
+    )
+    assert.strictEqual(currentReleaseDoc.includes('**206/206 Node tests passed**'), true)
+    assert.strictEqual(currentReleaseDoc.includes('negative-control `fail` is expected'), true)
+    assert.strictEqual(currentReleaseDoc.includes('**86.56% lines**'), true)
+    assert.strictEqual(currentReleaseDoc.includes('Active pane supervision remains required'), true)
 
     const continuityPilotDoc = fs.readFileSync(
       path.join(ROOT_DIR, 'docs', 'execution-continuity-pilot.md'),
@@ -2414,8 +2412,8 @@ describe('Unit Coverage Extensions', () => {
       'utf8',
     )
     for (const requiredText of [
-      '**Latest published release:** `v1.19.0`',
-      '**Current development candidate:** `v1.20.0` (unreleased)',
+      '**Evidence state:** Retained pre-release readiness evidence for released `v1.20.0`',
+      '**Latest published release:** `v1.20.0` (released 2026-09-13)',
       '206/206 Node tests passed',
       '11/11 scenarios passed',
       '86.71% lines, 74.97% branches, 90.66% functions',
@@ -2426,6 +2424,7 @@ describe('Unit Coverage Extensions', () => {
       'not a semantic proof',
       'no compaction interceptor, durable mission supervisor, deterministic conversation rotation, automatic continuation',
       'interactive, human-supervised `v1.20.0` release candidate',
+      'Mahiro explicitly accepted this boundary on 2026-09-13',
       'reported `done` while the pane was still awaiting permission',
       'reviewer model did not itself observe the permission UI',
       'docs/evidence/agy-main-phase4b-canary-2026-09-13/',
@@ -2468,9 +2467,10 @@ describe('Unit Coverage Extensions', () => {
       'utf8',
     )
     assert.strictEqual(
-      phase4aDoc.startsWith('> **Historical baseline — not the current candidate owner.**'),
+      phase4aDoc.startsWith('> **Historical baseline — not the current release owner.**'),
       true,
     )
+    assert.strictEqual(phase4aDoc.includes('./releases/v1.20.0.md'), true)
     assert.strictEqual(phase4aDoc.includes('./agy-main-phase4b-readiness-2026-09-13.md'), true)
 
     const fileOrganizationDoc = fs.readFileSync(

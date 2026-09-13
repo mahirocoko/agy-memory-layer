@@ -2,9 +2,9 @@
 
 This reference documents all testing, verification, script runners, and daemon commands available in this codebase.
 
-**Latest published release:** `v1.19.0`
+**Latest published release:** `v1.20.0` (interactive and human-supervised)
 
-**Current development candidate:** `v1.20.0` (unreleased)
+**Current development state:** matches `v1.20.0`; no newer candidate is declared
 
 ---
 
@@ -29,7 +29,7 @@ node --experimental-strip-types --test --test-concurrency=1 tests/material-claim
 node --experimental-strip-types --test --test-concurrency=1 tests/unit-coverage.test.ts
 ```
 
-Both focused candidate test files are included in `pnpm test` and
+Both focused release test files are included in `pnpm test` and
 `pnpm test:coverage`. The tool guard classifies confirmation requests; it does
 not authenticate authorization or grants and does not universally cover shell
 semantics. The material-claim verifier binds current owner/consumer bytes,
@@ -56,7 +56,7 @@ because the reviewer model did not observe the permission UI.
 ```
 
 An accepted packet shape and current bytes do not prove semantic correctness.
-See the [canonical candidate report](./agy-main-phase4b-readiness-2026-09-13.md)
+See the [retained readiness report](./agy-main-phase4b-readiness-2026-09-13.md)
 and [retained evidence index](./evidence/agy-main-phase4b-canary-2026-09-13/README.md).
 
 ---

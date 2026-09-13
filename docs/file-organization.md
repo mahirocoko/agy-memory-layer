@@ -23,7 +23,7 @@ learn-letta-code/
 ├── docs/                                    # Modular developer documentation family
 │   ├── agy-host-e2e-2026-08-20.md           # Real interactive AGY host evidence and cleanup
 │   ├── agy-main-phase4a-external-product-attribution-2026-09-13.md # Historical attribution baseline
-│   ├── agy-main-phase4b-readiness-2026-09-13.md # Canonical v1.20.0 candidate readiness owner
+│   ├── agy-main-phase4b-readiness-2026-09-13.md # Retained v1.20.0 pre-release readiness evidence
 │   ├── evidence/agy-main-phase4b-canary-2026-09-13/ # Retained bounded canary packet
 │   ├── onboarding.md                        # Day 1 setup and verification
 │   ├── project-overview.md                  # Architecture and subsystem overview
@@ -42,6 +42,7 @@ learn-letta-code/
 │   ├── releases/v1.15.3.md                  # Prior layered Palace topology release
 │   ├── releases/v1.15.4.md                  # Prior model-guided authority boundary release
 │   ├── releases/v1.19.0.md                  # Approval-bound contract snapshot and alignment release
+│   ├── releases/v1.20.0.md                  # Interactive Agy Main guard and claim-review release
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene
