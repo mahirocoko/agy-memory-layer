@@ -2142,36 +2142,49 @@ describe('Unit Coverage Extensions', () => {
     // Preserves historical released v1.15.3 evidence
     assert.strictEqual(contractDoc.includes('Released `v1.15.3` measures'), true)
 
-    // 3. README.md current + prior-release distinction
+    // 3. README.md product-first onboarding and current release boundary
     const readmeDoc = fs.readFileSync(path.join(ROOT_DIR, 'README.md'), 'utf8')
-    assert.strictEqual(readmeDoc.includes('**v1.20.0 (Latest Release):**'), true)
-    assert.strictEqual(readmeDoc.includes('**v1.19.0 (Prior Release):**'), true)
-    assert.strictEqual(readmeDoc.includes('**v1.15.4 (Prior Release):**'), true)
-    assert.strictEqual(
-      readmeDoc.includes('| Metric | v1.19.0 prior release | v1.20.0 latest release |'),
-      true,
-    )
-    assert.strictEqual(readmeDoc.includes('| Lines | **83.76%** | **86.56%** |'), true)
-    assert.strictEqual(readmeDoc.includes('| Branches | **70.76%** | **74.75%** |'), true)
-    assert.strictEqual(readmeDoc.includes('| Functions | **88.12%** | **90.66%** |'), true)
+    assert.strictEqual(readmeDoc.includes('**Current release:** `v1.20.0`'), true)
+    assert.strictEqual(readmeDoc.includes('## Why it exists'), true)
+    assert.strictEqual(readmeDoc.includes('## Quick start'), true)
+    assert.strictEqual(readmeDoc.includes('## How it works'), true)
+    assert.strictEqual(readmeDoc.includes('## Everyday commands'), true)
+    assert.strictEqual(readmeDoc.includes('one-line installer follows `main`'), true)
+    assert.strictEqual(readmeDoc.includes('clone --branch v1.20.0 --depth 1'), true)
+    assert.strictEqual(readmeDoc.includes('Calling `/init` is the confirmation'), true)
+    assert.strictEqual(readmeDoc.includes('asks before writing'), false)
+    assert.strictEqual(readmeDoc.includes('better continuity and fewer unsupported claims'), true)
+    assert.strictEqual(readmeDoc.includes("does not improve Gemini's base"), true)
+    assert.strictEqual(readmeDoc.includes('`Stop` never auto-commits'), true)
     assert.strictEqual(readmeDoc.includes('206/206 Node tests'), true)
     assert.strictEqual(readmeDoc.includes('11/11 generated integration scenarios'), true)
+    assert.strictEqual(
+      readmeDoc.includes('86.56% lines / 74.75% branches / 90.66% functions'),
+      true,
+    )
     assert.strictEqual(readmeDoc.includes('./docs/agy-main-phase4b-readiness-2026-09-13.md'), true)
     assert.strictEqual(
       readmeDoc.includes('./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md'),
       true,
     )
-    assert.strictEqual(readmeDoc.includes('does not authenticate authorization or grants'), true)
+    assert.strictEqual(readmeDoc.includes('confirmation classifier'), true)
+    assert.match(readmeDoc, /Ambiguous gated\s+bundles/)
+    assert.strictEqual(readmeDoc.includes('not authenticated authorization'), true)
     assert.strictEqual(readmeDoc.includes('mission supervisor'), true)
-    assert.strictEqual(readmeDoc.includes('automatic continuation'), true)
+    assert.match(readmeDoc, /automatic\s+continuation/)
     assert.strictEqual(
-      readmeDoc.includes('coverage and action-specific authorization binding remain partial'),
-      false,
-    )
-    assert.strictEqual(
-      readmeDoc.includes('docs/letta-parity.md#model-guided-authority-host-matrix--2026-09-02'),
+      readmeDoc.includes('SOURCE_ROOT="$(git -C "$PLUGIN_ROOT" rev-parse --show-toplevel)"'),
       true,
     )
+    assert.strictEqual(readmeDoc.includes('"$SOURCE_ROOT/tools/memory-backup.ts"'), true)
+    assert.strictEqual(
+      readmeDoc.includes(
+        '"$HOME/.gemini/antigravity-cli/plugins/agy-memory-layer/scripts/uninstall.sh"',
+      ),
+      true,
+    )
+    assert.strictEqual(readmeDoc.includes('**v1.19.0 (Latest Release):**'), false)
+    assert.strictEqual(readmeDoc.includes('Current development candidate'), false)
     const phase3Doc = fs.readFileSync(
       path.join(ROOT_DIR, 'docs', 'host-evidence-phase3.md'),
       'utf8',
