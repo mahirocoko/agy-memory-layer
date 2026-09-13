@@ -35,6 +35,10 @@ Antigravity CLI
   │     └── hook-inject-memory.ts
   │           └── compile layered/legacy committed HEAD through layered-memory.ts
   │
+  ├── PreToolUse
+  │     └── hook-pre-tool-use.ts
+  │           └── classify command, write, dependency, and subagent safety boundaries
+  │
   ├── Active conversation / explicit skills
   │     ├── Evidence Controller direct/delegated routing
   │     ├── contained targeted memory writers
@@ -52,6 +56,7 @@ Antigravity CLI
 | --- | --- | --- |
 | Committed prompt projection | `scripts/layered-memory.ts` | Selects layered/legacy ownership from `HEAD`; dirty content is not active |
 | Working hypothesis | `scripts/active-learning.ts` | One canonical protected hypothesis; malformed/stray active state fails closed |
+| Tool safety classification | `scripts/tool-guard.ts`, `scripts/hook-pre-tool-use.ts` | Classifies selected command/write/subagent shapes; configured destructive patterns are denied and configured mutations escalated, but coverage and action-specific authorization binding remain partial |
 | Evidence Controller | `skills/evidence-controller/SKILL.md` | Agy-native claim, delegation, retry, and human-gate procedure |
 | Repository contract refinement and alignment | `skills/contract-refine/SKILL.md`, `skills/contract-align/SKILL.md`, `scripts/contract-ledger*.ts`, `scripts/contract-snapshot.ts` | Explicit approval binds complete final owner bytes; evaluation and verdict bind verified snapshot plus exact targets; heuristic review remains bounded evidence |
 | Execution-continuity pilot | `docs/execution-continuity-pilot.md`, `docs/execution-continuity-stage1-evidence-2026-09-11.md`, `scripts/execution-continuity-stage1.ts`, `tests/execution-continuity*.test.ts`, `tests/support/execution-continuity-*.ts` | Stage 0 deterministic fixture preflight plus audited Stage 1 no-advance evidence and corrected test-only scorer; no runtime state or supervisor |
@@ -80,3 +85,9 @@ Antigravity CLI
 - a release-acquiring updater with validation and rollback;
 - self-contained runtime artifacts for remote TypeScript execution;
 - host-level evidence for subagent capability enforcement.
+
+The [Phase 4A external-product attribution baseline](./agy-main-phase4a-external-product-attribution-2026-09-13.md)
+adds longitudinal real-project evidence to these gaps. It supports Agy as a high-throughput primary
+implementation lane, refutes memory loss as the primary explanation for the sampled failures, and
+limits the next candidate work to observing the real PreToolUse/host boundary plus material-claim
+review binding before any new live canary.

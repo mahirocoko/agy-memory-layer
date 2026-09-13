@@ -89,6 +89,7 @@
 - 📦 **Git-Backed MemFS (`~/.gemini/memory/`)**: Decoupled from project source code; tracks all knowledge snapshots in an independent Git repository.
 - ⚡ **Zero-Friction Lifecycle Hooks**:
   - `PreInvocation`: Reads committed Git memory into `ephemeralMessage` and discloses dirty/conflict state separately.
+  - `PreToolUse`: Classifies selected Git, MemFS, dependency, manifest, and subagent-capability command shapes before dispatch. Configured destructive patterns are denied and configured state-changing operations are escalated, but coverage is not universal and Git permission is not bound to one unambiguous action-specific user grant.
   - `Stop`: Reports MemFS status without staging, committing, deleting locks, or launching background work.
 - 🧠 **Hybrid Semantic Recall (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across available Antigravity conversation transcripts.
 - 🌙 **Dreaming (`/dream` & `dream-daemon.ts`)**: Explicit reflection guidance plus an optional deterministic correction-archive utility; isolated model-backed reflection remains deferred.
