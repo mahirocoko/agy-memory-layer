@@ -336,9 +336,47 @@ This subsystem has these formal boundaries:
   run remains detectable only when verification receives an externally retained
   sealed checkpoint.
 
-This is current-source offline evidence infrastructure only. It is not a live
-adapter, CLI runner, plugin integration, scheduler, generic event framework, or
-released/live host capability.
+This Phase 2 subsystem remains current-source offline evidence infrastructure.
+Its descriptor and authorization receipt stay literal `offline-only`; neither
+its manifest allow flags nor a sealed score grants a live host action.
+
+### 10. Current-source Phase 3 Direct CLI callback evidence boundary
+
+Current source implements a focused evidence-only adapter owned by
+`tools/host-evidence-direct-cli.ts` (strictly under 800 lines) and specified in
+[`docs/host-evidence-phase3.md`](./docs/host-evidence-phase3.md).
+
+Ownership is strictly bounded:
+- **Direct CLI runtime/lifecycle owner**: The installed Direct CLI workflow at
+  `/Users/mahiro/.letta/skills/direct-cli` (especially `scripts/herdr-jobs.py`)
+  owns Herdr shell readiness, trust prompt handling, prompt dispatch,
+  wait/callback lifecycle, target result collection, and workspace cleanup.
+  This repository must not implement a parallel Herdr transport.
+- **This repository**: Pure receipt/replay/scoring/checkpoint verifier via
+  `tools/host-evidence-direct-cli.ts`. It verifies retained `direct-cli.herdr-job.v2`
+  bundles and `direct-cli.callback-message.v1` messages, validates before/after
+  repository and MemFS snapshots, translates evidence into Phase 2 immutable
+  store receipts, derives scoring, and seals Phase 3 checkpoints. It never spawns
+  Herdr or Agy, sends keys/prompts, waits, closes panes/tabs, or mutates Direct
+  CLI state.
+- **Phase 2 immutable store**: Supporting owner (`tools/host-evidence-store.ts`,
+  `tools/host-evidence-receipts.ts`) providing immutable filesystem store,
+  append-only receipt hashing, replay verification, run derivation, scoring,
+  and sealing.
+- **Released v1.19.0**: Historical release baseline strictly preserved without
+  rewriting history.
+
+Verification requires a terminal done callback job, single Agy target, matching
+working directory, consistent prompt/dispatch hashes, valid target/parent receipts
+with stable `agentSession`, pane, workspace, tab, and terminal identifiers, an
+accepted `report_ready` callback message with parent acknowledgement, matching
+results file bytes, valid `DirectCliCanaryReport` body, and exact before/after
+repository and MemFS snapshot invariance.
+
+The Phase 3 regression suite retains **30/30 focused Phase 3 tests** and
+**108/108 aggregate host-evidence tests**. Main owns the separately authorized
+canary run. This is current source after released v1.19.0, not a release-history
+amendment or live proof.
 
 ## Plugin Surface
 
@@ -411,9 +449,13 @@ Current direct regression coverage includes:
 
 `TEST_REPORT.md` is generated evidence for the 11 integration scenarios. The
 current Node test count and coverage must be refreshed by the full verification
-run before each release. Remote sync is exercised against a disposable
-local bare repository. Neither report alone proves cron, external network,
-automatic model routing, or AGY host-enforcement behavior.
+run before each release. The Phase 3 Direct CLI verifier retains 30/30
+focused Phase 3 and 108/108 aggregate host-evidence tests. Final current-source
+verification on 2026-09-13 passed 188/188 Node tests and measured 86.32% lines,
+73.63% branches, and 90.00% functions. These current-source results are not the
+released v1.19.0 snapshot. Remote sync is exercised against a disposable local bare
+repository. Neither report alone proves cron, external network, automatic model
+routing, or AGY host-enforcement behavior.
 
 Released `v1.19.0` measures **83.76% lines**, **70.76% branches**, and
 **88.12% functions**, with 80/80 Node tests passing (one integration runner

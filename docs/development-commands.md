@@ -12,9 +12,17 @@ Run the primary Node.js test runner suite:
 # Run integration scenarios plus focused unit cases
 pnpm test
 
-# Run tests directly with Node 22+ type stripping
-node --experimental-strip-types --test --test-concurrency=1 tests/layered-memory.test.ts tests/run-test-suite.ts tests/unit-coverage.test.ts tests/contract-ledger.test.ts tests/execution-continuity.test.ts tests/execution-continuity-stage1.test.ts
+# Run the current Phase 3 first-turn adapter regressions only (fixture mode; no host effects)
+pnpm test:phase3
 ```
+
+The focused Phase 3 command exercises only the Direct CLI callback evidence
+adapter (`tools/host-evidence-direct-cli.ts`) against retained job bundles and
+counterexamples; it launches no Herdr, Agy, provider, browser, or network
+action. Runtime lifecycle execution (Herdr shell readiness, trust prompt,
+prompt dispatch, callback wait, and cleanup) is owned by the installed Direct
+CLI workflow at `/Users/mahiro/.letta/skills/direct-cli`. See
+[`host-evidence-phase3.md`](./host-evidence-phase3.md).
 
 ---
 

@@ -22,6 +22,19 @@
 > retained stale candidate fingerprints, while the Letta-led scorer closed missions with agent
 > criteria still open. The harness now rejects those shapes, but it adds no runtime state,
 > supervisor, automatic continuation, or new subagent definition.
+>
+> Current source also contains the [Phase 3 Direct CLI callback evidence adapter](./docs/host-evidence-phase3.md).
+> Ownership is decoupled: the installed Direct CLI workflow at `/Users/mahiro/.letta/skills/direct-cli`
+> (`scripts/herdr-jobs.py`) owns Herdr shell readiness, trust prompt handling, prompt dispatch, wait/callback lifecycle,
+> and cleanup. This repository provides a pure evidence-only adapter (`tools/host-evidence-direct-cli.ts`)
+> that verifies retained terminal callback job bundles (`direct-cli.herdr-job.v2`) and callback messages
+> (`direct-cli.callback-message.v1`), validates before/after repository and MemFS snapshot invariance, translates
+> evidence into Phase 2 immutable store receipts, derives scoring, and seals Phase 3 checkpoints.
+> One bounded Agy 1.2.2 / Gemini 3.8 Flash High canary completed through the Direct CLI v2
+> callback path on 2026-09-13, produced an acknowledged exact report, preserved repository and
+> live MemFS content, passed Phase 2 scoring, and sealed a `verifiedLive: true` external checkpoint.
+> This remains current-source evidence rather than v1.19.0 release evidence; provider request
+> counts and provider-visible input bytes remain unavailable.
 
 > **v1.15.4 (Prior Release):** Model-guided authority boundary and
 > anti-laundering stanza emitted first whenever a schema-valid PreInvocation
@@ -274,7 +287,7 @@ being copied into this README.
 
 > **Latest release**: [`v1.19.0`](./docs/releases/v1.19.0.md) binds contract approval to exact final owner bytes and binds alignment to verified snapshot and target identities. Verification: 80 Node tests and 11 integration scenarios passed; `pnpm check` passed. One disposable real Agy refine-to-align trial plus fail-closed negative controls provide bounded host evidence, not authenticated approval, reviewer identity, or universal semantic correctness. Aggregate coverage is recorded in the table above.
 
-> **Current development candidate**: the [execution-continuity pilot](./docs/execution-continuity-pilot.md) has a nine-case deterministic Stage 0 fixture-preflight PASS and an audited 15-run Stage 1 no-advance result. The current source passes 80 Node tests and 11 integration scenarios. This remains bounded source/model evidence only: no Stage 2 repeat, automatic continuation, compaction recovery, runtime supervisor, or OS sandbox is implemented or authorized.
+> **Current development candidate**: the [execution-continuity pilot](./docs/execution-continuity-pilot.md) has a nine-case deterministic Stage 0 fixture-preflight PASS and an audited 15-run Stage 1 no-advance result. The Phase 3 Direct CLI verifier retains **30/30 focused Phase 3 tests** and **108/108 aggregate host-evidence tests**, plus the bounded live canary described above. Final current-source verification on 2026-09-13 passed **188/188 Node tests**, **11/11 isolated integration scenarios**, `pnpm check`, plugin validation, and coverage at **86.32% lines / 73.63% branches / 90.00% functions**. These are not the released v1.19.0 coverage snapshot, and no Stage 2 repeat, automatic continuation, compaction recovery, runtime supervisor, or OS sandbox is implemented or authorized.
 
 ---
 

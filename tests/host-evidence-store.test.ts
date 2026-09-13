@@ -50,16 +50,15 @@ function payloads(handle: RunHandle) {
     attempt: {
       event: 'attempt.reserved',
       attemptId: 'attempt-1',
-      nonce: 'nonce-1',
       processId: 'process-1',
     } as const,
     ready: {
       event: 'shell.ready',
       attemptId: 'attempt-1',
-      nonce: 'nonce-1',
-      stdout: 'nonce-1',
       shellProcessId: 'process-1',
       foregroundProcessId: 'process-1',
+      foregroundProcessCount: 1,
+      cwd: '/trusted/repository',
     } as const,
     host: { event: 'host.observed', attemptId: 'attempt-1', ...manifest.plannedHost } as const,
     conversationReservation: {
@@ -548,7 +547,6 @@ test('store accepts only exact typed payloads before persistence', () => {
     const invalid = {
       event: 'attempt.reserved',
       attemptId: 'attempt-1',
-      nonce: 'nonce-1',
       processId: 'process-1',
       extra: true,
     }
@@ -607,7 +605,7 @@ test('active receipt checkpoint rejects suffix deletion and coherent history rew
   const receiptPath = path.join(rewritten.root, receiptFileName(2))
   const receipt = JSON.parse(fs.readFileSync(receiptPath, 'utf8')) as Receipt
   const payload = receipt.payload as Extract<ReceiptPayload, { event: 'attempt.reserved' }>
-  payload.nonce = 'coherent-rewrite'
+  payload.processId = 'coherent-rewrite'
   const { receiptHash: _oldHash, ...unsigned } = receipt
   receipt.receiptHash = computeReceiptHash(unsigned)
   writeCanonical(receiptPath, receipt)

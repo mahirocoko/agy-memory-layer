@@ -2063,6 +2063,10 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(packageJson.version, '1.19.0')
     assert.strictEqual(pluginJson.version, '1.19.0')
     assert.strictEqual(packageJson.version, pluginJson.version)
+    assert.strictEqual(
+      packageJson.scripts['test:phase3'],
+      'node --experimental-strip-types --test --test-concurrency=1 tests/host-evidence-direct-cli.test.ts',
+    )
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
@@ -2121,10 +2125,24 @@ describe('Unit Coverage Extensions', () => {
       readmeDoc.includes('[execution-continuity pilot](./docs/execution-continuity-pilot.md)'),
       true,
     )
+    assert.strictEqual(readmeDoc.includes('**30/30 focused Phase 3 tests**'), true)
+    assert.strictEqual(readmeDoc.includes('**108/108 aggregate host-evidence tests**'), true)
     assert.strictEqual(
-      readmeDoc.includes('The current source passes 80 Node tests and 11 integration scenarios.'),
+      readmeDoc.includes('Final current-source verification on 2026-09-13 passed'),
       true,
     )
+    assert.strictEqual(readmeDoc.includes('not the released v1.19.0 coverage snapshot'), true)
+    assert.strictEqual(readmeDoc.includes('bounded live canary described above'), true)
+    const phase3Doc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'host-evidence-phase3.md'),
+      'utf8',
+    )
+    assert.strictEqual(phase3Doc.includes('tools/host-evidence-direct-cli.ts'), true)
+    assert.strictEqual(phase3Doc.includes('direct-cli.herdr-job.v2'), true)
+    assert.strictEqual(phase3Doc.includes('direct-cli.callback-message.v1'), true)
+    assert.strictEqual(phase3Doc.includes('Direct CLI runtime/lifecycle owner'), true)
+    assert.strictEqual(phase3Doc.includes('Phase 2 immutable store'), true)
+    assert.strictEqual(phase3Doc.includes('not part of the v1.19.0 release history'), true)
 
     const currentReleaseDoc = fs.readFileSync(
       path.join(ROOT_DIR, 'docs', 'releases', 'v1.19.0.md'),
@@ -2284,11 +2302,16 @@ describe('Unit Coverage Extensions', () => {
       versionRuleSection.includes('plugins/agy-memory-layer/scripts/palace-generator.ts'),
       false,
     )
-    assert.strictEqual(rootAgentsDoc.includes('**149 focused Node test-runner cases**'), true)
+    assert.strictEqual(rootAgentsDoc.includes('**30/30 focused Phase 3**'), true)
+    assert.strictEqual(rootAgentsDoc.includes('**108/108 aggregate host-evidence**'), true)
     assert.strictEqual(
       rootAgentsDoc.includes(
         '[`docs/execution-continuity-pilot.md`](docs/execution-continuity-pilot.md)',
       ),
+      true,
+    )
+    assert.strictEqual(
+      rootAgentsDoc.includes('[`docs/host-evidence-phase3.md`](docs/host-evidence-phase3.md)'),
       true,
     )
 

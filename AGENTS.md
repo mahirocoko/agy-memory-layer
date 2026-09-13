@@ -72,11 +72,11 @@ Always run the full test suite before concluding changes:
 pnpm test
 ```
 
-Expected output for the current source: **11/11 integration scenarios**
-in `TEST_REPORT.md` and **149 focused Node test-runner cases** passing
-(150 tests including the integration runner). Refresh
-the exact count and coverage after the final full run; do not infer release or
-live-migration readiness from source tests alone.
+The Phase 3 Direct CLI verifier lane retains **30/30 focused Phase 3**
+and **108/108 aggregate host-evidence** tests. Final current-source verification
+on 2026-09-13 passed 188/188 Node tests, 11/11 isolated integration scenarios,
+`pnpm check`, plugin validation, and coverage at 86.32% lines / 73.63% branches /
+90.00% functions. Do not infer release readiness from current-source evidence alone.
 - PreInvocation hook schema validation
 - Committed-HEAD projection and non-mutating Stop status
 - Contained paths and targeted memory commits
@@ -123,6 +123,7 @@ Detailed operational documentation is split into modular files under [`docs/`](d
 - [`docs/letta-parity.md`](docs/letta-parity.md) — Canonical Letta behavior → Agy adaptation → implementation status matrix.
 - [`docs/execution-continuity-pilot.md`](docs/execution-continuity-pilot.md) — Stage 0 fixture-preflight and audited Stage 1 results; both candidate modes are disqualified and production continuity remains unimplemented.
 - [`docs/execution-continuity-stage1-evidence-2026-09-11.md`](docs/execution-continuity-stage1-evidence-2026-09-11.md) — Exact 15-run receipts, false-PASS findings, cleanup, and the no-advance decision.
+- [`docs/host-evidence-phase3.md`](docs/host-evidence-phase3.md) — Current-source evidence-only verifier for terminal Direct CLI callback receipts, Phase 2 sealing, repository/MemFS content invariance, retained checkpoints, and non-claims; the installed Direct CLI workflow owns Agy/Herdr lifecycle execution.
 - [`docs/development-commands.md`](docs/development-commands.md) — Script runners, testing, and daemon commands.
 - [`docs/file-organization.md`](docs/file-organization.md) — Directory layout and responsibility matrix.
 - [`docs/best-practices.md`](docs/best-practices.md) — Coding conventions, non-blocking hooks, and memory hygiene.

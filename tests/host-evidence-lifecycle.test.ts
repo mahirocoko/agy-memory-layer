@@ -92,21 +92,51 @@ function authorize(script: Script): void {
   })
 }
 
+function throughHost(script: Script, attemptId = 'attempt-1'): void {
+  authorize(script)
+  script.add({
+    event: 'attempt.reserved',
+    attemptId,
+    processId: 'process-1',
+  })
+  script.add({
+    event: 'shell.ready',
+    attemptId,
+    shellProcessId: 'process-1',
+    foregroundProcessId: 'process-1',
+    foregroundProcessCount: 1,
+    cwd: '/trusted/repository',
+  })
+  if (script.context.descriptor.trustRequired) {
+    script.add({
+      event: 'trust.accepted',
+      attemptId,
+      workspacePath: script.context.descriptor.workspacePath,
+      workspaceDev: script.context.descriptor.workspaceDev,
+      workspaceIno: script.context.descriptor.workspaceIno,
+    })
+  }
+  script.add({
+    event: 'host.observed',
+    attemptId,
+    ...script.context.manifest.plannedHost,
+  })
+}
+
 function throughInput(script: Script): void {
   authorize(script)
   script.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
     processId: 'process-1',
   })
   script.add({
     event: 'shell.ready',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
-    stdout: 'nonce-1',
     shellProcessId: 'process-1',
     foregroundProcessId: 'process-1',
+    foregroundProcessCount: 1,
+    cwd: '/trusted/repository',
   })
   if (script.context.descriptor.trustRequired) {
     script.add({
@@ -290,7 +320,7 @@ test('replay rejects gaps, reorder, payload drift, predecessor drift, and cross-
   const payloadDrift = structuredClone(script.receipts)
   ;(payloadDrift[0].payload as Extract<ReceiptPayload, { event: 'authorized' }>).scope =
     'offline-only'
-  ;(payloadDrift[1].payload as Extract<ReceiptPayload, { event: 'attempt.reserved' }>).nonce =
+  ;(payloadDrift[1].payload as Extract<ReceiptPayload, { event: 'attempt.reserved' }>).processId =
     'drift'
   variants.push(payloadDrift)
   const predecessor = structuredClone(script.receipts)
@@ -303,30 +333,27 @@ test('replay rejects gaps, reorder, payload drift, predecessor drift, and cross-
     assert.throws(() => replayRun(script.context, receipts), /integrity/)
 })
 
-test('readiness and trust are exact, foreground, attempt-bound workspace facts', () => {
-  for (const mutation of ['nonce', 'stdout', 'foreground', 'shell'] as const) {
+test('shell readiness and trust are exact, foreground, attempt-bound workspace facts', () => {
+  for (const mutation of ['foreground', 'shell'] as const) {
     const script = new Script(context())
     authorize(script)
     script.add({
       event: 'attempt.reserved',
       attemptId: 'attempt-1',
-      nonce: 'nonce-1',
       processId: 'process-1',
     })
     const ready: Extract<ReceiptPayload, { event: 'shell.ready' }> = {
       event: 'shell.ready',
       attemptId: 'attempt-1',
-      nonce: 'nonce-1',
-      stdout: 'nonce-1',
       shellProcessId: 'process-1',
       foregroundProcessId: 'process-1',
+      foregroundProcessCount: 1,
+      cwd: '/trusted/repository',
     }
-    if (mutation === 'nonce') ready.nonce = 'stale'
-    if (mutation === 'stdout') ready.stdout = 'marker only on stderr'
     if (mutation === 'foreground') ready.foregroundProcessId = 'background-process'
     if (mutation === 'shell') ready.shellProcessId = 'other-attempt-process'
     script.add(ready)
-    assert.throws(() => script.replay(), /shell readiness nonce or process identity mismatch/)
+    assert.throws(() => script.replay(), /shell foreground process identity mismatch/)
   }
 
   const trust = new Script(context(true))
@@ -334,16 +361,15 @@ test('readiness and trust are exact, foreground, attempt-bound workspace facts',
   trust.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
     processId: 'process-1',
   })
   trust.add({
     event: 'shell.ready',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
-    stdout: 'nonce-1',
     shellProcessId: 'process-1',
     foregroundProcessId: 'process-1',
+    foregroundProcessCount: 1,
+    cwd: '/trusted/repository',
   })
   trust.add({
     event: 'trust.accepted',
@@ -360,7 +386,6 @@ test('lifecycle rejects commands before prerequisites and mismatched result corr
   beforeAuthorization.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
     processId: 'process-1',
   })
   assert.throws(() => beforeAuthorization.replay(), /authorization required/)
@@ -370,16 +395,15 @@ test('lifecycle rejects commands before prerequisites and mismatched result corr
   inputBeforeConversation.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
     processId: 'process-1',
   })
   inputBeforeConversation.add({
     event: 'shell.ready',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
-    stdout: 'nonce-1',
     shellProcessId: 'process-1',
     foregroundProcessId: 'process-1',
+    foregroundProcessCount: 1,
+    cwd: '/trusted/repository',
   })
   inputBeforeConversation.add({
     event: 'host.observed',
@@ -745,13 +769,11 @@ test('attempt retry requires not-submitted reconciliation and is forbidden after
   overlap.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
     processId: 'process-1',
   })
   overlap.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-2',
-    nonce: 'nonce-2',
     processId: 'process-2',
   })
   assert.throws(() => overlap.replay(), /overlapping or ineligible/)
@@ -761,7 +783,6 @@ test('attempt retry requires not-submitted reconciliation and is forbidden after
   retry.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
     processId: 'process-1',
   })
   retry.add({
@@ -781,16 +802,15 @@ test('attempt retry requires not-submitted reconciliation and is forbidden after
   retry.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-2',
-    nonce: 'nonce-2',
     processId: 'process-2',
   })
   retry.add({
     event: 'shell.ready',
     attemptId: 'attempt-2',
-    nonce: 'nonce-2',
-    stdout: 'nonce-2',
     shellProcessId: 'process-2',
     foregroundProcessId: 'process-2',
+    foregroundProcessCount: 1,
+    cwd: '/trusted/repository',
   })
   retry.add({
     event: 'host.observed',
@@ -804,7 +824,6 @@ test('attempt retry requires not-submitted reconciliation and is forbidden after
   delivered.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-2',
-    nonce: 'nonce-2',
     processId: 'process-2',
   })
   assert.throws(() => delivered.replay(), /retry after confirmed USER_INPUT/)
@@ -985,16 +1004,15 @@ test('completion reconciliation rejects self, reservation, wrong-operation, and 
   const attemptReservation = attemptCase.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
     processId: 'process-1',
   })
   attemptCase.add({
     event: 'shell.ready',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
-    stdout: 'nonce-1',
     shellProcessId: 'process-1',
     foregroundProcessId: 'process-1',
+    foregroundProcessCount: 1,
+    cwd: '/trusted/repository',
   })
   attemptCase.add({
     event: 'transport.failed',
@@ -1057,16 +1075,15 @@ test('completion reconciliation rejects self, reservation, wrong-operation, and 
   contradictoryAttempt.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
     processId: 'process-1',
   })
   contradictoryAttempt.add({
     event: 'shell.ready',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
-    stdout: 'nonce-1',
     shellProcessId: 'process-1',
     foregroundProcessId: 'process-1',
+    foregroundProcessCount: 1,
+    cwd: '/trusted/repository',
   })
   contradictoryAttempt.add({
     event: 'transport.failed',
@@ -1167,7 +1184,6 @@ test('not-submitted attempt reconciliation retires the same attempt', () => {
   script.add({
     event: 'attempt.reserved',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
     processId: 'process-1',
   })
   script.add({
@@ -1187,10 +1203,10 @@ test('not-submitted attempt reconciliation retires the same attempt', () => {
   script.add({
     event: 'shell.ready',
     attemptId: 'attempt-1',
-    nonce: 'nonce-1',
-    stdout: 'nonce-1',
     shellProcessId: 'process-1',
     foregroundProcessId: 'process-1',
+    foregroundProcessCount: 1,
+    cwd: '/trusted/repository',
   })
   assert.throws(() => script.replay(), /retired attempt requires a new reservation/)
 })
@@ -1369,7 +1385,6 @@ test('Phase 2 identifier boundary accepts 128 characters and rejects 129', () =>
   const base = {
     event: 'attempt.reserved',
     attemptId: 'a'.repeat(128),
-    nonce: 'nonce-1',
     processId: 'process-1',
   }
   assert.equal(parseReceiptPayload(base).event, 'attempt.reserved')
@@ -1393,4 +1408,504 @@ test('validated replay is deeply immutable against post-return evidence forgery'
     replay.context.manifest.taskId = 'forged-task'
   })
   assert.deepEqual(deriveHostEvidence(replay), before)
+})
+
+test('Phase 3 seam: allows valid paired reservation and submission of user-input before conversation is created', () => {
+  const script = new Script(context())
+  throughHost(script)
+  // Reserve and submit conversation-create
+  script.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  script.add({ event: 'effect.submitted', attemptId: 'attempt-1', effectId: 'conversation-effect' })
+  // Now reserve user-input while conversationId is null
+  script.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    operation: 'user-input',
+  })
+  // Now submit user-input while conversationId is still null
+  script.add({ event: 'effect.submitted', attemptId: 'attempt-1', effectId: 'input-effect' })
+  // Now conversation.created arrives
+  script.add({
+    event: 'conversation.created',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    conversationId: 'conversation-1',
+  })
+  // Now user-input.observed arrives using the bound conversationId
+  script.add({
+    event: 'user-input.observed',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    conversationId: 'conversation-1',
+    structured: true,
+    taskId: script.context.manifest.taskId,
+    promptHash: script.context.bindings.promptHash,
+  })
+  addRetrieval(script)
+  addFinalAndClose(script)
+  const replay = script.replay()
+  const derived = deriveHostEvidence(replay)
+  assert.equal(derived.status, 'ready')
+  if (derived.status !== 'ready') return
+  assert.equal(
+    scoreHostEvidence(script.context.manifest, derived.evidence, script.context.bindings).passed,
+    true,
+  )
+
+  // Verify non-input effects (tools) remain strictly blocked before conversation exists
+  const toolBeforeConversation = new Script(context())
+  throughHost(toolBeforeConversation)
+  toolBeforeConversation.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  toolBeforeConversation.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+  })
+  toolBeforeConversation.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'tool-effect',
+    operation: 'tool',
+  })
+  assert.throws(() => toolBeforeConversation.replay(), /conversation required before effect/)
+})
+
+test('Phase 3 seam: rejects user-input reservation on missing or multiple conversation-create dependency', () => {
+  // Case 2a: Missing create dependency (no conversation-create effect reserved at all)
+  const missingScript = new Script(context())
+  throughHost(missingScript)
+  missingScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    operation: 'user-input',
+  })
+  assert.throws(() => missingScript.replay(), /conversation required/)
+
+  // Case 2b: Create dependency reserved but not submitted
+  const unsubmittedScript = new Script(context())
+  throughHost(unsubmittedScript)
+  unsubmittedScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  unsubmittedScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    operation: 'user-input',
+  })
+  assert.throws(() => unsubmittedScript.replay(), /unresolved effect blocks reservation/)
+
+  // Case 2c: Multiple create dependencies on same attempt
+  const runContext = context()
+  runContext.manifest.budgets.maxCreatedConversations = 2
+  rebindContext(runContext)
+  const multipleScript = new Script(runContext)
+  throughHost(multipleScript)
+  multipleScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect-1',
+    operation: 'conversation-create',
+  })
+  multipleScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect-1',
+  })
+  multipleScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect-2',
+    operation: 'conversation-create',
+  })
+  multipleScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect-2',
+  })
+  multipleScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    operation: 'user-input',
+  })
+  assert.throws(() => multipleScript.replay(), /multiple conversation-create dependencies/)
+})
+
+test('Phase 3 seam: blocks reservation and submission when conversation-create has failed or reconciled', () => {
+  // Case 3a: Intervening transport.failed on create blocks input effect submission
+  const failedSubmitScript = new Script(context())
+  throughHost(failedSubmitScript)
+  failedSubmitScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  failedSubmitScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+  })
+  failedSubmitScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    operation: 'user-input',
+  })
+  failedSubmitScript.add({
+    event: 'transport.failed',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    uncertainty: 'after-submission',
+    label: 'network-drop',
+  })
+  failedSubmitScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+  })
+  assert.throws(
+    () => failedSubmitScript.replay(),
+    /conversation-create dependency failed or reconciled/,
+  )
+
+  // Case 3b: Intervening reconciliation on create blocks input effect submission
+  const reconciledSubmitScript = new Script(context())
+  throughHost(reconciledSubmitScript)
+  reconciledSubmitScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  reconciledSubmitScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+  })
+  reconciledSubmitScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    operation: 'user-input',
+  })
+  reconciledSubmitScript.add({
+    event: 'transport.failed',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    uncertainty: 'after-submission',
+    label: 'network-drop',
+  })
+  reconciledSubmitScript.add({
+    event: 'effect.reconciled',
+    reservationKind: 'effect',
+    reservationId: 'conversation-effect',
+    resolution: 'unknown',
+    observationSequences: [],
+  })
+  reconciledSubmitScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+  })
+  assert.throws(
+    () => reconciledSubmitScript.replay(),
+    /conversation-create dependency failed or reconciled/,
+  )
+
+  // Case 3c: Reconciled create (not-submitted) blocks later input reservation
+  const reconciledReserveScript = new Script(context())
+  throughHost(reconciledReserveScript)
+  reconciledReserveScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  reconciledReserveScript.add({
+    event: 'transport.failed',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    uncertainty: 'before-submission',
+    label: 'spawn-failure',
+  })
+  reconciledReserveScript.add({
+    event: 'effect.reconciled',
+    reservationKind: 'effect',
+    reservationId: 'conversation-effect',
+    resolution: 'not-submitted',
+    observationSequences: [],
+  })
+  reconciledReserveScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    operation: 'user-input',
+  })
+  assert.throws(
+    () => reconciledReserveScript.replay(),
+    /conversation-create dependency failed or reconciled/,
+  )
+})
+
+test('Phase 3 seam: rejects cross-attempt conversation-create dependency', () => {
+  const script = new Script(context())
+  throughHost(script)
+  script.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  script.add({ event: 'effect.submitted', attemptId: 'attempt-1', effectId: 'conversation-effect' })
+  script.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    operation: 'user-input',
+  })
+  script.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-wrong',
+    effectId: 'input-effect',
+  })
+  assert.throws(() => script.replay(), /unknown attempt attempt-wrong/)
+})
+
+test('Phase 3 seam: rejects user-input.observed arriving before conversation.created', () => {
+  const script = new Script(context())
+  throughHost(script)
+  script.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  script.add({ event: 'effect.submitted', attemptId: 'attempt-1', effectId: 'conversation-effect' })
+  script.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    operation: 'user-input',
+  })
+  script.add({ event: 'effect.submitted', attemptId: 'attempt-1', effectId: 'input-effect' })
+  // Input observed before conversation.created
+  script.add({
+    event: 'user-input.observed',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    conversationId: 'conversation-1',
+    structured: true,
+    taskId: script.context.manifest.taskId,
+    promptHash: script.context.bindings.promptHash,
+  })
+  assert.throws(() => script.replay(), /conversation required before USER_INPUT observation/)
+})
+
+test('Phase 3 seam: rejects user-input.observed with mismatched conversation ID', () => {
+  const script = new Script(context())
+  throughHost(script)
+  script.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  script.add({ event: 'effect.submitted', attemptId: 'attempt-1', effectId: 'conversation-effect' })
+  script.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    operation: 'user-input',
+  })
+  script.add({ event: 'effect.submitted', attemptId: 'attempt-1', effectId: 'input-effect' })
+  script.add({
+    event: 'conversation.created',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    conversationId: 'conversation-1',
+  })
+  // Mismatched conversationId: 'conversation-wrong'
+  script.add({
+    event: 'user-input.observed',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    conversationId: 'conversation-wrong',
+    structured: true,
+    taskId: script.context.manifest.taskId,
+    promptHash: script.context.bindings.promptHash,
+  })
+  assert.throws(() => script.replay(), /cross-conversation result/)
+})
+
+test('Phase 3 seam: prevents duplicate user-input reservation and repeated observation', () => {
+  // Case 7a: Duplicate user-input effect reservation budget exhausted
+  const duplicateReserveScript = new Script(context())
+  throughHost(duplicateReserveScript)
+  duplicateReserveScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  duplicateReserveScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+  })
+  duplicateReserveScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect-1',
+    operation: 'user-input',
+  })
+  duplicateReserveScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect-1',
+  })
+  duplicateReserveScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect-2',
+    operation: 'user-input',
+  })
+  assert.throws(() => duplicateReserveScript.replay(), /user-input budget exhausted/)
+
+  // Case 7b: Resending user-input.observed rejected
+  const repeatObservationScript = new Script(context())
+  throughHost(repeatObservationScript)
+  repeatObservationScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  repeatObservationScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+  })
+  repeatObservationScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    operation: 'user-input',
+  })
+  repeatObservationScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+  })
+  repeatObservationScript.add({
+    event: 'conversation.created',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    conversationId: 'conversation-1',
+  })
+  repeatObservationScript.add({
+    event: 'user-input.observed',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    conversationId: 'conversation-1',
+    structured: true,
+    taskId: repeatObservationScript.context.manifest.taskId,
+    promptHash: repeatObservationScript.context.bindings.promptHash,
+  })
+  repeatObservationScript.add({
+    event: 'user-input.observed',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect',
+    conversationId: 'conversation-1',
+    structured: true,
+    taskId: repeatObservationScript.context.manifest.taskId,
+    promptHash: repeatObservationScript.context.bindings.promptHash,
+  })
+  assert.throws(
+    () => repeatObservationScript.replay(),
+    /duplicate terminal result for effect|confirmed USER_INPUT cannot be resent/,
+  )
+
+  // Case 7c: Reserving input after confirmed input observation
+  const reserveAfterObservedScript = new Script(context())
+  throughHost(reserveAfterObservedScript)
+  reserveAfterObservedScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    operation: 'conversation-create',
+  })
+  reserveAfterObservedScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+  })
+  reserveAfterObservedScript.add({
+    event: 'conversation.created',
+    attemptId: 'attempt-1',
+    effectId: 'conversation-effect',
+    conversationId: 'conversation-1',
+  })
+  reserveAfterObservedScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect-1',
+    operation: 'user-input',
+  })
+  reserveAfterObservedScript.add({
+    event: 'effect.submitted',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect-1',
+  })
+  reserveAfterObservedScript.add({
+    event: 'user-input.observed',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect-1',
+    conversationId: 'conversation-1',
+    structured: true,
+    taskId: reserveAfterObservedScript.context.manifest.taskId,
+    promptHash: reserveAfterObservedScript.context.bindings.promptHash,
+  })
+  // Now try to reserve another user-input effect after confirmed observation
+  reserveAfterObservedScript.add({
+    event: 'effect.reserved',
+    attemptId: 'attempt-1',
+    effectId: 'input-effect-2',
+    operation: 'user-input',
+  })
+  assert.throws(
+    () => reserveAfterObservedScript.replay(),
+    /user-input budget exhausted|confirmed USER_INPUT cannot be resent/,
+  )
+})
+
+test('Phase 3 seam: preserves existing Phase 2 legacy path where conversation is created before user-input reservation', () => {
+  const script = new Script(context())
+  throughInput(script)
+  addRetrieval(script)
+  addFinalAndClose(script)
+  const replay = script.replay()
+  const derived = deriveHostEvidence(replay)
+  assert.equal(derived.status, 'ready')
+  if (derived.status !== 'ready') return
+  assert.equal(
+    scoreHostEvidence(script.context.manifest, derived.evidence, script.context.bindings).passed,
+    true,
+  )
 })

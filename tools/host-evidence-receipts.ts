@@ -27,14 +27,14 @@ export type ReceiptPayload =
       bindingsHash: string
       scope: 'offline-only'
     }
-  | { event: 'attempt.reserved'; attemptId: string; nonce: string; processId: string }
+  | { event: 'attempt.reserved'; attemptId: string; processId: string }
   | {
       event: 'shell.ready'
       attemptId: string
-      nonce: string
-      stdout: string
       shellProcessId: string
       foregroundProcessId: string
+      foregroundProcessCount: 1
+      cwd: string
     }
   | {
       event: 'trust.accepted'
@@ -196,7 +196,6 @@ export type DerivedHostEvidence =
 type ObjectRecord = Record<string, unknown>
 type AttemptState = {
   state: 'RESERVED' | 'READY' | 'RUNNING' | 'BLOCKED_ON_RECONCILIATION'
-  nonce: string
   processId: string
   shellReady: boolean
   trustAccepted: boolean
@@ -353,24 +352,34 @@ export function parseReceiptPayload(value: unknown, path = 'receipt.payload'): R
         scope: literal(input.scope, 'offline-only', `${path}.scope`),
       }
     case 'attempt.reserved':
-      keys(input, ['attemptId', 'event', 'nonce', 'processId'], path)
+      keys(input, ['attemptId', 'event', 'processId'], path)
       return {
         event,
         attemptId: id(input.attemptId, `${path}.attemptId`),
-        nonce: id(input.nonce, `${path}.nonce`),
         processId: id(input.processId, `${path}.processId`),
       }
     case 'shell.ready':
       keys(
         input,
-        ['attemptId', 'event', 'foregroundProcessId', 'nonce', 'shellProcessId', 'stdout'],
+        [
+          'attemptId',
+          'cwd',
+          'event',
+          'foregroundProcessCount',
+          'foregroundProcessId',
+          'shellProcessId',
+        ],
         path,
       )
       return {
         event,
         attemptId: id(input.attemptId, `${path}.attemptId`),
-        nonce: id(input.nonce, `${path}.nonce`),
-        stdout: text(input.stdout, `${path}.stdout`, true),
+        cwd: text(input.cwd, `${path}.cwd`),
+        foregroundProcessCount: literal(
+          input.foregroundProcessCount,
+          1,
+          `${path}.foregroundProcessCount`,
+        ),
         shellProcessId: id(input.shellProcessId, `${path}.shellProcessId`),
         foregroundProcessId: id(input.foregroundProcessId, `${path}.foregroundProcessId`),
       }
@@ -777,6 +786,33 @@ function requireEffect(
   return effect
 }
 
+function requireSubmittedConversationCreateDependency(
+  effects: ReadonlyMap<string, EffectState>,
+  attemptId: string,
+): EffectState {
+  const createEffects = [...effects.values()].filter(
+    (effect) => effect.operation === 'conversation-create',
+  )
+  const sameAttemptCreateEffects = createEffects.filter((effect) => effect.attemptId === attemptId)
+  if (sameAttemptCreateEffects.length === 0) {
+    if (createEffects.length > 0) {
+      throw new Error('lifecycle: cross-attempt conversation-create dependency')
+    }
+    throw new Error('lifecycle: conversation required before effect')
+  }
+  if (sameAttemptCreateEffects.length > 1) {
+    throw new Error('lifecycle: multiple conversation-create dependencies')
+  }
+  const createEffect = sameAttemptCreateEffects[0]
+  if (createEffect.failureUncertainty !== null || createEffect.reconciliation !== null) {
+    throw new Error('lifecycle: conversation-create dependency failed or reconciled')
+  }
+  if (createEffect.state !== 'SUBMITTED') {
+    throw new Error('lifecycle: conversation-create dependency not submitted')
+  }
+  return createEffect
+}
+
 function verifyCorrelation(receipt: Receipt): void {
   const payloadAttempt = 'attemptId' in receipt.payload ? receipt.payload.attemptId : null
   const payloadConversation =
@@ -970,7 +1006,6 @@ export function replayRun(
       }
       attempts.set(payload.attemptId, {
         state: 'RESERVED',
-        nonce: payload.nonce,
         processId: payload.processId,
         shellReady: false,
         trustAccepted: !context.descriptor.trustRequired,
@@ -1090,12 +1125,11 @@ export function replayRun(
     if (payload.event === 'shell.ready') {
       if (attempt.shellReady) throw new Error('lifecycle: duplicate shell readiness')
       if (
-        payload.nonce !== attempt.nonce ||
-        payload.stdout !== attempt.nonce ||
         payload.shellProcessId !== attempt.processId ||
-        payload.foregroundProcessId !== attempt.processId
+        payload.foregroundProcessId !== attempt.processId ||
+        payload.foregroundProcessCount !== 1
       ) {
-        throw new Error('lifecycle: shell readiness nonce or process identity mismatch')
+        throw new Error('lifecycle: shell foreground process identity mismatch')
       }
       attempt.shellReady = true
       attempt.state = 'READY'
@@ -1178,10 +1212,15 @@ export function replayRun(
       }
       if (payload.operation === 'conversation-create' && attempt.conversationId !== null)
         throw new Error('lifecycle: one conversation per attempt')
-      if (payload.operation !== 'conversation-create' && attempt.conversationId === null)
-        throw new Error('lifecycle: conversation required before effect')
-      if (payload.operation === 'user-input' && attempt.inputObserved)
+      if (payload.operation !== 'conversation-create' && attempt.conversationId === null) {
+        if (payload.operation !== 'user-input') {
+          throw new Error('lifecycle: conversation required before effect')
+        }
+        requireSubmittedConversationCreateDependency(effects, attemptId)
+      }
+      if (payload.operation === 'user-input' && attempt.inputObserved) {
         throw new Error('lifecycle: confirmed USER_INPUT cannot be resent')
+      }
       effects.set(payload.effectId, {
         attemptId,
         operation: payload.operation,
@@ -1199,6 +1238,9 @@ export function replayRun(
       const effect = requireEffect(effects, payload.effectId, attemptId)
       if (effect.state !== 'RESERVED')
         throw new Error('lifecycle: effect submission requires reservation')
+      if (effect.operation === 'user-input' && attempt.conversationId === null) {
+        requireSubmittedConversationCreateDependency(effects, attemptId)
+      }
       effect.submitted = true
       effect.state = 'SUBMITTED'
       continue
@@ -1274,6 +1316,9 @@ export function replayRun(
       attempt.state = 'RUNNING'
       if (!unresolvedAtObservation) effect.state = 'COMPLETED'
     } else if (payload.event === 'user-input.observed') {
+      if (attempt.conversationId === null) {
+        throw new Error('lifecycle: conversation required before USER_INPUT observation')
+      }
       if (attempt.inputObserved) throw new Error('lifecycle: confirmed USER_INPUT cannot be resent')
       if (
         effect.operation !== 'user-input' ||
