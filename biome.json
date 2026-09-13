@@ -49,5 +49,16 @@
     "formatter": {
       "trailingCommas": "none"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "docs/evidence/agy-main-phase4b-canary-2026-09-13/subject.json",
+        "docs/evidence/agy-main-phase4b-canary-2026-09-13/review.json"
+      ],
+      "formatter": {
+        "enabled": false
+      }
+    }
+  ]
 }

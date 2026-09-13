@@ -1,3 +1,7 @@
+> **Historical baseline — not the current candidate owner.** This dated external-product attribution
+> evidence remains unchanged as historical input. The canonical current `v1.20.0` development-candidate
+> owner is [`agy-main-phase4b-readiness-2026-09-13.md`](./agy-main-phase4b-readiness-2026-09-13.md).
+
 # Agy Main Phase 4A: External Product Failure Attribution Baseline
 
 **Date:** 2026-09-13  

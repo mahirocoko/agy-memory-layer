@@ -1,5 +1,6 @@
 import * as assert from 'node:assert'
 import { execFileSync, spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -1917,6 +1918,23 @@ describe('Unit Coverage Extensions', () => {
       true,
     )
     assert.strictEqual(evidenceControllerSkill.includes('Fail Closed'), true)
+    assert.strictEqual(
+      evidenceControllerSkill.includes('Bounded re-grounding and conversation rotation'),
+      true,
+    )
+    assert.strictEqual(evidenceControllerSkill.includes('treat summaries as navigation only'), true)
+    assert.strictEqual(
+      evidenceControllerSkill.includes('Never carry a') &&
+        evidenceControllerSkill.includes('one-shot grant as authorization'),
+      true,
+    )
+    assert.strictEqual(
+      evidenceControllerSkill.includes('does not intercept compaction, create') &&
+        evidenceControllerSkill.includes(
+          'conversations, persist a mission supervisor, or guarantee automatic continuation',
+        ),
+      true,
+    )
 
     // 3. Dream skill and subagent prompt enforce non-laundering and non-binding historical evidence
     assert.strictEqual(
@@ -2058,11 +2076,26 @@ describe('Unit Coverage Extensions', () => {
   it('validates Phase 3 version manifests, release contract boundary, parity owners, and documentation alignment', () => {
     const packageJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'))
     const pluginJson = JSON.parse(fs.readFileSync(path.join(PLUGIN_DIR, 'plugin.json'), 'utf8'))
+    const biomeJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'biome.json'), 'utf8'))
 
-    // 1. Released version intent and mirror equality
-    assert.strictEqual(packageJson.version, '1.19.0')
-    assert.strictEqual(pluginJson.version, '1.19.0')
+    // 1. Development candidate intent and mirror equality
+    assert.strictEqual(packageJson.version, '1.20.0')
+    assert.strictEqual(pluginJson.version, '1.20.0')
     assert.strictEqual(packageJson.version, pluginJson.version)
+    const exactEvidenceOverride = biomeJson.overrides.find(
+      (override: { includes?: string[]; formatter?: { enabled?: boolean } }) =>
+        override.includes?.includes(
+          'docs/evidence/agy-main-phase4b-canary-2026-09-13/subject.json',
+        ),
+    )
+    assert.ok(exactEvidenceOverride)
+    assert.strictEqual(exactEvidenceOverride.formatter?.enabled, false)
+    assert.strictEqual(
+      exactEvidenceOverride.includes?.includes(
+        'docs/evidence/agy-main-phase4b-canary-2026-09-13/review.json',
+      ),
+      true,
+    )
     assert.strictEqual(
       packageJson.scripts['test:phase3'],
       'node --experimental-strip-types --test --test-concurrency=1 tests/host-evidence-direct-cli.test.ts',
@@ -2070,8 +2103,14 @@ describe('Unit Coverage Extensions', () => {
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(contractDoc.includes('**Package version:** `1.19.0`'), true)
-    assert.strictEqual(contractDoc.includes('Released as `v1.19.0` on 2026-09-11'), true)
+    assert.strictEqual(
+      contractDoc.includes('**Package version:** `1.20.0` development candidate'),
+      true,
+    )
+    assert.strictEqual(
+      contractDoc.includes('Latest published release is `v1.19.0` from 2026-09-11'),
+      true,
+    )
     assert.strictEqual(
       contractDoc.includes(
         'Every schema-valid invocation that runs to completion within the host hook',
@@ -2112,27 +2151,36 @@ describe('Unit Coverage Extensions', () => {
     // 3. README.md current + prior-release distinction
     const readmeDoc = fs.readFileSync(path.join(ROOT_DIR, 'README.md'), 'utf8')
     assert.strictEqual(readmeDoc.includes('**v1.19.0 (Latest Release):**'), true)
+    assert.strictEqual(
+      readmeDoc.includes('**v1.20.0 (Current development candidate; unreleased):**'),
+      true,
+    )
     assert.strictEqual(readmeDoc.includes('**v1.15.4 (Prior Release):**'), true)
-    assert.strictEqual(readmeDoc.includes('| Metric | v1.19.0 release |'), true)
-    assert.strictEqual(readmeDoc.includes('| Lines | **83.76%** |'), true)
-    assert.strictEqual(readmeDoc.includes('| Branches | **70.76%** |'), true)
-    assert.strictEqual(readmeDoc.includes('| Functions | **88.12%** |'), true)
+    assert.strictEqual(
+      readmeDoc.includes('| Metric | v1.19.0 release | v1.20.0 development candidate |'),
+      true,
+    )
+    assert.strictEqual(readmeDoc.includes('| Lines | **83.76%** | **86.71%** |'), true)
+    assert.strictEqual(readmeDoc.includes('| Branches | **70.76%** | **74.97%** |'), true)
+    assert.strictEqual(readmeDoc.includes('| Functions | **88.12%** | **90.66%** |'), true)
+    assert.strictEqual(readmeDoc.includes('206/206 Node tests'), true)
+    assert.strictEqual(readmeDoc.includes('11/11 generated integration scenarios'), true)
+    assert.strictEqual(readmeDoc.includes('./docs/agy-main-phase4b-readiness-2026-09-13.md'), true)
+    assert.strictEqual(
+      readmeDoc.includes('./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md'),
+      true,
+    )
+    assert.strictEqual(readmeDoc.includes('does not authenticate authorization or grants'), true)
+    assert.strictEqual(readmeDoc.includes('mission supervisor'), true)
+    assert.strictEqual(readmeDoc.includes('automatic continuation'), true)
+    assert.strictEqual(
+      readmeDoc.includes('coverage and action-specific authorization binding remain partial'),
+      false,
+    )
     assert.strictEqual(
       readmeDoc.includes('docs/letta-parity.md#model-guided-authority-host-matrix--2026-09-02'),
       true,
     )
-    assert.strictEqual(
-      readmeDoc.includes('[execution-continuity pilot](./docs/execution-continuity-pilot.md)'),
-      true,
-    )
-    assert.strictEqual(readmeDoc.includes('**30/30 focused Phase 3 tests**'), true)
-    assert.strictEqual(readmeDoc.includes('**108/108 aggregate host-evidence tests**'), true)
-    assert.strictEqual(
-      readmeDoc.includes('Final current-source verification on 2026-09-13 passed'),
-      true,
-    )
-    assert.strictEqual(readmeDoc.includes('not the released v1.19.0 coverage snapshot'), true)
-    assert.strictEqual(readmeDoc.includes('bounded live canary described above'), true)
     const phase3Doc = fs.readFileSync(
       path.join(ROOT_DIR, 'docs', 'host-evidence-phase3.md'),
       'utf8',
@@ -2347,6 +2395,111 @@ describe('Unit Coverage Extensions', () => {
       packageJson.scripts['test:coverage'].includes('tests/execution-continuity-stage1.test.ts'),
       true,
     )
+    assert.strictEqual(packageJson.scripts.test.includes('tests/tool-guard.test.ts'), true)
+    assert.strictEqual(
+      packageJson.scripts['test:coverage'].includes('tests/tool-guard.test.ts'),
+      true,
+    )
+    assert.strictEqual(
+      packageJson.scripts.test.includes('tests/material-claim-review.test.ts'),
+      true,
+    )
+    assert.strictEqual(
+      packageJson.scripts['test:coverage'].includes('tests/material-claim-review.test.ts'),
+      true,
+    )
+
+    const readinessDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'agy-main-phase4b-readiness-2026-09-13.md'),
+      'utf8',
+    )
+    for (const requiredText of [
+      '**Latest published release:** `v1.19.0`',
+      '**Current development candidate:** `v1.20.0` (unreleased)',
+      '206/206 Node tests passed',
+      '11/11 scenarios passed',
+      '86.71% lines, 74.97% branches, 90.66% functions',
+      'atomic confirmation-request classifier',
+      'does **not** authenticate authorization',
+      'current owner/consumer bytes',
+      'identityAuthentication: not-authenticated',
+      'not a semantic proof',
+      'no compaction interceptor, durable mission supervisor, deterministic conversation rotation, automatic continuation',
+      'interactive, human-supervised `v1.20.0` release candidate',
+      'reported `done` while the pane was still awaiting permission',
+      'reviewer model did not itself observe the permission UI',
+      'docs/evidence/agy-main-phase4b-canary-2026-09-13/',
+    ]) {
+      assert.strictEqual(readinessDoc.includes(requiredText), true, requiredText)
+    }
+    assert.strictEqual(
+      readinessDoc.includes('the exact captured') &&
+        readinessDoc.includes(
+          'PreToolUse payload was replayed offline through the final guard bytes',
+        ),
+      true,
+    )
+    assert.strictEqual(
+      readinessDoc.includes('Whole-interval source invariance is therefore not claimed'),
+      true,
+    )
+    const canaryReceipt = JSON.parse(
+      fs.readFileSync(
+        path.join(
+          ROOT_DIR,
+          'docs',
+          'evidence',
+          'agy-main-phase4b-canary-2026-09-13',
+          'receipt.json',
+        ),
+        'utf8',
+      ),
+    )
+    assert.strictEqual(canaryReceipt.preToolUse.finalSourceReplay.decision, 'force_ask')
+    assert.strictEqual(
+      canaryReceipt.preToolUse.finalSourceReplay.toolGuardSha256,
+      createHash('sha256')
+        .update(fs.readFileSync(path.join(SCRIPTS_DIR, 'tool-guard.ts')))
+        .digest('hex'),
+    )
+
+    const phase4aDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'agy-main-phase4a-external-product-attribution-2026-09-13.md'),
+      'utf8',
+    )
+    assert.strictEqual(
+      phase4aDoc.startsWith('> **Historical baseline — not the current candidate owner.**'),
+      true,
+    )
+    assert.strictEqual(phase4aDoc.includes('./agy-main-phase4b-readiness-2026-09-13.md'), true)
+
+    const fileOrganizationDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'file-organization.md'),
+      'utf8',
+    )
+    const developmentCommandsDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'development-commands.md'),
+      'utf8',
+    )
+    for (const filename of [
+      'material-claim-review.ts',
+      'material-claim-review.test.ts',
+      'tool-guard.test.ts',
+      'agy-main-phase4b-canary-2026-09-13',
+    ]) {
+      assert.strictEqual(fileOrganizationDoc.includes(filename), true, filename)
+      assert.strictEqual(developmentCommandsDoc.includes(filename), true, filename)
+    }
+    assert.strictEqual(developmentCommandsDoc.includes('do not prove semantic correctness'), true)
+    assert.strictEqual(developmentCommandsDoc.includes('not-authenticated'), true)
+    assert.strictEqual(
+      developmentCommandsDoc.includes('cd docs/evidence/agy-main-phase4b-canary-2026-09-13') &&
+        developmentCommandsDoc.includes(
+          '../../../plugins/agy-memory-layer/scripts/material-claim-review.ts verify --subject subject.json --review review.json',
+        ),
+      true,
+    )
+
     const executionContinuityTest = fs.readFileSync(
       path.join(ROOT_DIR, 'tests', 'execution-continuity.test.ts'),
       'utf8',
@@ -2460,7 +2613,7 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(classifyCommandLine('Git commit -m "capital"').decision, 'force_ask')
     assert.strictEqual(classifyCommandLine('env git commit -m "bypass"').decision, 'force_ask')
     assert.strictEqual(classifyCommandLine('PAGER=cat git push').decision, 'force_ask')
-    assert.strictEqual(classifyCommandLine('git -c Alias.ci=commit ci').decision, 'force_ask')
+    assert.strictEqual(classifyCommandLine('git -c Alias.ci=commit ci').decision, 'deny')
     assert.strictEqual(
       classifyCommandLine("GIT_CONFIG_PARAMETERS='alias.ci=commit' git ci").decision,
       'force_ask',

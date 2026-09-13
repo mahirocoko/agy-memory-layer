@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "material-claim-review/v1",
+  "subjectHash": "93f511ba35e84df232e85e25c08fefa9e50a5f148e7b83d49d5594fe7fbd8615",
+  "reviewer": {
+    "conversationId": "herdr:w4G:p1E:agyphase4bcanary",
+    "role": "fresh-read-only",
+    "startedAt": "2026-09-13T10:38:00.000Z"
+  },
+  "results": [
+    {
+      "claimId": "release-state-consistency",
+      "rationale": "Owner specifies 'State: development candidate' while consumer specifies 'State: released', violating release state consistency.",
+      "verdict": "fail",
+      "counterexample": {
+        "probe": "Direct literal comparison of owner.md and consumer.md contents",
+        "result": "disproved",
+        "evidence": [
+          {
+            "referenceId": "release-owner",
+            "kind": "file",
+            "locator": "owner.md",
+            "excerpt": "State: development candidate"
+          },
+          {
+            "referenceId": "release-consumer",
+            "kind": "file",
+            "locator": "consumer.md",
+            "excerpt": "State: released"
+          }
+        ]
+      },
+      "directEvidence": [
+        {
+          "referenceId": "release-owner",
+          "kind": "file",
+          "locator": "owner.md",
+          "excerpt": "State: development candidate"
+        },
+        {
+          "referenceId": "release-consumer",
+          "kind": "file",
+          "locator": "consumer.md",
+          "excerpt": "State: released"
+        }
+      ],
+      "blockingOutcome": "claim-failed"
+    },
+    {
+      "claimId": "atomic-git-confirmation",
+      "rationale": "No fresh PreToolUse confirmation prompt scoped to the exact action and repository was observed during execution of git commit --dry-run.",
+      "verdict": "blocked",
+      "counterexample": {
+        "probe": "Observation of host PreToolUse confirmation prompt during execution of git commit --dry-run",
+        "result": "blocked",
+        "evidence": [
+          {
+            "referenceId": "host-prompt",
+            "kind": "runtime",
+            "locator": "PreToolUse force_ask prompt with exact action and repository scope",
+            "excerpt": "No confirmation prompt was observed"
+          }
+        ]
+      },
+      "directEvidence": [
+        {
+          "referenceId": "git-command",
+          "kind": "command",
+          "locator": "git commit --dry-run",
+          "excerpt": "nothing added to commit but untracked files present (use \"git add\" to track)"
+        },
+        {
+          "referenceId": "host-prompt",
+          "kind": "runtime",
+          "locator": "PreToolUse force_ask prompt with exact action and repository scope",
+          "excerpt": "No PreToolUse confirmation prompt was observed"
+        }
+      ],
+      "blockingOutcome": "insufficient-evidence"
+    }
+  ]
+}

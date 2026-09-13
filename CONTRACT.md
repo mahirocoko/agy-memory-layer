@@ -1,10 +1,11 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.19.0`
+**Package version:** `1.20.0` development candidate
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.19.0` on 2026-09-11
+**Release state:** Latest published release is `v1.19.0` from 2026-09-11;
+`v1.20.0` is an unreleased local readiness candidate
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -153,6 +154,38 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
   refined, disputed, or implemented the claim under review. Reviewer output is
   evidence rather than authority or a vote, and recorded reviewer IDs are not
   host-attested identity proof.
+
+#### Atomic confirmation-request gating
+
+- `tool-guard.ts` is a confirmation-request classifier for recognized PreToolUse
+  shapes. It denies ambiguous gated bundles, malformed known-tool inputs,
+  destructive actions, protected MemFS/Git metadata targets, and unknown Git
+  subcommands that may resolve to aliases or external executables.
+- One recognized scoped mutation receives `force_ask`; Git mutation reasons bind
+  the normalized action text and resolved repository scope. Missing or ambiguous
+  repository scope fails closed.
+- Conversation, transcript, model, and artifact metadata are context only. The
+  guard does not authenticate authorization, issue or verify grants, retain an
+  action hash or approval receipt, or treat host confirmation as plugin-owned
+  authority. Its shell parser is deliberately bounded and not universal shell
+  semantics coverage.
+
+#### Material-claim review packets
+
+- `material-claim-review.ts` validates a bounded subject packet naming each
+  material claim, canonical owner, current consumers, failure condition, and
+  required evidence kinds. File owners and consumers bind exact current bytes by
+  SHA-256 plus required contained text.
+- A review packet binds the subject hash, a different `fresh-read-only` reviewer
+  conversation, fresh reviewer timestamp, direct evidence for every binding, an
+  explicit counterexample probe/outcome, and coherent `pass`, `fail`, or
+  `blocked` tuples. Overall `fail` outranks `blocked`, which outranks `pass`.
+- Verification rejects stale/tampered bytes, missing evidence, locator
+  substitution, symlinks, and paths outside the repository. It validates packet
+  shape, current bindings, and declared outcomes; it is not semantic proof and
+  cannot establish that a reviewer observed runtime or UI evidence.
+- Reviewer identity remains cooperative metadata. Every result reports
+  `identityAuthentication: not-authenticated`.
 
 ### 5. Project identity
 
@@ -399,8 +432,11 @@ provider actions, fresh-grant quote ritual for Mahiro-owned
 visual/product/audio-content/spend/release gates, and treating summary-carried
 claims as Unverified until re-derived from live artifacts. It guides native
 `define_subagent`/`invoke_subagent` routing across `DIRECT`, `ONE_LANE`,
-`WRITER_REVIEWER`, and `PARALLEL_READONLY`; it is not a deterministic scheduler,
-does not intercept commands deterministically, and does not make model consensus proof.
+`WRITER_REVIEWER`, and `PARALLEL_READONLY`. Its bounded re-grounding and
+fresh-conversation rotation policy is model-guided only: it does not intercept
+compaction, persist a mission supervisor, create or rotate conversations
+deterministically, guarantee automatic continuation, intercept commands
+deterministically, or make model consensus proof.
 
 The JSON subagent manifests express role and capability intent. This repository
 does not itself prove AGY process/tool confinement; documentation must not call
@@ -450,10 +486,11 @@ Current direct regression coverage includes:
 `TEST_REPORT.md` is generated evidence for the 11 integration scenarios. The
 current Node test count and coverage must be refreshed by the full verification
 run before each release. The Phase 3 Direct CLI verifier retains 30/30
-focused Phase 3 and 108/108 aggregate host-evidence tests. Final current-source
-verification on 2026-09-13 passed 188/188 Node tests and measured 86.32% lines,
-73.63% branches, and 90.00% functions. These current-source results are not the
-released v1.19.0 snapshot. Remote sync is exercised against a disposable local bare
+focused Phase 3 and 108/108 aggregate host-evidence tests. Final `v1.20.0` candidate
+verification on 2026-09-13 passed 206/206 Node tests and 11/11 generated
+integration scenarios, with plugin validation at 14 skills, 9 agents, 3 hooks,
+and zero errors; aggregate coverage measured 86.71% lines, 74.97% branches, and
+90.66% functions. These candidate results are not the released v1.19.0 snapshot. Remote sync is exercised against a disposable local bare
 repository. Neither report alone proves cron, external network, automatic model
 routing, or AGY host-enforcement behavior.
 
@@ -523,6 +560,17 @@ The real AGY `1.1.16` host E2E also passed committed injection, `/memory`,
 targeted `/remember`, scoped `/init`, non-mutating Stop, fresh-session
 persistence, and cleanup.
 See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
+
+## Current candidate readiness boundary
+
+The canonical local readiness owner is
+[`docs/agy-main-phase4b-readiness-2026-09-13.md`](./docs/agy-main-phase4b-readiness-2026-09-13.md),
+with bounded retained evidence under
+[`docs/evidence/agy-main-phase4b-canary-2026-09-13/`](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md).
+The strongest supported verdict is an interactive, human-supervised `v1.20.0`
+release candidate, not an unsupervised safety-trusted main. Herdr may report
+`done` while its pane still awaits permission, and the reviewer model may not
+observe that permission UI; interactive pane supervision remains required.
 
 ## Deferred Before Production-Ready Parity
 

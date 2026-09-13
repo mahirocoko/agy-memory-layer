@@ -2,6 +2,10 @@
 
 This reference documents all testing, verification, script runners, and daemon commands available in this codebase.
 
+**Latest published release:** `v1.19.0`
+
+**Current development candidate:** `v1.20.0` (unreleased)
+
 ---
 
 ## 🧪 Testing & Quality Assurance
@@ -14,15 +18,46 @@ pnpm test
 
 # Run the current Phase 3 first-turn adapter regressions only (fixture mode; no host effects)
 pnpm test:phase3
+
+# Run the atomic PreToolUse confirmation-request regressions only
+node --experimental-strip-types --test --test-concurrency=1 tests/tool-guard.test.ts
+
+# Run the material-claim packet verifier regressions only
+node --experimental-strip-types --test --test-concurrency=1 tests/material-claim-review.test.ts
+
+# Run the deterministic current documentation/version/script contracts only
+node --experimental-strip-types --test --test-concurrency=1 tests/unit-coverage.test.ts
 ```
+
+Both focused candidate test files are included in `pnpm test` and
+`pnpm test:coverage`. The tool guard classifies confirmation requests; it does
+not authenticate authorization or grants and does not universally cover shell
+semantics. The material-claim verifier binds current owner/consumer bytes,
+counterexamples/outcomes, and fresh reviewer metadata, but is not semantic
+proof and always reports identity as `not-authenticated`.
 
 The focused Phase 3 command exercises only the Direct CLI callback evidence
 adapter (`tools/host-evidence-direct-cli.ts`) against retained job bundles and
 counterexamples; it launches no Herdr, Agy, provider, browser, or network
-action. Runtime lifecycle execution (Herdr shell readiness, trust prompt,
-prompt dispatch, callback wait, and cleanup) is owned by the installed Direct
-CLI workflow at `/Users/mahiro/.letta/skills/direct-cli`. See
+action. Runtime lifecycle execution remains external to this repository. See
 [`host-evidence-phase3.md`](./host-evidence-phase3.md).
+
+## Material-claim retained canary verification
+
+The retained negative-control packet is expected to exit `1` because its seeded
+release-state contradiction is `fail`; the host-prompt claim remains `blocked`
+because the reviewer model did not observe the permission UI.
+
+```bash
+(
+  cd docs/evidence/agy-main-phase4b-canary-2026-09-13
+  node --experimental-strip-types ../../../plugins/agy-memory-layer/scripts/material-claim-review.ts verify --subject subject.json --review review.json
+)
+```
+
+An accepted packet shape and current bytes do not prove semantic correctness.
+See the [canonical candidate report](./agy-main-phase4b-readiness-2026-09-13.md)
+and [retained evidence index](./evidence/agy-main-phase4b-canary-2026-09-13/README.md).
 
 ---
 

@@ -8,6 +8,10 @@ The project is inspired by Letta Code, but adapts the behavior to one Agy user
 repository rather than copying Letta's per-agent storage and service APIs. The
 canonical boundary is [`letta-parity.md`](./letta-parity.md).
 
+**Latest published release:** `v1.19.0`
+
+**Current development candidate:** `v1.20.0` (unreleased; interactive and human-supervised)
+
 ## Core Value
 
 1. **External MemFS** — `~/.gemini/memory/` stays outside application repos.
@@ -56,8 +60,9 @@ Antigravity CLI
 | --- | --- | --- |
 | Committed prompt projection | `scripts/layered-memory.ts` | Selects layered/legacy ownership from `HEAD`; dirty content is not active |
 | Working hypothesis | `scripts/active-learning.ts` | One canonical protected hypothesis; malformed/stray active state fails closed |
-| Tool safety classification | `scripts/tool-guard.ts`, `scripts/hook-pre-tool-use.ts` | Classifies selected command/write/subagent shapes; configured destructive patterns are denied and configured mutations escalated, but coverage and action-specific authorization binding remain partial |
-| Evidence Controller | `skills/evidence-controller/SKILL.md` | Agy-native claim, delegation, retry, and human-gate procedure |
+| Tool confirmation-request gate | `scripts/tool-guard.ts`, `scripts/hook-pre-tool-use.ts` | Denies ambiguous bundles, malformed/protected/destructive shapes and issues `force_ask` for one recognized scoped mutation; does not authenticate authorization or grants and does not universally cover shell semantics |
+| Material-claim review | `scripts/material-claim-review.ts` | Binds claim packets to current owner/consumer bytes, counterexamples/outcomes, and fresh reviewer metadata; validates structure and current bytes rather than semantic truth, with identity `not-authenticated` |
+| Evidence Controller | `skills/evidence-controller/SKILL.md` | Agy-native claim, delegation, retry, human-gate, and bounded re-grounding procedure; no compaction interceptor, mission supervisor, deterministic rotation, or automatic continuation |
 | Repository contract refinement and alignment | `skills/contract-refine/SKILL.md`, `skills/contract-align/SKILL.md`, `scripts/contract-ledger*.ts`, `scripts/contract-snapshot.ts` | Explicit approval binds complete final owner bytes; evaluation and verdict bind verified snapshot plus exact targets; heuristic review remains bounded evidence |
 | Execution-continuity pilot | `docs/execution-continuity-pilot.md`, `docs/execution-continuity-stage1-evidence-2026-09-11.md`, `scripts/execution-continuity-stage1.ts`, `tests/execution-continuity*.test.ts`, `tests/support/execution-continuity-*.ts` | Stage 0 deterministic fixture preflight plus audited Stage 1 no-advance evidence and corrected test-only scorer; no runtime state or supervisor |
 | Memory repository contract | `scripts/memory-repository.ts`, `scripts/memory-write-lock.ts` | Containment, status, serialization, atomic writes, targeted commits |
@@ -87,7 +92,8 @@ Antigravity CLI
 - host-level evidence for subagent capability enforcement.
 
 The [Phase 4A external-product attribution baseline](./agy-main-phase4a-external-product-attribution-2026-09-13.md)
-adds longitudinal real-project evidence to these gaps. It supports Agy as a high-throughput primary
-implementation lane, refutes memory loss as the primary explanation for the sampled failures, and
-limits the next candidate work to observing the real PreToolUse/host boundary plus material-claim
-review binding before any new live canary.
+is historical evidence, not the current implementation owner. The [canonical Phase 4B readiness
+report](./agy-main-phase4b-readiness-2026-09-13.md) records the completed `v1.20.0` candidate and
+[retained canary packet](./evidence/agy-main-phase4b-canary-2026-09-13/README.md). The strongest
+supported boundary is interactive, human-supervised use: Herdr can report stale `done` while a pane
+awaits permission, and the reviewer model may not observe that UI.

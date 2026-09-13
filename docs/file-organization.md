@@ -22,6 +22,9 @@ learn-letta-code/
 │
 ├── docs/                                    # Modular developer documentation family
 │   ├── agy-host-e2e-2026-08-20.md           # Real interactive AGY host evidence and cleanup
+│   ├── agy-main-phase4a-external-product-attribution-2026-09-13.md # Historical attribution baseline
+│   ├── agy-main-phase4b-readiness-2026-09-13.md # Canonical v1.20.0 candidate readiness owner
+│   ├── evidence/agy-main-phase4b-canary-2026-09-13/ # Retained bounded canary packet
 │   ├── onboarding.md                        # Day 1 setup and verification
 │   ├── project-overview.md                  # Architecture and subsystem overview
 │   ├── execution-continuity-pilot.md        # Stage 0 plus audited Stage 1 decision owner
@@ -52,7 +55,7 @@ learn-letta-code/
 │
 ├── plugins/agy-memory-layer/                # Core Antigravity Plugin bundle
 │   ├── plugin.json                          # Plugin manifest and metadata
-│   ├── hooks.json                           # Lifecycle hook registration (PreInvocation, Stop)
+│   ├── hooks.json                           # Lifecycle hook registration (PreInvocation, PreToolUse, Stop)
 │   ├── agents/                              # Declarative Subagent Role Manifests (9 JSON specs)
 │   │   ├── evidence_reviewer_agent.json
 │   │   ├── repo_scout_agent.json
@@ -94,7 +97,8 @@ learn-letta-code/
 │       ├── hook-inject-memory.ts            # Committed-HEAD projection owner
 │       ├── hook-pre-tool-use.sh             # Strict PreToolUse wrapper
 │       ├── hook-pre-tool-use.ts             # PreToolUse entrypoint and dispatcher
-│       ├── tool-guard.ts                    # Escalate-only safety classifier (Git, dependencies, containment)
+│       ├── tool-guard.ts                    # Atomic confirmation-request classifier; no authorization authority
+│       ├── material-claim-review.ts         # Current-byte claim/review packet verifier; no semantic proof
 │       ├── hook-memory-status.sh             # Strict Stop wrapper
 │       ├── hook-memory-status.ts             # Non-mutating Stop status owner
 │       ├── active-learning.ts                 # Canonical committed working-hypothesis selector
@@ -142,6 +146,8 @@ learn-letta-code/
     ├── host-evidence.test.ts                 # Phase 1 manifest, aggregate evidence, and scorer contract
     ├── host-evidence-lifecycle.test.ts       # Pure receipt parsing, replay, lifecycle, and derivation cases
     ├── host-evidence-store.test.ts           # Immutable system-temp persistence, seal, and tamper cases
+    ├── tool-guard.test.ts                    # Atomic gate, malformed/bundled, and protected-target regressions
+    ├── material-claim-review.test.ts         # Packet binding, counterexample, freshness, and exit-code regressions
     ├── support/
     │   ├── host-evidence-fixtures.ts         # Frozen Phase 1 manifest/evidence fixtures
     │   ├── host-evidence-fake-transport.ts   # Offline deterministic transport with zero live capabilities

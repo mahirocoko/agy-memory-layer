@@ -2,6 +2,10 @@
 
 Welcome to **`agy-memory-layer`** (`learn-letta-code`). This document defines the engineering standards, architecture rules, and non-negotiable conventions for all agents and pair programmers working in this repository.
 
+**Latest published release:** `v1.19.0`
+
+**Current development candidate:** `v1.20.0` (unreleased; interactive and human-supervised)
+
 ---
 
 ## 🏛️ System Overview & Core Architecture
@@ -62,6 +66,12 @@ Host Workspace (learn-letta-code)
 - **Portable Enforcement Boundary**: `.cocoindex_code/settings.yml` acts as the portable boundary for sensitive credential exclusion and noise filtering.
 - **Search Tooling Priority**: Prefer CocoIndex / `ccc search` for semantic exploration; use `grep_search` / `rg` for exact tokens, syntax, and literal strings.
 
+### 8. Candidate Control Boundaries
+- **Atomic confirmation requests**: PreToolUse denies ambiguous bundles, malformed inputs, destructive actions, and protected targets, while one recognized scoped mutation receives `force_ask`. This classifier does not authenticate authorization or grants and does not universally cover shell semantics.
+- **Material claims**: Bind consequential claims to current owner and consumer bytes, explicit counterexample probes/outcomes, and fresh reviewer metadata. Packet verification is structural/current-byte evidence, not semantic proof; reviewer identity remains `not-authenticated`.
+- **Continuity**: Bounded re-grounding and fresh-conversation rotation are model-guided policy only. There is no compaction interceptor, mission supervisor, deterministic rotation, or automatic continuation.
+- **Supervision**: The `v1.20.0` candidate requires interactive pane supervision because host lifecycle status may be stale while permission UI remains pending, and a reviewer model may not observe that UI.
+
 ---
 
 ## 🛠️ Verification & Test Suite
@@ -73,10 +83,12 @@ pnpm test
 ```
 
 The Phase 3 Direct CLI verifier lane retains **30/30 focused Phase 3**
-and **108/108 aggregate host-evidence** tests. Final current-source verification
-on 2026-09-13 passed 188/188 Node tests, 11/11 isolated integration scenarios,
-`pnpm check`, plugin validation, and coverage at 86.32% lines / 73.63% branches /
-90.00% functions. Do not infer release readiness from current-source evidence alone.
+and **108/108 aggregate host-evidence** tests. Final `v1.20.0` candidate verification
+on 2026-09-13 passed 206/206 Node tests, 11/11 generated integration scenarios,
+`pnpm check`, plugin validation (14 skills, 9 agents, 3 hooks, zero errors), and
+coverage at 86.71% lines / 74.97% branches / 90.66% functions. The latest
+published release remains `v1.19.0`; do not infer unsupervised readiness from
+candidate evidence alone.
 - PreInvocation hook schema validation
 - Committed-HEAD projection and non-mutating Stop status
 - Contained paths and targeted memory commits
@@ -124,6 +136,8 @@ Detailed operational documentation is split into modular files under [`docs/`](d
 - [`docs/execution-continuity-pilot.md`](docs/execution-continuity-pilot.md) — Stage 0 fixture-preflight and audited Stage 1 results; both candidate modes are disqualified and production continuity remains unimplemented.
 - [`docs/execution-continuity-stage1-evidence-2026-09-11.md`](docs/execution-continuity-stage1-evidence-2026-09-11.md) — Exact 15-run receipts, false-PASS findings, cleanup, and the no-advance decision.
 - [`docs/host-evidence-phase3.md`](docs/host-evidence-phase3.md) — Current-source evidence-only verifier for terminal Direct CLI callback receipts, Phase 2 sealing, repository/MemFS content invariance, retained checkpoints, and non-claims; the installed Direct CLI workflow owns Agy/Herdr lifecycle execution.
+- [`docs/agy-main-phase4a-external-product-attribution-2026-09-13.md`](docs/agy-main-phase4a-external-product-attribution-2026-09-13.md) — Historical external-product attribution baseline; not the current candidate owner.
+- [`docs/agy-main-phase4b-readiness-2026-09-13.md`](docs/agy-main-phase4b-readiness-2026-09-13.md) — Canonical `v1.20.0` local readiness report and interactive/human-supervised boundary; links the retained canary evidence.
 - [`docs/development-commands.md`](docs/development-commands.md) — Script runners, testing, and daemon commands.
 - [`docs/file-organization.md`](docs/file-organization.md) — Directory layout and responsibility matrix.
 - [`docs/best-practices.md`](docs/best-practices.md) — Coding conventions, non-blocking hooks, and memory hygiene.

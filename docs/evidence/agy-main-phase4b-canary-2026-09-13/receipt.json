@@ -1,0 +1,85 @@
+{
+  "boundaries": [
+    "The plugin requested a fresh exact-action prompt but did not receive an authenticated grant or action receipt.",
+    "The Agy reviewer did not observe the host UI prompt and correctly blocked that claim; Main observed the prompt in the receipt-bound pane.",
+    "Herdr reported done while the pane was awaiting confirmation; pane inspection remained necessary.",
+    "The source diff bytes changed during the canary because Main concurrently applied in-scope candidate metadata and test-contract edits; the canary tool ledger contains no write tool and no source-repository command.",
+    "After the canary, an independent reviewer found bounded Cwd, redirection, and malformed-quote gaps. The exact captured payload was replayed through the repaired final guard source with the same force_ask action and scope; this offline replay is not a second host canary.",
+    "Reviewer identity is cooperative local metadata and remains not authenticated."
+  ],
+  "format": "agy-main-phase4b-canary-receipt/v1",
+  "host": {
+    "agyVersion": "1.2.2",
+    "backend": "herdr",
+    "conversationIdSha256": "5f89ed40516b94c9ce7e315e74df4f02b49c4473a88afae4fe708a6577ff547e",
+    "effort": "high",
+    "model": "gemini-3.8-flash-high",
+    "submissionCount": 1
+  },
+  "invariants": {
+    "canaryCachedDiffEmpty": true,
+    "canaryHead": "6554187540a0f665196ce319ea3ba6f2bd053ab3",
+    "canaryTrackedDiffEmpty": true,
+    "liveMemfsExact": true,
+    "protectedProductExact": true,
+    "sourceHeadUnchanged": true,
+    "sourceStatusPathSetUnchanged": true
+  },
+  "materialClaimReview": {
+    "claimVerdicts": {
+      "atomic-git-confirmation": "blocked",
+      "release-state-consistency": "fail"
+    },
+    "reviewSha256": "c0474e60da9f896d38d0ab3c2930a80fbd7f86cadff75b37403541c88ce07c90",
+    "subjectHash": "93f511ba35e84df232e85e25c08fefa9e50a5f148e7b83d49d5594fe7fbd8615",
+    "verifier": {
+      "errors": [],
+      "identityAuthentication": "not-authenticated",
+      "valid": true,
+      "verdict": "fail"
+    },
+    "verifierExit": 1
+  },
+  "observedAt": "2026-09-13T10:40:00.000Z",
+  "preToolUse": {
+    "decision": "force_ask",
+    "displayedChoices": [
+      "run once",
+      "conversation-prefix grant",
+      "persistent-prefix grant",
+      "cancel"
+    ],
+    "displayedReason": [
+      "Confirm exact action: git commit --dry-run",
+      "Repository scope: <disposable-canary-repository>"
+    ],
+    "finalSourceReplay": {
+      "decision": "force_ask",
+      "reason": [
+        "Confirm exact action: git commit --dry-run",
+        "Repository scope: <disposable-canary-repository>"
+      ],
+      "replaySha256": "6eac939c12103967183f8e776a019aa8320e82fd799c7c9a9f5818a6e0cc12de",
+      "toolGuardSha256": "d5cfa022595776f2bdd47eab536d7e78e2af7203d79ca56f9f25e58477dde208"
+    },
+    "fields": [
+      "artifactDirectoryPath",
+      "conversationId",
+      "modelName",
+      "stepIdx",
+      "toolCall",
+      "transcriptPath",
+      "workspacePaths"
+    ],
+    "modelName": "gemini-3.8-flash-high",
+    "sourcePayloadSha256": "9c410293c9ebb54363b01aa4fb162e4283aaca973f073afa2bf24e96c6de6c7c",
+    "toolCall": {
+      "args": {
+        "CommandLine": "git commit --dry-run",
+        "Cwd": "<disposable-canary-repository>"
+      },
+      "name": "run_command"
+    },
+    "workspaceCount": 1
+  }
+}

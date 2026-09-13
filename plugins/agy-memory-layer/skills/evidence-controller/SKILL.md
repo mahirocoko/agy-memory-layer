@@ -102,6 +102,27 @@ or stale proof remains open. This conversation checkpoint is not guaranteed dura
 host-enforced completion, a final-response interceptor, or an automatic wake/retry scheduler.
 Do not repurpose the observational Stop hook to continue work or write mission state.
 
+### Bounded re-grounding and conversation rotation
+
+On the first turn after compaction, resume, or a handoff, treat summaries as navigation only:
+
+1. re-read the current repository rules, Git state, named source owners, and open criterion;
+2. invalidate summary-carried grants, reviewer verdicts, runtime claims, and provider status until
+   the current owner or receipt is checked again;
+3. restate one falsifiable hypothesis and run its cheapest disconfirming check before writing;
+4. create a new material-claim subject after the current writer finishes—never reuse one whose
+   owner or consumer bytes changed.
+
+Prefer a fresh Agy conversation before the next separable consequential checkpoint when critical
+scope or proof survives only in a compacted summary, when the canonical owner changes, or when two
+contradictory hypotheses remain after re-grounding. Carry only a bounded handoff containing the
+goal, current owner references, open evidence gaps, and non-binding prior results. Never carry a
+one-shot grant as authorization. Do not rotate in the middle of an uncheckpointed write merely to
+shorten context.
+
+This is a model-guided operating policy. The current plugin does not intercept compaction, create
+conversations, persist a mission supervisor, or guarantee automatic continuation.
+
 ## Automatic routing decision
 
 Agy must choose one mode before a material action. This is a model decision guided by this
@@ -169,6 +190,31 @@ Rules:
 
 Two Gemini agents can agree and still be wrong. Tests, typecheck, hashes, screenshots, current
 runtime state, and provider receipts decide deterministic questions.
+
+### Consequential material-claim review packet
+
+For consequential claims in `WRITER_REVIEWER`, Main must author a
+`material-claim-subject/v1` packet only after the writer has completed. Bind each exact claim to its owner, every known consumer, failure
+condition, required evidence kinds, and current SHA-256 for file bindings. Then supply that packet
+to a fresh `evidence_reviewer_agent`; the reviewer returns a strict
+`material-claim-review/v1` JSON packet rather than an aggregate heuristic PASS. Every evidence
+locator must exactly equal the path or non-file locator bound by its reference ID. Main runs this
+verifier before setting `agent_checked`:
+
+```bash
+node --experimental-strip-types plugins/agy-memory-layer/scripts/material-claim-review.ts verify --subject <subject.json> --review <review.json>
+```
+
+Exit 0 is scoped pass, 1 is a disproved claim, 3 is insufficient evidence, and 2 is an invalid
+packet or stale binding. A fail or blocked result keeps the affected criterion open. Do not require
+this packet for ordinary small work where proportional direct checks suffice.
+
+This packet is cooperative local evidence only. Its hashes bind supplied claims to current local
+file bytes; `identityAuthentication: 'not-authenticated'` explicitly means it does not authenticate
+the writer or reviewer. A coherent FAIL tuple validates and aggregates the reviewer's report; the
+verifier does not semantically discover the seeded counterexample. It is not semantic proof, human
+acceptance, runtime/visual/provider proof without evidence from that layer, or permission for a
+human-owned gate.
 
 ## Ambiguous provider stop gate
 

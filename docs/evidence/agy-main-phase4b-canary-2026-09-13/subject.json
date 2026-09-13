@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "material-claim-subject/v1",
+  "taskId": "phase4b-real-canary",
+  "writer": {
+    "conversationId": "synthetic-writer-phase4b",
+    "completedAt": "2026-09-13T10:35:00.000Z"
+  },
+  "claims": [
+    {
+      "id": "release-state-consistency",
+      "statement": "The consumer preserves the owner release state.",
+      "owner": {
+        "id": "release-owner",
+        "type": "file",
+        "path": "owner.md",
+        "sha256": "8fb605b939c88fb9970ff38d98b12d0aaeb8741d4314a4a6528e58cf5d7b3f8e",
+        "contains": "State: development candidate"
+      },
+      "consumers": [
+        {
+          "id": "release-consumer",
+          "type": "file",
+          "path": "consumer.md",
+          "sha256": "d3f776842cb623f75f8720ae51fc606936dc43379ffcaedf345e79abf43320b0",
+          "contains": "State: released"
+        }
+      ],
+      "failureCondition": "The consumer claims released while the owner says development candidate.",
+      "requiredEvidenceKinds": [
+        "file"
+      ]
+    },
+    {
+      "id": "atomic-git-confirmation",
+      "statement": "The atomic Git command receives a fresh PreToolUse confirmation request scoped to its exact action and repository.",
+      "owner": {
+        "id": "git-command",
+        "type": "non-file",
+        "evidenceKind": "command",
+        "locator": "git commit --dry-run"
+      },
+      "consumers": [
+        {
+          "id": "host-prompt",
+          "type": "non-file",
+          "evidenceKind": "runtime",
+          "locator": "PreToolUse force_ask prompt with exact action and repository scope"
+        }
+      ],
+      "failureCondition": "The command executes without a fresh exact-action/repository confirmation request, or the prompt is ambiguous.",
+      "requiredEvidenceKinds": [
+        "command",
+        "runtime"
+      ]
+    }
+  ]
+}

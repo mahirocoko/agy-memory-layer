@@ -1,6 +1,6 @@
 # 🧠 agy-memory-layer
 
-[![Coverage](https://img.shields.io/badge/Coverage-83.76%25-green.svg)](./CONTRACT.md)
+[![Candidate Coverage](https://img.shields.io/badge/Candidate%20Coverage-86.71%25-green.svg)](./CONTRACT.md)
 [![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity-1.1%2B-blue.svg)](https://github.com/google/antigravity)
@@ -15,26 +15,13 @@
 > Approval and reviewer identity remain cooperative rather than authenticated.
 > See the [release notes](./docs/releases/v1.19.0.md) for verification and limitations.
 
-> **Current development candidate:** The approved
-> [execution-continuity pilot](./docs/execution-continuity-pilot.md) compares the released
-> conversation-only controller with standalone durable-checkpoint and Letta-led bounded-Agy modes.
-> Stage 1 used its complete 15-run ceiling and disqualified both candidate modes: standalone state
-> retained stale candidate fingerprints, while the Letta-led scorer closed missions with agent
-> criteria still open. The harness now rejects those shapes, but it adds no runtime state,
-> supervisor, automatic continuation, or new subagent definition.
->
-> Current source also contains the [Phase 3 Direct CLI callback evidence adapter](./docs/host-evidence-phase3.md).
-> Ownership is decoupled: the installed Direct CLI workflow at `/Users/mahiro/.letta/skills/direct-cli`
-> (`scripts/herdr-jobs.py`) owns Herdr shell readiness, trust prompt handling, prompt dispatch, wait/callback lifecycle,
-> and cleanup. This repository provides a pure evidence-only adapter (`tools/host-evidence-direct-cli.ts`)
-> that verifies retained terminal callback job bundles (`direct-cli.herdr-job.v2`) and callback messages
-> (`direct-cli.callback-message.v1`), validates before/after repository and MemFS snapshot invariance, translates
-> evidence into Phase 2 immutable store receipts, derives scoring, and seals Phase 3 checkpoints.
-> One bounded Agy 1.2.2 / Gemini 3.8 Flash High canary completed through the Direct CLI v2
-> callback path on 2026-09-13, produced an acknowledged exact report, preserved repository and
-> live MemFS content, passed Phase 2 scoring, and sealed a `verifiedLive: true` external checkpoint.
-> This remains current-source evidence rather than v1.19.0 release evidence; provider request
-> counts and provider-visible input bytes remain unavailable.
+> **v1.20.0 (Current development candidate; unreleased):** Adds atomic
+> confirmation-request gating for recognized tool mutations and hash-bound material-claim review
+> packets. The candidate is ready only for interactive, human-supervised use—not as an unsupervised
+> safety-trusted main. It has no authenticated authorization/grant authority, universal shell
+> coverage, compaction interceptor, mission supervisor, deterministic conversation rotation, or
+> automatic continuation. See the [canonical readiness report](./docs/agy-main-phase4b-readiness-2026-09-13.md)
+> and its [bounded canary evidence](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md).
 
 > **v1.15.4 (Prior Release):** Model-guided authority boundary and
 > anti-laundering stanza emitted first whenever a schema-valid PreInvocation
@@ -89,7 +76,7 @@
 - 📦 **Git-Backed MemFS (`~/.gemini/memory/`)**: Decoupled from project source code; tracks all knowledge snapshots in an independent Git repository.
 - ⚡ **Zero-Friction Lifecycle Hooks**:
   - `PreInvocation`: Reads committed Git memory into `ephemeralMessage` and discloses dirty/conflict state separately.
-  - `PreToolUse`: Classifies selected Git, MemFS, dependency, manifest, and subagent-capability command shapes before dispatch. Configured destructive patterns are denied and configured state-changing operations are escalated, but coverage is not universal and Git permission is not bound to one unambiguous action-specific user grant.
+  - `PreToolUse`: Applies atomic confirmation-request gating to recognized Git, shell-write, dependency, manifest, and subagent-capability shapes. Ambiguous bundles, malformed inputs, destructive actions, and protected targets are denied; one scoped mutation receives `force_ask`. This classifies confirmation needs—it does not authenticate authorization or grants, and it does not universally cover shell semantics.
   - `Stop`: Reports MemFS status without staging, committing, deleting locks, or launching background work.
 - 🧠 **Hybrid Semantic Recall (`/recall`)**: Subword n-gram vector embeddings + BM25 keyword fusion across available Antigravity conversation transcripts.
 - 🌙 **Dreaming (`/dream` & `dream-daemon.ts`)**: Explicit reflection guidance plus an optional deterministic correction-archive utility; isolated model-backed reflection remains deferred.
@@ -271,16 +258,17 @@ pnpm test:coverage
 
 ### 📈 Coverage Evidence
 
-| Metric | v1.19.0 release |
-| :--- | ---: |
-| Lines | **83.76%** |
-| Branches | **70.76%** |
-| Functions | **88.12%** |
+| Metric | v1.19.0 release | v1.20.0 development candidate |
+| :--- | ---: | ---: |
+| Lines | **83.76%** | **86.71%** |
+| Branches | **70.76%** | **74.97%** |
+| Functions | **88.12%** | **90.66%** |
 
-This is the aggregate Node/V8 snapshot for the released `v1.19.0` source.
-Run `pnpm test:coverage` after source changes and update this snapshot in the
-same candidate/release change; per-file percentages remain in command output rather than
-being copied into this README.
+The first column is the published `v1.19.0` aggregate Node/V8 snapshot. The second is the
+unreleased local `v1.20.0` candidate snapshot from 206/206 passing Node tests; the generated
+integration suite passed 11/11 scenarios. Run `pnpm test:coverage` after source changes and
+update only the applicable candidate or release snapshot; per-file percentages remain in
+command output rather than being copied into this README.
 
 > 📋 **Detailed integration evidence**: See [TEST_REPORT.md](./TEST_REPORT.md) for the latest isolated scenario results and measured timings.
 
@@ -288,7 +276,7 @@ being copied into this README.
 
 > **Latest release**: [`v1.19.0`](./docs/releases/v1.19.0.md) binds contract approval to exact final owner bytes and binds alignment to verified snapshot and target identities. Verification: 80 Node tests and 11 integration scenarios passed; `pnpm check` passed. One disposable real Agy refine-to-align trial plus fail-closed negative controls provide bounded host evidence, not authenticated approval, reviewer identity, or universal semantic correctness. Aggregate coverage is recorded in the table above.
 
-> **Current development candidate**: the [execution-continuity pilot](./docs/execution-continuity-pilot.md) has a nine-case deterministic Stage 0 fixture-preflight PASS and an audited 15-run Stage 1 no-advance result. The Phase 3 Direct CLI verifier retains **30/30 focused Phase 3 tests** and **108/108 aggregate host-evidence tests**, plus the bounded live canary described above. Final current-source verification on 2026-09-13 passed **188/188 Node tests**, **11/11 isolated integration scenarios**, `pnpm check`, plugin validation, and coverage at **86.32% lines / 73.63% branches / 90.00% functions**. These are not the released v1.19.0 coverage snapshot, and no Stage 2 repeat, automatic continuation, compaction recovery, runtime supervisor, or OS sandbox is implemented or authorized.
+> **Current development candidate**: `v1.20.0` passed **206/206 Node tests**, **11/11 generated integration scenarios**, `pnpm check`, plugin validation (**14 skills, 9 agents, 3 hooks, zero errors**), and aggregate coverage at **86.71% lines / 74.97% branches / 90.66% functions**. The [readiness report](./docs/agy-main-phase4b-readiness-2026-09-13.md) and [retained canary packet](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md) record the bounded evidence and deferred host boundaries. These are not the released v1.19.0 metrics. The candidate remains interactive and human-supervised; it has no authenticated authorization authority, semantic-proof verifier, compaction interceptor, mission supervisor, deterministic rotation, or automatic continuation.
 
 ---
 
