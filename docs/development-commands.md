@@ -66,11 +66,23 @@ and [retained evidence index](./evidence/agy-main-phase4b-canary-2026-09-13/READ
 `dream-daemon.ts` maps transcripts through local Agy workspace history and writes deterministic recall-only correction evidence only when explicit durable-memory intent contains an actionable rule or fact. Unknown ownership, vague intent, and no-signal sessions skip. It never activates the protected working hypothesis, remains separate from Stop, and does not provide Letta's model-backed isolated reflection worktree.
 
 ```bash
-# Check status of pending undreamed sessions and step count threshold
+# Check status of pending undreamed sessions for current project
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --status
 
-# Process pending sessions; only explicit durable intent creates archive evidence
+# Check status of pending undreamed sessions across all projects (grouped summary)
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --status --all-projects
+
+# Check status of pending undreamed sessions for a specific target project
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --status --project <slug>
+
+# Process pending sessions for current project; only explicit durable intent creates archive evidence
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now
+
+# Process pending sessions across all initialized projects
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now --all-projects
+
+# Process pending sessions for a specific target project
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now --project <slug>
 
 # Force immediate synthesis regardless of session age
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now --force

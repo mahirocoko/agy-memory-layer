@@ -2,9 +2,9 @@
 
 Welcome to **`agy-memory-layer`** (`learn-letta-code`). This document defines the engineering standards, architecture rules, and non-negotiable conventions for all agents and pair programmers working in this repository.
 
-**Latest published release:** `v1.20.0` (interactive and human-supervised)
+**Latest published release:** `v1.21.0` (interactive and human-supervised)
 
-**Current development state:** matches `v1.20.0`; no newer candidate is declared
+**Current development state:** matches `v1.21.0`; no newer candidate is declared
 
 ---
 
@@ -137,7 +137,8 @@ Detailed operational documentation is split into modular files under [`docs/`](d
 - [`docs/host-evidence-phase3.md`](docs/host-evidence-phase3.md) — Current-source evidence-only verifier for terminal Direct CLI callback receipts, Phase 2 sealing, repository/MemFS content invariance, retained checkpoints, and non-claims; the installed Direct CLI workflow owns Agy/Herdr lifecycle execution.
 - [`docs/agy-main-phase4a-external-product-attribution-2026-09-13.md`](docs/agy-main-phase4a-external-product-attribution-2026-09-13.md) — Historical external-product attribution baseline; not the current release owner.
 - [`docs/agy-main-phase4b-readiness-2026-09-13.md`](docs/agy-main-phase4b-readiness-2026-09-13.md) — Retained `v1.20.0` pre-release readiness evidence and interactive/human-supervised boundary; links the retained canary evidence.
-- [`docs/releases/v1.20.0.md`](docs/releases/v1.20.0.md) — Current release scope, verification, host evidence, and limitations.
+- [`docs/releases/v1.21.0.md`](docs/releases/v1.21.0.md) — Cross-project dream daemon release, verification, and usage.
+- [`docs/releases/v1.20.0.md`](docs/releases/v1.20.0.md) — Interactive Agy Main controls, verification, host evidence, and limitations.
 - [`docs/development-commands.md`](docs/development-commands.md) — Script runners, testing, and daemon commands.
 - [`docs/file-organization.md`](docs/file-organization.md) — Directory layout and responsibility matrix.
 - [`docs/best-practices.md`](docs/best-practices.md) — Coding conventions, non-blocking hooks, and memory hygiene.

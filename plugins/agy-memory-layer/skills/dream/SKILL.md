@@ -21,11 +21,23 @@ producing session-continuity boilerplate. Dream never activates or replaces the 
 working hypothesis itself.
 
 ```bash
-# Inspect pending transcript notes
+# Inspect pending transcript notes for current project
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --status
 
-# Generate and commit pending deterministic archive evidence now
+# Inspect pending transcript notes across all projects (grouped summary)
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --status --all-projects
+
+# Inspect pending transcript notes for a specific target project
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --status --project <slug>
+
+# Generate and commit pending deterministic archive evidence for current project
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now
+
+# Process and commit pending archive evidence across all initialized projects
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now --all-projects
+
+# Process and commit pending archive evidence for a specific target project
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now --project <slug>
 ```
 
 The command requires a clean MemFS repository. External Dream cursor state

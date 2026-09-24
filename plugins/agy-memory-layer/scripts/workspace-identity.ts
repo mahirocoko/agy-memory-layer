@@ -41,7 +41,7 @@ export const getWorkspaceRootSlug = (workspacePath: string = process.cwd()): str
   return toProjectSlug(path.basename(gitRoot || workspacePath))
 }
 
-const projectScopeExists = (memoryRoot: string, slug: string): boolean =>
+export const projectScopeExists = (memoryRoot: string, slug: string): boolean =>
   committedMemoryPathExists(memoryRoot, `projects/${slug}/project.md`) ||
   committedMemoryPathExists(memoryRoot, `projects/${slug}/rules.md`) ||
   listCommittedMemoryFiles(memoryRoot, `projects/${slug}/system`).some((relativePath) =>

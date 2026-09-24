@@ -5,6 +5,10 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { describe, it } from 'node:test'
+import type {
+  CrossProjectDreamReport,
+  ProjectDreamOutcome,
+} from '../plugins/agy-memory-layer/scripts/dream-daemon.ts'
 import { TEST_ENVIRONMENT, TEST_MEMORY_ROOT, TEST_TEMP_ROOT } from './test-environment.ts'
 
 const ROOT_DIR = path.resolve(import.meta.dirname, '..')
@@ -26,8 +30,15 @@ const { cosineSimilarity, buildVectorProfile, scanAllConversations, searchRecall
 )
 const {
   extractExplicitDurableLessons,
+  getDreamState,
   getDreamedConversationIds,
+  parseDreamCliScope,
+  printAllProjectsStatus,
   runAutoDream,
+  runCrossProjectDream,
+  runProjectDream,
+  saveDreamState,
+  scanAllPendingConversations,
   scanPendingConversations,
   synthesizeConversationLearning,
   printStatus,
@@ -786,6 +797,170 @@ describe('Unit Coverage Extensions', () => {
         `archives/projects/dream-alpha/learnings/${new Date().toISOString().split('T')[0]}_auto_dream_${alphaId.slice(0, 8)}.md`,
       ],
       reason: 'test: remove Dream archive fixture',
+    })
+  })
+
+  it('dreams across projects with per-project commits and skips uninitialized projects', () => {
+    const brainRoot = path.join(TEST_ENVIRONMENT.homeDir, '.gemini', 'antigravity-cli', 'brain')
+    const historyFile = path.join(
+      TEST_ENVIRONMENT.homeDir,
+      '.gemini',
+      'antigravity-cli',
+      'history.jsonl',
+    )
+    const stateFile = path.join(
+      process.env.AGY_MEMORY_STATE_DIR || `${MEMORY_ROOT}.state`,
+      'dream-state.json',
+    )
+    const originalState = fs.existsSync(stateFile) ? fs.readFileSync(stateFile, 'utf-8') : null
+    const today = new Date().toISOString().split('T')[0]
+    const fixtures = [
+      {
+        id: '55555555-5555-4555-8555-555555555555',
+        slug: 'dream-gamma',
+        initialized: true,
+        content: 'Please remember this: always use pnpm for dream gamma.',
+      },
+      {
+        id: '66666666-6666-4666-8666-666666666666',
+        slug: 'dream-delta',
+        initialized: true,
+        content: 'Inspect this session without creating durable memory.',
+      },
+      {
+        id: '77777777-7777-4777-8777-777777777777',
+        slug: 'dream-epsilon',
+        initialized: false,
+        content: 'จำไว้ว่าต้องใช้ pnpm สำหรับ dream epsilon',
+      },
+    ]
+    const projectMarkers = fixtures
+      .filter((fixture) => fixture.initialized)
+      .map((fixture) => `projects/${fixture.slug}/project.md`)
+    const gammaArchive = `archives/projects/dream-gamma/learnings/${today}_auto_dream_55555555.md`
+
+    fs.mkdirSync(path.dirname(historyFile), { recursive: true })
+    for (const fixture of fixtures) {
+      fs.mkdirSync(path.join(TEST_TEMP_ROOT, fixture.slug), { recursive: true })
+      const logDir = path.join(brainRoot, fixture.id, '.system_generated', 'logs')
+      fs.mkdirSync(logDir, { recursive: true })
+      fs.writeFileSync(
+        path.join(logDir, 'transcript.jsonl'),
+        `${JSON.stringify({ type: 'USER_INPUT', content: `<USER_REQUEST>${fixture.content}</USER_REQUEST>` })}\n`,
+      )
+    }
+    fs.writeFileSync(
+      historyFile,
+      fixtures
+        .map((fixture, index) =>
+          JSON.stringify({
+            conversationId: fixture.id,
+            timestamp: index + 1,
+            workspace: path.join(TEST_TEMP_ROOT, fixture.slug),
+          }),
+        )
+        .join('\n'),
+    )
+    for (const marker of projectMarkers) {
+      writeMemoryFile(MEMORY_ROOT, marker, '# Dream fixture project\n')
+    }
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: projectMarkers,
+      reason: 'test: seed cross-project Dream fixtures',
+    })
+
+    const scanOptions = { force: true, minSteps: 1, idleMinutes: 0 }
+    const grouped = scanAllPendingConversations(scanOptions)
+    assert.deepStrictEqual([...grouped.keys()], ['dream-delta', 'dream-epsilon', 'dream-gamma'])
+    assert.doesNotThrow(() => printAllProjectsStatus())
+
+    const missing = runProjectDream('dream-missing', scanOptions)
+    assert.deepStrictEqual(missing, { projects: [], uninitialized: [] })
+
+    const report: CrossProjectDreamReport = runCrossProjectDream(grouped)
+    const outcomes = new Map<string, ProjectDreamOutcome>(
+      report.projects.map((outcome) => [outcome.slug, outcome]),
+    )
+    assert.deepStrictEqual([...outcomes.keys()], ['dream-delta', 'dream-gamma'])
+    assert.deepStrictEqual(report.uninitialized, [{ slug: 'dream-epsilon', conversations: 1 }])
+    assert.strictEqual(outcomes.get('dream-gamma')?.results[0]?.status, 'written')
+    assert.strictEqual(typeof outcomes.get('dream-gamma')?.commitSha, 'string')
+    assert.strictEqual(outcomes.get('dream-delta')?.results[0]?.status, 'skipped')
+    assert.strictEqual(outcomes.get('dream-delta')?.commitSha, undefined)
+    assert.strictEqual(readCommittedMemoryFile(MEMORY_ROOT, gammaArchive)?.includes('pnpm'), true)
+    assert.strictEqual(
+      execFileSync('git', ['-C', MEMORY_ROOT, 'log', '-1', '--format=%s'], {
+        encoding: 'utf-8',
+      }).includes('for dream-gamma'),
+      true,
+    )
+    assert.strictEqual(getMemoryRepositoryStatus(MEMORY_ROOT).state, 'clean')
+
+    const state = getDreamState()
+    assert.strictEqual(state.lastDreamedSteps[fixtures[0].id], 1)
+    assert.strictEqual(state.lastDreamedSteps[fixtures[1].id], 1)
+    assert.strictEqual(fixtures[2].id in state.lastDreamedSteps, false)
+    assert.strictEqual(typeof state.lastRunByProject['dream-gamma'], 'string')
+
+    const headBeforeReplay = execFileSync('git', ['-C', MEMORY_ROOT, 'rev-parse', 'HEAD'], {
+      encoding: 'utf-8',
+    })
+    const replay: CrossProjectDreamReport = runCrossProjectDream(grouped)
+    assert.deepStrictEqual(
+      replay.projects.flatMap((outcome) => outcome.results.map((result) => result.status)),
+      ['already-dreamed', 'already-dreamed'],
+    )
+    assert.strictEqual(
+      execFileSync('git', ['-C', MEMORY_ROOT, 'rev-parse', 'HEAD'], { encoding: 'utf-8' }),
+      headBeforeReplay,
+    )
+    assert.deepStrictEqual([...scanAllPendingConversations(scanOptions).keys()], ['dream-epsilon'])
+
+    assert.deepStrictEqual(parseDreamCliScope(['--status']), { kind: 'current' })
+    assert.deepStrictEqual(parseDreamCliScope(['--run-now', '--all-projects']), {
+      kind: 'all-projects',
+    })
+    assert.deepStrictEqual(parseDreamCliScope(['--run-now', '--project', 'Dream-Gamma']), {
+      kind: 'project',
+      slug: 'dream-gamma',
+    })
+    assert.throws(() => parseDreamCliScope(['--run-now', '--project']), /requires a project slug/)
+    assert.throws(
+      () => parseDreamCliScope(['--run-now', '--all-projects', '--project', 'dream-gamma']),
+      /not both/,
+    )
+
+    fs.writeFileSync(stateFile, '{not json')
+    const recovered = getDreamState()
+    assert.deepStrictEqual(recovered.lastDreamedSteps, {})
+    saveDreamState(recovered)
+    assert.deepStrictEqual(JSON.parse(fs.readFileSync(stateFile, 'utf-8')).lastDreamedSteps, {})
+    const stateEntries = fs.readdirSync(path.dirname(stateFile))
+    const corruptBackups = stateEntries.filter((file) =>
+      file.startsWith('dream-state.json.corrupt-'),
+    )
+    assert.strictEqual(corruptBackups.length, 1)
+    assert.strictEqual(
+      stateEntries.some((file) => file.includes('.tmp-')),
+      false,
+    )
+
+    for (const backup of corruptBackups) fs.rmSync(path.join(path.dirname(stateFile), backup))
+    if (originalState === null) fs.rmSync(stateFile, { force: true })
+    else fs.writeFileSync(stateFile, originalState)
+    fs.rmSync(brainRoot, { recursive: true, force: true })
+    fs.unlinkSync(historyFile)
+    for (const fixture of fixtures) {
+      fs.rmSync(path.join(TEST_TEMP_ROOT, fixture.slug), { recursive: true, force: true })
+    }
+    for (const relativePath of [...projectMarkers, gammaArchive]) {
+      fs.rmSync(path.join(MEMORY_ROOT, relativePath), { force: true })
+    }
+    commitMemoryPaths({
+      memoryRoot: MEMORY_ROOT,
+      relativePaths: [...projectMarkers, gammaArchive],
+      reason: 'test: remove cross-project Dream fixtures',
     })
   })
 
@@ -2079,8 +2254,8 @@ describe('Unit Coverage Extensions', () => {
     const biomeJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'biome.json'), 'utf8'))
 
     // 1. Development candidate intent and mirror equality
-    assert.strictEqual(packageJson.version, '1.20.0')
-    assert.strictEqual(pluginJson.version, '1.20.0')
+    assert.strictEqual(packageJson.version, '1.21.0')
+    assert.strictEqual(pluginJson.version, '1.21.0')
     assert.strictEqual(packageJson.version, pluginJson.version)
     const exactEvidenceOverride = biomeJson.overrides.find(
       (override: { includes?: string[]; formatter?: { enabled?: boolean } }) =>
@@ -2103,8 +2278,8 @@ describe('Unit Coverage Extensions', () => {
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(contractDoc.includes('**Package version:** `1.20.0`'), true)
-    assert.strictEqual(contractDoc.includes('Released as `v1.20.0` on 2026-09-13'), true)
+    assert.strictEqual(contractDoc.includes('**Package version:** `1.21.0`'), true)
+    assert.strictEqual(contractDoc.includes('Released as `v1.21.0` on 2026-09-24'), true)
     assert.strictEqual(
       contractDoc.includes(
         'Every schema-valid invocation that runs to completion within the host hook',
@@ -2144,13 +2319,13 @@ describe('Unit Coverage Extensions', () => {
 
     // 3. README.md product-first onboarding and current release boundary
     const readmeDoc = fs.readFileSync(path.join(ROOT_DIR, 'README.md'), 'utf8')
-    assert.strictEqual(readmeDoc.includes('**Current release:** `v1.20.0`'), true)
+    assert.strictEqual(readmeDoc.includes('**Current release:** `v1.21.0`'), true)
     assert.strictEqual(readmeDoc.includes('## Why it exists'), true)
     assert.strictEqual(readmeDoc.includes('## Quick start'), true)
     assert.strictEqual(readmeDoc.includes('## How it works'), true)
     assert.strictEqual(readmeDoc.includes('## Everyday commands'), true)
     assert.strictEqual(readmeDoc.includes('one-line installer follows `main`'), true)
-    assert.strictEqual(readmeDoc.includes('clone --branch v1.20.0 --depth 1'), true)
+    assert.strictEqual(readmeDoc.includes('clone --branch v1.21.0 --depth 1'), true)
     assert.strictEqual(readmeDoc.includes('Calling `/init` is the confirmation'), true)
     assert.strictEqual(readmeDoc.includes('asks before writing'), false)
     assert.strictEqual(readmeDoc.includes('better continuity and fewer unsupported claims'), true)
