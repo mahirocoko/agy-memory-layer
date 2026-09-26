@@ -44,6 +44,7 @@ learn-letta-code/
 │   ├── releases/v1.19.0.md                  # Approval-bound contract snapshot and alignment release
 │   ├── releases/v1.20.0.md                  # Interactive Agy Main guard and claim-review release
 │   ├── releases/v1.21.0.md                  # Cross-project dream daemon release
+│   ├── releases/v1.22.0.md                  # Lossless memory transport and curation safety release
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene

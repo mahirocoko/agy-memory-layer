@@ -133,6 +133,10 @@ Based on real A/B testing across 6 models on a hard scenario:
 
 ### Model Configuration
 
+Desired Dream v2 route, not wired: **Opus 4.6 primary**, **Gemini 4.8 High fallback**. Do not implement this routing in the current change, and do not silently substitute a Gemini 3.x catalog id for the fallback.
+
+A fresh `agy models` check on 2026-09-26 listed `claude-opus-4-6-thinking` and did not list `gemini-4.8-high`. The visible Gemini tiers were 3.8, 3.7, and 3.6 Flash plus 3.1 Pro. Fallback availability therefore requires another catalog check before Dream v2 activation. This JSON remains the desired configuration, not a live model binding.
+
 ```json
 // dream-state.json
 {
@@ -169,41 +173,36 @@ Based on real A/B testing across 6 models on a hard scenario:
 
 ---
 
-## Prerequisite: Remove Injection Budget Ceiling (separate task, do first)
+## Prerequisite: Active-memory notice threshold (separate from Dream v2)
 
-> **Source:** Cursor session analysis + Letta viewer comparison
+> **Source:** Current Agy source (`hook-inject-memory.ts`, `tools/memory-health.ts`) outranks the earlier plan wording. The 4,000-character per-file and 24,000-character aggregate figures came from Cursor memory-layer history. They are not an Agy injection ceiling.
 
-### Problem
-Doctor ย่อ `coding.md` (47K→949 chars) กับ `workflow.md` (43K→3,213 chars) ลงเหลือ bullet-point summaries แล้ว move ตัวเต็มไป `reference/letta-system/human/prefs/`. Agent เห็นแค่สรุปย่อ — ขาด detail ที่ Letta inject เต็ม.
+Dream v2 Phases 1–4 stay deferred. Do not implement `dream-reflector.ts` for this prerequisite.
 
-เพดานเดิม (from `src/memory-config.ts` or doctor checkSize):
-- 4,000 ตัวอักษร/ไฟล์
-- 24,000 ตัวอักษรทั้งก้อน
+### Verified Agy contract
+- Current source has no 4,000-character per-file injection ceiling and no 24,000-character aggregate injection ceiling. There is no `memory-config.ts` size ceiling and no Doctor `checkSize` character gate to remove.
+- `ACTIVE_MEMORY_BUDGET_TOKENS` is a runtime notice and a strict offline Doctor/health gate. It does not drop active content. It is not proof that the Agy host delivered a single message intact.
+- The threshold is **32,000** estimated tokens, raised from 1,400. Above it, PreInvocation still emits the full active projection and puts a `/doctor` notice on the final transport step. Deterministic `/dream` does not consolidate that projection. Raising the threshold does not by itself deliver full memory: a disposable Agy 1.2.11 / Opus 4.6 session received one 100,098-character hook message as a single `EPHEMERAL_MESSAGE`. The host omitted bytes and recorded `<truncated 51851 bytes>` around the end of `coding.md`. The coding tail was visible and a workflow tail rule was NOT VISIBLE.
+- Active content is packed into ordered inject steps of at most 40,000 UTF-8 bytes. Empty memory stays one authority-only step. The authority stanza stays on the first step. Chunks prefer newline and document boundaries; one oversized document is split on Unicode code points without dropping, duplicating, or inserting replacement characters. Budget accounting uses the aggregate payload before chunking and excludes the authority stanza, chunk labels, header, and notice. A follow-up Agy 1.2.11 / Opus 4.6 probe received five ordered messages of 1,871, 38,280, 15,503, 38,911, and 6,434 UTF-8 bytes without a transcript truncation marker; the model quoted unique tail rules from both `coding.md` and `workflow.md`. This verifies the current bounded fixture, not every future host version. There is still no per-file content ceiling.
+- `/doctor` and `memory-health.ts --strict` fail when a projection exceeds the threshold. Doctor does not automatically rewrite active files.
+- Current live Agy summary files were created by approved curation. Replacing those summaries is a separate pass through the existing provenance-preserving curation flow (`memory-curation.ts`).
+- The portable preference source for that curation comes from the current Mahiro Code/Letta system preference owners, but runtime-specific model/delegation prose must be adapted rather than copied byte-for-byte. Current Agy truth is owned by a focused `system/agy-runtime-routing.md`, live `agy models`, the installed agent manifests, and Evidence Controller. `~/.gemini/memory/reference/letta-system` does not exist and is not a source path.
+- A live Agy 1.2.11 / Opus 4.6 probe defined and invoked a native read-only `flash` child (`c5c015f9-b9a4-46cd-9f49-abbdcd6de54d`) that verified both version owners as `1.21.0`. The exact resolved child model ID and adversarial host enforcement of declared tool restrictions remain unverified. Herdr parent state stayed `done`; a wait restricted to `idle|blocked` timed out after the report existed, so lifecycle state alone is not completion proof.
 
-### Decision
-เอาเพดานออก → doctor เป็นคนกั้นแทน (warn/error เมื่อ budget ร้อน):
+### Source status
+1. [x] Raise `ACTIVE_MEMORY_BUDGET_TOKENS` from 1,400 to 32,000 in `hook-inject-memory.ts`
+2. [x] Point the budget notice at `/doctor` without claiming the host left the message untruncated
+3. [x] Prove the exact token boundary in the direct budget tests
+4. [x] Pack active injection into ordered transport steps of at most 40,000 UTF-8 bytes
+5. [x] Prove current Agy host delivery with unique tail rules from separate transport steps
+6. [x] Prepare and disposable-test an Agy-adapted curation: 24 prior units retained exactly, 5 superseded absolute rules archived, all 14 current model IDs captured, native subagents preferred, and direct-cli scoped to real external capability/session needs
+7. [x] Apply the fresh human-approved live curation at MemFS commit `1726af9973a61e46608995c428848fb4432aa955` with plan hash `b98f341c20f1835b89ff5ccef28be9586921ba85c18ad65f925a644a7a578970`; strict live health is clean at 24,603 / 32,000 estimated tokens, and a fresh Agy 1.2.11 / Opus 4.6 session recovered the native/direct/external route plus the Haabiz, reusable-skill, nested-repo, and tier-identity constraints from injected memory without tools
 
-| Item | Before | After |
-|---|---|---|
-| Per-file limit | 4,000 chars | **None** (doctor warns) |
-| Total active limit | 24,000 chars | **~112,000 chars** (~32K tokens, ~10% context like Letta) |
-| `ACTIVE_MEMORY_BUDGET_TOKENS` | 1,400 | **32,000** |
-| `projects-index.md` | In system/ | **Not needed** (hook resolves slug from workspace) |
-
-### Steps
-1. [ ] Restore full `coding.md` (47K), `workflow.md` (43K), `communication.md` (6K) from `reference/letta-system/human/prefs/` back to `system/human/prefs/` — write as separate focused files (like Letta), delete merged `preferences.md`
-2. [ ] Remove per-file (4,000) and total (24,000) character ceilings from doctor checkSize / memory-config
-3. [ ] Raise `ACTIVE_MEMORY_BUDGET_TOKENS` from 1,400 to 32,000 in `hook-inject-memory.ts`
-4. [ ] Update budget test ceiling to match
-5. [ ] Add dream prompt rule: don't grow `system/` files beyond N% per run; excess goes to `reference/`
-6. [ ] Verify: run injection, check full content is loaded, run doctor to validate budget
-7. [ ] Test: open Cursor CLI to compare `workflow.md` end-to-end visibility
-
-### Safety Net (replaces hard ceiling)
-- Doctor `checkSize`: warn when approaching budget, error above it
-- Dream prompt rule: cap per-run growth
-- Palace: visual inspection of active memory size
+### Not part of this change
+- Do not invent a per-file character limit.
+- Do not start Dream v2 phases or add `dream-reflector.ts`.
+- Do not implement Dream v2 reflection model routing. Its desired route stays Opus 4.6 primary and Gemini 4.8 High fallback, with a fresh `agy models` check before activation. The focused Agy runtime owner documents current execution routing separately and explicitly records that `gemini-4.8-high` is absent from the current catalog.
 
 ---
 
-> **Next session:** Do budget ceiling removal first, then start Dream v2 Phase 1.
+> **Next session:** The Agy-adapted live curation prerequisite is complete. Dream v2 phases remain deferred; start Phase 1 only from the current Agy model catalog and the separate desired reflection-route gate above.

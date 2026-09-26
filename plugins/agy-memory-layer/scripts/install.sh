@@ -135,7 +135,7 @@ echo "✓ Plugin config linked to ${CONFIG_LINK}"
 # 4. Verify hooks through the installed symlink
 echo "🔍 Validating hook scripts..."
 INJECT_OUTPUT="$(printf '{"workspacePaths":["%s"]}' "$(pwd)" | "$TARGET_LINK/scripts/hook-inject-memory.sh")"
-printf '%s' "$INJECT_OUTPUT" | node -e 'const fs=require("node:fs");const value=JSON.parse(fs.readFileSync(0,"utf8"));if(!Array.isArray(value.injectSteps)||value.injectSteps.length===0)process.exit(1)'
+printf '%s' "$INJECT_OUTPUT" | node -e 'const fs=require("node:fs");const steps=JSON.parse(fs.readFileSync(0,"utf8")).injectSteps;const bytes=(value)=>Buffer.byteLength(value,"utf8");if(!Array.isArray(steps)||steps.length===0||!steps.every((step)=>step&&typeof step.ephemeralMessage==="string"&&bytes(step.ephemeralMessage)>0&&bytes(step.ephemeralMessage)<=40000)||!steps[0].ephemeralMessage.includes("Authority Boundary"))process.exit(1)'
 STOP_OUTPUT="$(printf '{"decision":"stop"}' | "$TARGET_LINK/scripts/hook-memory-status.sh")"
 printf '%s' "$STOP_OUTPUT" | node -e 'const fs=require("node:fs");const value=JSON.parse(fs.readFileSync(0,"utf8"));if(value.decision!=="stop")process.exit(1)'
 echo "✓ Hook validation passed."

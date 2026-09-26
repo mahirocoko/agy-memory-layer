@@ -159,10 +159,7 @@ export function findCrossProjectSynapses(
   const seenPaths = new Set<string>()
 
   // Scan both active project learnings and archived dream learnings
-  const roots = [
-    path.join(memoryRoot, 'projects'),
-    path.join(memoryRoot, 'archives', 'projects'),
-  ]
+  const roots = [path.join(memoryRoot, 'projects'), path.join(memoryRoot, 'archives', 'projects')]
 
   for (const projectsDir of roots) {
     if (!fs.existsSync(projectsDir)) continue

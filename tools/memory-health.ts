@@ -7,7 +7,7 @@ import { inspectCommittedWorkingHypothesis } from '../plugins/agy-memory-layer/s
 import { isDirectCliInvocation } from '../plugins/agy-memory-layer/scripts/cli-entrypoint.ts'
 import {
   ACTIVE_MEMORY_BUDGET_TOKENS,
-  AUTHORITY_BOUNDARY_STANZA,
+  activeMemoryPayload,
   generatePreInvocationContext,
 } from '../plugins/agy-memory-layer/scripts/hook-inject-memory.ts'
 import { inspectCommittedMemoryProjection } from '../plugins/agy-memory-layer/scripts/layered-memory.ts'
@@ -67,15 +67,9 @@ export const inspectMemoryHealth = (
       JSON.stringify({ workspacePaths: [workspace], conversationId: 'memory-health-check' }),
       memoryRoot,
     )
-    const message = output.injectSteps[0]?.ephemeralMessage || ''
-    const authorityPrefix = `${AUTHORITY_BOUNDARY_STANZA}\n\n`
-    const activeMemoryMessage =
-      message === AUTHORITY_BOUNDARY_STANZA
-        ? ''
-        : message.startsWith(authorityPrefix)
-          ? message.slice(authorityPrefix.length)
-          : message
+    const activeMemoryMessage = activeMemoryPayload(output.injectSteps)
     const estimatedTokens = Math.ceil(activeMemoryMessage.length / 4)
+    const injectedText = output.injectSteps.map((step) => step.ephemeralMessage).join('\n')
     const workingHypothesis = inspectCommittedWorkingHypothesis(projectSlug, memoryRoot)
     const memoryProjection = inspectCommittedMemoryProjection(memoryRoot, projectSlug)
 
@@ -99,9 +93,9 @@ export const inspectMemoryHealth = (
               document.relativePath.endsWith('/rules.md'),
             )
           : true),
-      injectsArchive: message.includes('archive_'),
+      injectsArchive: injectedText.includes('archive_'),
       injectsSessionBoilerplate:
-        message.includes('Session Continuity') || message.includes('Autonomous Recall'),
+        injectedText.includes('Session Continuity') || injectedText.includes('Autonomous Recall'),
       workingHypothesisState: workingHypothesis.state,
       workingHypothesisPath: workingHypothesis.selectedPath,
       workingHypothesisDiagnostics: workingHypothesis.diagnostics,

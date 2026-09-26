@@ -88,6 +88,15 @@ const stateRootFor = (memoryRoot: string): string =>
 const pendingDirFor = (memoryRoot: string): string =>
   path.join(stateRootFor(memoryRoot), 'pending-curations')
 
+const assertGitIndexUnlocked = (memoryRoot: string): void => {
+  const indexLock = path.join(memoryRoot, '.git', 'index.lock')
+  if (fs.existsSync(indexLock)) {
+    throw new Error(
+      `Git index lock exists at ${indexLock}; refusing curation before writing memory.`,
+    )
+  }
+}
+
 const archivePathFor = (curationId: string, sourcePath: string): string =>
   `archives/curations/${curationId}/source/${sourcePath}`
 
@@ -383,6 +392,7 @@ export const reviewMemoryCuration = (
 
   return withMemoryWriteLock(memoryRoot, `approve curation ${proposalId}`, () => {
     assertMemoryRepositoryCleanForWrite(memoryRoot)
+    assertGitIndexUnlocked(memoryRoot)
     const plan = planMemoryCuration(memoryRoot, proposal.spec)
     if (plan.planHash !== proposal.planHash) {
       throw new Error(`Memory curation proposal is stale: ${proposalId}`)

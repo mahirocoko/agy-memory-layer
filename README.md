@@ -1,7 +1,7 @@
 # 🧠 agy-memory-layer
 
-[![Release](https://img.shields.io/badge/Release-v1.21.0-blue.svg)](./docs/releases/v1.21.0.md)
-[![Release Coverage](https://img.shields.io/badge/Release%20Coverage-86.56%25-green.svg)](./CONTRACT.md)
+[![Release](https://img.shields.io/badge/Release-v1.22.0-blue.svg)](./docs/releases/v1.22.0.md)
+[![Release Coverage](https://img.shields.io/badge/Release%20Coverage-86.81%25-green.svg)](./CONTRACT.md)
 [![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -13,9 +13,9 @@ summaries, uncommitted notes, or model confidence as current truth. It injects o
 and current-project memory, keeps learning explicit, and adds bounded safeguards for consequential
 actions and completion claims.
 
-> **Current release:** `v1.21.0` — ready for interactive, human-supervised use. It improves context
+> **Current release:** `v1.22.0` — ready for interactive, human-supervised use. It improves context
 > continuity, mutation gating, and evidence quality; it does not turn Gemini into an autonomous or
-> safety-trusted supervisor. See the [release notes](./docs/releases/v1.21.0.md).
+> safety-trusted supervisor. See the [release notes](./docs/releases/v1.22.0.md).
 
 ## Why it exists
 
@@ -55,10 +55,10 @@ curl -fsSL https://raw.githubusercontent.com/mahirocoko/agy-memory-layer/main/in
 ```
 
 The one-line installer follows `main`: on a later run it fast-forwards its cached source checkout.
-For a reproducible release-pinned installation, clone `v1.21.0` explicitly instead:
+For a reproducible release-pinned installation, clone `v1.22.0` explicitly instead:
 
 ```bash
-git clone --branch v1.21.0 --depth 1 https://github.com/mahirocoko/agy-memory-layer.git
+git clone --branch v1.22.0 --depth 1 https://github.com/mahirocoko/agy-memory-layer.git
 cd agy-memory-layer
 ./install.sh
 ```
@@ -239,9 +239,9 @@ pnpm test:coverage
 agy plugin validate plugins/agy-memory-layer
 ```
 
-The `v1.20.0` release passed **206/206 Node tests**, **11/11 generated integration scenarios**, and
-plugin validation for **14 skills, 9 agents, and 3 hooks** with zero errors. Its release-preparation
-coverage snapshot is **86.56% lines / 74.75% branches / 90.66% functions**.
+The `v1.22.0` release passed **208/208 Node tests**, **11/11 generated integration scenarios**, and
+plugin validation for **14 skills, 9 agents, and 3 hooks** with zero errors. Its exact
+release-preparation coverage snapshot is recorded in the [release notes](./docs/releases/v1.22.0.md).
 
 ## Documentation map
 
@@ -250,7 +250,7 @@ coverage snapshot is **86.56% lines / 74.75% branches / 90.66% functions**.
 - [Development commands](./docs/development-commands.md) — script and maintenance reference
 - [File organization](./docs/file-organization.md) — source ownership map
 - [Letta parity](./docs/letta-parity.md) — current parity and non-parity boundaries
-- [v1.20.0 release notes](./docs/releases/v1.20.0.md) — shipped scope, checks, and limitations
+- [v1.22.0 release notes](./docs/releases/v1.22.0.md) — lossless memory transport, curation safety, checks, and limitations
 - [Generated test report](./TEST_REPORT.md) — latest integration scenario evidence
 
 ## License and acknowledgement

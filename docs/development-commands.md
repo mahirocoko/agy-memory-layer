@@ -2,9 +2,9 @@
 
 This reference documents all testing, verification, script runners, and daemon commands available in this codebase.
 
-**Latest published release:** `v1.20.0` (interactive and human-supervised)
+**Latest published release:** `v1.22.0` (interactive and human-supervised)
 
-**Current development state:** matches `v1.20.0`; no newer candidate is declared
+**Current development state:** matches `v1.22.0`; no newer candidate is declared
 
 ---
 
@@ -106,8 +106,13 @@ pnpm memory:health -- --workspace "$(pwd)"
 ```
 
 Pass additional `--workspace <path>` arguments to audit multiple active scopes.
-The strict command checks clean Git state, complete project scopes, the 1,400-token
+The strict command checks clean Git state, complete project scopes, the 32,000-token
 projection budget, tracked transient residue, and archive/session-boilerplate injection.
+Crossing that budget fails the offline gate. The token count is the aggregate
+active payload before transport chunking, excluding the authority stanza,
+chunk labels, active-memory header, and budget notice. PreInvocation packs that
+payload into ordered steps of at most 40,000 UTF-8 bytes and puts the `/doctor`
+notice only on the final step. Empty memory stays one authority-only step.
 
 ---
 

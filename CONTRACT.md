@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.21.0`
+**Package version:** `1.22.0`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.21.0` on 2026-09-24 for interactive,
+**Release state:** Released as `v1.22.0` on 2026-09-26 for interactive,
 human-supervised use
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
@@ -49,9 +49,10 @@ into MemFS commits.
   back to the current directory. A host timeout or unexpected hook-process
   failure can omit the entire injection; this program contract is not a host
   availability guarantee.
-- The fixed authority stanza overhead is outside the existing 1,400-token
-  active-memory projection calculation; the memory/status portion retains its
-  current budget semantics.
+- The fixed authority stanza overhead is outside the existing 32,000-token
+  active-memory projection calculation. The active-memory header, transport
+  labels, and budget notice are also outside that threshold. Health uses the
+  aggregate active payload before transport chunking.
 - Summaries (including host compaction summaries), recall results, injected
   memory (`[MemFS Active Memory]`), and child subagent reports are
   model-guided historical evidence rather than current authorization,
@@ -75,10 +76,30 @@ into MemFS commits.
 - Archive paths, legacy uncurated learnings, and deterministic session-continuity
   boilerplate are never active prompt memory. They remain searchable through
   `/memory search` when retained as Markdown under `archives/`.
-- The strict offline health threshold is 1,400 estimated tokens. PreInvocation
-  remains advisory above that threshold and continues to inject a budget notice
-  before every invocation; it does not truncate rules or suppress calls without
-  an Agy host persistence contract.
+- The strict offline health threshold is 32,000 estimated tokens, measured on the
+  aggregate active payload before transport chunking. PreInvocation remains
+  advisory above that threshold and still emits the full projection. The budget
+  notice is only on the final transport step and points to `/doctor` for
+  inspection and curation. Deterministic `/dream` does not consolidate that
+  active projection. The token gate does not drop active content.
+- Active content is packed into ordered `injectSteps` of at most 40,000
+  UTF-8 bytes. The authority stanza stays on the first step. Empty memory stays
+  one authority-only step. Chunks prefer newline and document boundaries, and a
+  single oversized document is split on Unicode code points without dropping,
+  duplicating, or inserting replacement characters.
+  This is transport chunking, not a content ceiling. Budget accounting excludes
+  the authority stanza, per-chunk labels, the active-memory header, and the
+  budget notice.
+- A disposable Agy 1.2.11 / Opus 4.6 probe received one 100,098-character hook
+  message as a single `EPHEMERAL_MESSAGE`. The host omitted bytes and recorded
+  `<truncated 51851 bytes>` around the end of `coding.md`. The model saw the
+  coding tail and returned NOT VISIBLE for a workflow tail rule. The hook itself
+  had not dropped that content. Byte-bounded multi-step transport is the
+  mitigation. A follow-up probe on the same host/model path delivered five
+  ordered messages of 1,871, 38,280, 15,503, 38,911, and 6,434 UTF-8 bytes
+  without a transcript truncation marker. The model then quoted unique tail
+  rules from both `coding.md` and `workflow.md`. This verifies the current
+  bounded fixture; it is not a guarantee for every future host version.
 
 ### 2. Explicit, targeted persistence
 
@@ -124,7 +145,8 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
   requires a clean MemFS repository and propagates pull/rebase failures.
 - Pending proposals are stored outside the Git working tree and are revalidated
   for path containment, exact old/new receipts, stale target content, and stale
-  MemFS `HEAD` before approval.
+  MemFS `HEAD` before approval. Curation approval also refuses an existing
+  `.git/index.lock` before writing any target; it never deletes that lock.
 - `/remember` routes complete proposed content through
   `memory-approval.ts propose` rather than direct `git add -A`.
 - A move, demotion, paraphrase, deduplication, or removal uses
@@ -566,8 +588,9 @@ The retained pre-release readiness owner is
 [`docs/agy-main-phase4b-readiness-2026-09-13.md`](./docs/agy-main-phase4b-readiness-2026-09-13.md),
 with bounded retained evidence under
 [`docs/evidence/agy-main-phase4b-canary-2026-09-13/`](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md).
-The strongest supported verdict is an interactive, human-supervised `v1.20.0`
-release, not an unsupervised safety-trusted main. Herdr may report
+The strongest supported verdict is an interactive, human-supervised `v1.22.0`
+release, not an unsupervised safety-trusted main. The retained `v1.20.0`
+readiness packet still owns the original supervision evidence. Herdr may report
 `done` while its pane still awaits permission, and the reviewer model may not
 observe that permission UI; interactive pane supervision remains required.
 
@@ -592,7 +615,7 @@ observe that permission UI; interactive pane supervision remains required.
 6. An automated release workflow remains deferred. Releases use the existing
    manual tag/GitHub Release path only after source, host, and human gates pass;
    current release evidence lives in
-   [`docs/releases/v1.20.0.md`](./docs/releases/v1.20.0.md).
+   [`docs/releases/v1.22.0.md`](./docs/releases/v1.22.0.md).
 
 ## Distribution
 

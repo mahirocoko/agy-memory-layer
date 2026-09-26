@@ -2,9 +2,9 @@
 
 Welcome to **`agy-memory-layer`** (`learn-letta-code`). This document defines the engineering standards, architecture rules, and non-negotiable conventions for all agents and pair programmers working in this repository.
 
-**Latest published release:** `v1.21.0` (interactive and human-supervised)
+**Latest published release:** `v1.22.0` (interactive and human-supervised)
 
-**Current development state:** matches `v1.21.0`; no newer candidate is declared
+**Current development state:** matches `v1.22.0`; no newer candidate is declared
 
 ---
 
@@ -70,7 +70,7 @@ Host Workspace (learn-letta-code)
 - **Atomic confirmation requests**: PreToolUse denies ambiguous bundles, malformed inputs, destructive actions, and protected targets, while one recognized scoped mutation receives `force_ask`. This classifier does not authenticate authorization or grants and does not universally cover shell semantics.
 - **Material claims**: Bind consequential claims to current owner and consumer bytes, explicit counterexample probes/outcomes, and fresh reviewer metadata. Packet verification is structural/current-byte evidence, not semantic proof; reviewer identity remains `not-authenticated`.
 - **Continuity**: Bounded re-grounding and fresh-conversation rotation are model-guided policy only. There is no compaction interceptor, mission supervisor, deterministic rotation, or automatic continuation.
-- **Supervision**: The `v1.20.0` release requires interactive pane supervision because host lifecycle status may be stale while permission UI remains pending, and a reviewer model may not observe that UI.
+- **Supervision**: The current `v1.22.0` release retains the interactive pane-supervision boundary established by `v1.20.0`: host lifecycle status may be stale while permission UI or a final response remains pending, and a reviewer model may not observe that UI.
 
 ---
 
@@ -137,6 +137,7 @@ Detailed operational documentation is split into modular files under [`docs/`](d
 - [`docs/host-evidence-phase3.md`](docs/host-evidence-phase3.md) — Current-source evidence-only verifier for terminal Direct CLI callback receipts, Phase 2 sealing, repository/MemFS content invariance, retained checkpoints, and non-claims; the installed Direct CLI workflow owns Agy/Herdr lifecycle execution.
 - [`docs/agy-main-phase4a-external-product-attribution-2026-09-13.md`](docs/agy-main-phase4a-external-product-attribution-2026-09-13.md) — Historical external-product attribution baseline; not the current release owner.
 - [`docs/agy-main-phase4b-readiness-2026-09-13.md`](docs/agy-main-phase4b-readiness-2026-09-13.md) — Retained `v1.20.0` pre-release readiness evidence and interactive/human-supervised boundary; links the retained canary evidence.
+- [`docs/releases/v1.22.0.md`](docs/releases/v1.22.0.md) — Lossless active-memory transport and Agy-adapted curation release.
 - [`docs/releases/v1.21.0.md`](docs/releases/v1.21.0.md) — Cross-project dream daemon release, verification, and usage.
 - [`docs/releases/v1.20.0.md`](docs/releases/v1.20.0.md) — Interactive Agy Main controls, verification, host evidence, and limitations.
 - [`docs/development-commands.md`](docs/development-commands.md) — Script runners, testing, and daemon commands.

@@ -100,17 +100,28 @@ await runTest('Hooks Contract', 'PreInvocation Hook outputs valid AGY JSON schem
     throw new Error("Missing 'injectSteps' array in output JSON")
   }
 
-  if (output.injectSteps.length > 0) {
-    const step = output.injectSteps[0]
-    if (!step.ephemeralMessage || typeof step.ephemeralMessage !== 'string') {
-      throw new Error('Invalid ephemeralMessage structure')
-    }
-    if (!step.ephemeralMessage.includes('MemFS Active Memory')) {
-      throw new Error('ephemeralMessage does not contain memory marker')
-    }
-    if (!step.ephemeralMessage.includes('Agent Persona')) {
-      throw new Error('ephemeralMessage does not contain global persona memory')
-    }
+  const messages = output.injectSteps.map(
+    (step: { ephemeralMessage?: unknown }) => step.ephemeralMessage,
+  )
+  if (
+    messages.some(
+      (message: unknown) => typeof message !== 'string' || Buffer.byteLength(message, 'utf8') === 0,
+    )
+  ) {
+    throw new Error('Invalid ephemeralMessage structure')
+  }
+  if (messages.some((message: unknown) => Buffer.byteLength(String(message), 'utf8') > 40000)) {
+    throw new Error('inject step exceeds the 40000-byte transport bound')
+  }
+  const joinedMessage = messages.join('\n')
+  if (!String(messages[0]).includes('Authority Boundary')) {
+    throw new Error('first inject step does not carry the authority stanza')
+  }
+  if (!joinedMessage.includes('MemFS Active Memory')) {
+    throw new Error('ephemeralMessage does not contain memory marker')
+  }
+  if (!joinedMessage.includes('Agent Persona')) {
+    throw new Error('ephemeralMessage does not contain global persona memory')
   }
 
   const committedHuman = readCommittedMemoryFile(MEMORY_ROOT, 'global/human.md')
@@ -120,7 +131,9 @@ await runTest('Hooks Contract', 'PreInvocation Hook outputs valid AGY JSON schem
     input: payload,
     encoding: 'utf-8',
   })
-  const dirtyMessage = JSON.parse(dirtyProc.stdout.trim()).injectSteps[0].ephemeralMessage
+  const dirtyMessage = JSON.parse(dirtyProc.stdout.trim())
+    .injectSteps.map((step: { ephemeralMessage: string }) => step.ephemeralMessage)
+    .join('\n')
   if (dirtyMessage.includes('UNCOMMITTED_SENTINEL')) {
     throw new Error('PreInvocation injected uncommitted working-tree memory')
   }
@@ -205,14 +218,18 @@ await runTest(
       input: JSON.stringify({ workspacePaths: [fakeWorkspaceA] }),
       encoding: 'utf-8',
     })
-    const resA = JSON.parse(procA.stdout.trim()).injectSteps[0].ephemeralMessage
+    const resA = JSON.parse(procA.stdout.trim())
+      .injectSteps.map((step: { ephemeralMessage: string }) => step.ephemeralMessage)
+      .join('\n')
 
     // Test payload B
     const procB = spawnSync('bash', [scriptPath], {
       input: JSON.stringify({ workspacePaths: [fakeWorkspaceB] }),
       encoding: 'utf-8',
     })
-    const resB = JSON.parse(procB.stdout.trim()).injectSteps[0].ephemeralMessage
+    const resB = JSON.parse(procB.stdout.trim())
+      .injectSteps.map((step: { ephemeralMessage: string }) => step.ephemeralMessage)
+      .join('\n')
 
     // Assert isolation
     if (!resA.includes('Secret Alpha DB') || resA.includes('Secret Beta DB')) {

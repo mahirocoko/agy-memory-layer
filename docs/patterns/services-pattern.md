@@ -18,10 +18,22 @@
             ▼
 {
   "injectSteps": [
-    { "ephemeralMessage": "🧠 **[MemFS Active Memory]** ..." }
+    { "ephemeralMessage": "authority stanza, then [MemFS Transport 1/N] and the first chunk" },
+    { "ephemeralMessage": "[MemFS Transport 2/N] through a later document tail" }
   ]
 }
 ```
+
+A disposable Agy 1.2.11 / Opus 4.6 session received one 100,098-character
+message. The host omitted bytes and recorded `<truncated 51851 bytes>` around
+the end of `coding.md`, so a later owner's tail was NOT VISIBLE. Injection now
+packs active content into ordered steps of at most 40,000 UTF-8 bytes. That is
+byte-bounded transport chunking, not a content ceiling. A follow-up probe on the
+same host/model path received all five ordered messages without a transcript
+truncation marker, and the model quoted unique tail rules from both `coding.md`
+and `workflow.md`. This verifies the current bounded fixture, not every future
+host version. The 32,000-token gate still does not drop active content, and it
+is counted before chunking.
 
 The shell wrapper has one TypeScript implementation path and fails clearly when
 Node 22+ or the source file is unavailable. It does not contain a weaker fallback

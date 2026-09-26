@@ -857,6 +857,16 @@ describe('provenance-preserving memory curation', () => {
       assert.strictEqual(runGit(root, ['rev-parse', 'HEAD']), expectedHead)
       assert.strictEqual(fs.readFileSync(path.join(root, sourcePath), 'utf-8'), sourceContent)
 
+      const indexLock = path.join(root, '.git/index.lock')
+      fs.writeFileSync(indexLock, '')
+      assert.throws(
+        () => reviewMemoryCuration(root, proposal.id, 'approve'),
+        /Git index lock exists .* refusing curation before writing memory/,
+      )
+      assert.strictEqual(fs.readFileSync(path.join(root, sourcePath), 'utf-8'), sourceContent)
+      assert.strictEqual(runGit(root, ['status', '--porcelain']), '')
+      fs.rmSync(indexLock)
+
       const failingHook = path.join(root, '.git/hooks/pre-commit')
       fs.writeFileSync(failingHook, '#!/bin/sh\nexit 1\n')
       fs.chmodSync(failingHook, 0o755)

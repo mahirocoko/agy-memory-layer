@@ -336,80 +336,94 @@ export const inspectCommittedMemoryProjection = (
 const renderLayeredSystemSection = (document: MemoryDocument): string =>
   `### ${document.relativePath}\n_${document.description}_\n${document.body}\n\n`
 
-export const renderCommittedMemoryProjection = (
+const renderReferenceIndexSection = (memoryRoot: string, external: MemoryDocument[]): string => {
+  const visible: MemoryDocument[] = []
+  let renderedChars = 0
+  for (const document of external) {
+    const line = `- ${document.relativePath} — ${document.description}`
+    if (
+      visible.length >= EXTERNAL_INDEX_MAX_ENTRIES ||
+      renderedChars + line.length > EXTERNAL_INDEX_MAX_CHARS
+    ) {
+      break
+    }
+    visible.push(document)
+    renderedChars += line.length
+  }
+  let section = `### 📚 On-Demand Memory\nMemory root: ${path.resolve(memoryRoot)}\nRead a listed file only when its description matches the current task.\n${visible.map((document) => `- ${document.relativePath} — ${document.description}`).join('\n')}\n`
+  const omitted = external.length - visible.length
+  if (omitted > 0) {
+    section += `- … ${omitted} additional reference file(s) omitted from the bounded index\n`
+  }
+  return `${section}\n`
+}
+
+export const renderCommittedMemorySections = (
   memoryRoot: string,
   projection: MemoryProjection,
-): string => {
+): string[] => {
   if (projection.mode === 'conflict') {
-    return `### ⚠️ Layered Memory Conflict\n${projection.diagnostics.join('\n')}\nResolve the committed layout through the migration or rollback workflow before relying on active memory.\n\n`
+    return [
+      `### ⚠️ Layered Memory Conflict\n${projection.diagnostics.join('\n')}\nResolve the committed layout through the migration or rollback workflow before relying on active memory.\n\n`,
+    ]
   }
 
   if (projection.mode === 'legacy') {
-    let content = ''
     const byPath = new Map(
       [...projection.globalSystem, ...projection.projectSystem].map((document) => [
         document.relativePath,
         document,
       ]),
     )
+    const sections: string[] = []
     const human = byPath.get('global/human.md')
     if (human?.body) {
-      content += `### 👤 User Profile & Preferences (global/human.md)\n${human.body}\n\n`
+      sections.push(`### 👤 User Profile & Preferences (global/human.md)\n${human.body}\n\n`)
     }
     const persona = byPath.get('global/persona.md')
     if (persona?.body) {
-      content += `### 🤖 Agent Persona (global/persona.md)\n${persona.body}\n\n`
+      sections.push(`### 🤖 Agent Persona (global/persona.md)\n${persona.body}\n\n`)
     }
     const project = byPath.get(`projects/${projection.projectSlug}/project.md`)
     if (project?.body) {
-      content += `### 📁 Project Context (${projection.projectSlug}/project.md)\n${project.body}\n\n`
+      sections.push(
+        `### 📁 Project Context (${projection.projectSlug}/project.md)\n${project.body}\n\n`,
+      )
     }
     const rules = byPath.get(`projects/${projection.projectSlug}/rules.md`)
     if (rules?.body) {
-      content += `### 📋 Project Rules (${projection.projectSlug}/rules.md)\n${rules.body}\n\n`
+      sections.push(`### 📋 Project Rules (${projection.projectSlug}/rules.md)\n${rules.body}\n\n`)
     }
-    return content
+    return sections
   }
 
-  let content = ''
+  const sections: string[] = []
   const persona = projection.globalSystem.find(
     (document) => document.relativePath === 'system/persona.md',
   )
   if (persona) {
-    content += `### 🤖 Agent Identity (${persona.relativePath})\n${persona.body}\n\n`
+    sections.push(`### 🤖 Agent Identity (${persona.relativePath})\n${persona.body}\n\n`)
   }
   for (const document of projection.globalSystem.filter(
     (candidate) => candidate.relativePath !== 'system/persona.md',
   )) {
-    content += renderLayeredSystemSection(document)
+    sections.push(renderLayeredSystemSection(document))
   }
   for (const document of projection.projectSystem) {
-    content += renderLayeredSystemSection(document)
+    sections.push(renderLayeredSystemSection(document))
   }
-
   if (projection.external.length > 0) {
-    const visible: MemoryDocument[] = []
-    let renderedChars = 0
-    for (const document of projection.external) {
-      const line = `- ${document.relativePath} — ${document.description}`
-      if (
-        visible.length >= EXTERNAL_INDEX_MAX_ENTRIES ||
-        renderedChars + line.length > EXTERNAL_INDEX_MAX_CHARS
-      ) {
-        break
-      }
-      visible.push(document)
-      renderedChars += line.length
-    }
-    content += `### 📚 On-Demand Memory\nMemory root: ${path.resolve(memoryRoot)}\nRead a listed file only when its description matches the current task.\n${visible.map((document) => `- ${document.relativePath} — ${document.description}`).join('\n')}\n`
-    const omitted = projection.external.length - visible.length
-    if (omitted > 0)
-      content += `- … ${omitted} additional reference file(s) omitted from the bounded index\n`
-    content += '\n'
+    sections.push(renderReferenceIndexSection(memoryRoot, projection.external))
   }
-
   if (projection.diagnostics.length > 0) {
-    content += `### ⚠️ Layered Memory Diagnostics\n${projection.diagnostics.join('\n')}\nMalformed committed files were excluded from active memory.\n\n`
+    sections.push(
+      `### ⚠️ Layered Memory Diagnostics\n${projection.diagnostics.join('\n')}\nMalformed committed files were excluded from active memory.\n\n`,
+    )
   }
-  return content
+  return sections
 }
+
+export const renderCommittedMemoryProjection = (
+  memoryRoot: string,
+  projection: MemoryProjection,
+): string => renderCommittedMemorySections(memoryRoot, projection).join('')

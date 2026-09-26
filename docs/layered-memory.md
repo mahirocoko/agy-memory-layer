@@ -91,10 +91,24 @@ reference-only fact through the Memory search path. The host probe must remain
 read-only and must not be generalized to legacy or write behavior it did not
 exercise.
 
-The strict health budget remains 1,400 estimated tokens. Reference-index
-entries count toward that budget because they are injected; reference bodies do
-not. PreInvocation remains advisory over budget, while `/doctor --strict`
-provides the deterministic blocking gate.
+The strict health budget is 32,000 estimated tokens of the aggregate active
+payload before transport chunking. It excludes the authority stanza, chunk
+labels, active-memory header, and budget notice. Reference-index entries count
+toward that budget because they are injected; reference bodies do not.
+PreInvocation remains advisory over budget and does not drop active content.
+It packs injection into ordered steps of at most 40,000 UTF-8 bytes, preferring
+newline and document boundaries, and splits one oversized document on Unicode
+code points without omitting text. A disposable Agy 1.2.11 / Opus 4.6 session
+received one 100,098-character message; the host omitted bytes and recorded
+`<truncated 51851 bytes>` around the end of `coding.md`, and the workflow tail
+was NOT VISIBLE. That host byte truncation is why the single-message path is
+insufficient. A follow-up probe on the same Agy 1.2.11 / Opus 4.6 path delivered
+five ordered messages of 1,871, 38,280, 15,503, 38,911, and 6,434 UTF-8 bytes
+without a transcript truncation marker. The model quoted unique tail rules from
+both `coding.md` and `workflow.md`. This verifies the current bounded fixture,
+not every future host version. The notice points to `/doctor` for inspection and
+curation. `/doctor --strict` provides the deterministic blocking gate and does
+not rewrite active files.
 
 ## Write and Approval Contract
 
@@ -140,8 +154,9 @@ Planning and proposing do not mutate MemFS. Approval archives every exact source
 blob under `archives/curations/<id>/source/`, writes a hash-bound manifest,
 applies targets/removals, and creates one targeted commit. Missing or duplicate
 dispositions, stale receipts, stale `HEAD`, invalid destinations, dirty MemFS,
-or lock contention fail before activation. The read-only compactor may suggest
-changes but cannot bypass this protocol.
+or lock contention fail before activation. An existing `.git/index.lock` is a
+pre-write curation failure and is never deleted automatically. The read-only
+compactor may suggest changes but cannot bypass this protocol.
 
 ## Legacy-to-Layered Migration
 

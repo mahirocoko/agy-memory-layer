@@ -43,8 +43,26 @@ const {
   synthesizeConversationLearning,
   printStatus,
 } = await import(path.join(SCRIPTS_DIR, 'dream-daemon.ts'))
-const { AUTHORITY_BOUNDARY_STANZA, generatePreInvocationContext, getRecentLearningsSnippet } =
-  await import(path.join(SCRIPTS_DIR, 'hook-inject-memory.ts'))
+type InjectStep = {
+  ephemeralMessage: string
+}
+
+const {
+  ACTIVE_MEMORY_BUDGET_TOKENS,
+  ACTIVE_MEMORY_TRANSPORT_BYTES,
+  AUTHORITY_BOUNDARY_STANZA,
+  activeMemoryPayload,
+  generatePreInvocationContext: loadPreInvocationContext,
+  getRecentLearningsSnippet,
+  utf8ByteLength,
+} = await import(path.join(SCRIPTS_DIR, 'hook-inject-memory.ts'))
+const generatePreInvocationContext: (
+  inputJson: string,
+  memoryRootOverride?: string,
+) => { injectSteps: InjectStep[] } = loadPreInvocationContext
+const { inspectCommittedMemoryProjection, renderCommittedMemoryProjection } = await import(
+  path.join(SCRIPTS_DIR, 'layered-memory.ts')
+)
 const { getWorkingHypothesisPath, inspectCommittedWorkingHypothesis } = await import(
   path.join(SCRIPTS_DIR, 'active-learning.ts')
 )
@@ -228,7 +246,28 @@ describe('Unit Coverage Extensions', () => {
     const parsed = JSON.parse(res.stdout)
     assert.strictEqual(Array.isArray(parsed.injectSteps), true)
     assert.strictEqual(parsed.injectSteps.length > 0, true)
-    assert.strictEqual(parsed.injectSteps[0].ephemeralMessage.includes('MemFS Active Memory'), true)
+    assert.strictEqual(
+      parsed.injectSteps.every(
+        (step: { ephemeralMessage?: unknown }) =>
+          typeof step.ephemeralMessage === 'string' &&
+          utf8ByteLength(step.ephemeralMessage) > 0 &&
+          utf8ByteLength(step.ephemeralMessage) <= ACTIVE_MEMORY_TRANSPORT_BYTES,
+      ),
+      true,
+    )
+    assert.strictEqual(parsed.injectSteps[0].ephemeralMessage.includes('Authority Boundary'), true)
+    assert.strictEqual(
+      parsed.injectSteps.some((step: { ephemeralMessage: string }) =>
+        step.ephemeralMessage.includes('MemFS Active Memory'),
+      ),
+      true,
+    )
+    assert.strictEqual(
+      parsed.injectSteps.some((step: { ephemeralMessage: string }) =>
+        step.ephemeralMessage.includes('Agent Persona'),
+      ),
+      true,
+    )
 
     for (const malformedInput of ['{"workspacePaths":', 'null', '{"workspacePaths":"bad"}']) {
       const malformedResult = spawnSync('bash', [hookScript], {
@@ -346,7 +385,9 @@ describe('Unit Coverage Extensions', () => {
     const conflictedContext = generatePreInvocationContext(
       JSON.stringify({ workspacePaths: [path.join(TEST_TEMP_ROOT, slug)] }),
     )
-    const conflictedMessage = conflictedContext.injectSteps[0]?.ephemeralMessage || ''
+    const conflictedMessage = conflictedContext.injectSteps
+      .map((step) => step.ephemeralMessage)
+      .join('\n')
     assert.strictEqual(conflictedMessage.includes('Working Hypothesis Conflict'), true)
     assert.strictEqual(
       conflictedMessage.includes('canonical committed evidence is injected'),
@@ -383,7 +424,7 @@ describe('Unit Coverage Extensions', () => {
     const dirtyContext = generatePreInvocationContext(
       JSON.stringify({ workspacePaths: [path.join(TEST_TEMP_ROOT, slug)] }),
     )
-    const dirtyMessage = dirtyContext.injectSteps[0]?.ephemeralMessage || ''
+    const dirtyMessage = dirtyContext.injectSteps.map((step) => step.ephemeralMessage).join('\n')
     assert.strictEqual(dirtyMessage.includes('UNCOMMITTED_HYPOTHESIS_SENTINEL'), false)
     assert.strictEqual(dirtyMessage.includes('canonical committed evidence is injected'), true)
     assert.strictEqual(dirtyMessage.includes('Uncommitted memory is not active'), true)
@@ -456,7 +497,7 @@ describe('Unit Coverage Extensions', () => {
     })
   })
 
-  it('keeps the strict active-memory budget healthy at 1,400 and failing above it', () => {
+  it('keeps the strict active-memory budget healthy at the token ceiling and failing above it', () => {
     const slug = 'budget-boundary'
     const projectDir = path.join(MEMORY_ROOT, 'projects', slug)
     const projectPath = path.join(projectDir, 'project.md')
@@ -472,13 +513,15 @@ describe('Unit Coverage Extensions', () => {
       reason: 'test: seed budget boundary fixture',
     })
 
-    const baselineMessage = generatePreInvocationContext(
+    const baselineOutput = generatePreInvocationContext(
       JSON.stringify({ workspacePaths: [workspace] }),
-    ).injectSteps[0]?.ephemeralMessage
-    assert.ok(baselineMessage)
-    assert.strictEqual(baselineMessage.startsWith(AUTHORITY_BOUNDARY_STANZA), true)
-    const baseline = baselineMessage.slice(AUTHORITY_BOUNDARY_STANZA.length + 2)
-    const paddingLength = 1400 * 4 - baseline.length
+    )
+    assert.strictEqual(
+      baselineOutput.injectSteps[0]?.ephemeralMessage.startsWith(AUTHORITY_BOUNDARY_STANZA),
+      true,
+    )
+    const baseline = activeMemoryPayload(baselineOutput.injectSteps)
+    const paddingLength = ACTIVE_MEMORY_BUDGET_TOKENS * 4 - baseline.length
     assert.strictEqual(paddingLength > 0, true)
     fs.writeFileSync(projectPath, `# Budget Boundary\n${'x'.repeat(paddingLength - 1)}`)
     commitMemoryPaths({
@@ -488,7 +531,7 @@ describe('Unit Coverage Extensions', () => {
     })
 
     const exact = inspectMemoryHealth(MEMORY_ROOT, [workspace])
-    assert.strictEqual(exact.workspaces[0]?.estimatedTokens, 1400)
+    assert.strictEqual(exact.workspaces[0]?.estimatedTokens, ACTIVE_MEMORY_BUDGET_TOKENS)
     assert.strictEqual(exact.workspaces[0]?.withinBudget, true)
 
     fs.appendFileSync(projectPath, 'x')
@@ -498,12 +541,12 @@ describe('Unit Coverage Extensions', () => {
       reason: 'test: exceed exact budget boundary',
     })
     const over = inspectMemoryHealth(MEMORY_ROOT, [workspace])
-    assert.strictEqual(over.workspaces[0]?.estimatedTokens > 1400, true)
+    assert.strictEqual(over.workspaces[0]?.estimatedTokens, ACTIVE_MEMORY_BUDGET_TOKENS + 1)
     assert.strictEqual(over.workspaces[0]?.withinBudget, false)
     assert.strictEqual(
       generatePreInvocationContext(
         JSON.stringify({ workspacePaths: [workspace] }),
-      ).injectSteps[0]?.ephemeralMessage.includes('MemFS Budget Notice'),
+      ).injectSteps.some((step) => step.ephemeralMessage.includes('MemFS Budget Notice')),
       true,
     )
 
@@ -513,6 +556,142 @@ describe('Unit Coverage Extensions', () => {
       relativePaths,
       reason: 'test: remove budget boundary fixture',
     })
+  })
+
+  it('keeps large active documents lossless inside transport chunks', () => {
+    const memoryRoot = path.join(TEST_TEMP_ROOT, 'split-inject-memroot')
+    const workspace = path.join(TEST_TEMP_ROOT, 'split-inject-workspace')
+    fs.rmSync(memoryRoot, { recursive: true, force: true })
+    fs.mkdirSync(memoryRoot, { recursive: true })
+    execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: memoryRoot })
+    fs.mkdirSync(workspace, { recursive: true })
+
+    const codingHead = 'CODING_HEAD_MARKER'
+    const codingTail = 'CODING_TAIL_MARKER'
+    const workflowHead = 'WORKFLOW_HEAD_MARKER'
+    const workflowTail = 'WORKFLOW_TAIL_MARKER'
+    const wideHead = 'WIDE_HEAD_MARKER'
+    const wideTail = 'WIDE_TAIL_MARKER'
+    const wideRun = 'o'.repeat(45000)
+    const thaiHead = 'หัวไทย_THAI_HEAD'
+    const thaiTail = 'ท้ายไทย_THAI_TAIL'
+    const thaiRun = 'ก😊'.repeat(5600)
+    const hiddenTail = 'OTHER_PROJECT_TAIL_MARKER'
+    const referenceSecret = 'SECRET_REFERENCE_BODY'
+    const writeDocument = (relativePath: string, description: string, body: string) => {
+      const fullPath = path.join(memoryRoot, relativePath)
+      fs.mkdirSync(path.dirname(fullPath), { recursive: true })
+      fs.writeFileSync(fullPath, `---\ndescription: ${description}\n---\n${body}`)
+    }
+    writeDocument(
+      'system/human/prefs/coding.md',
+      'Coding preferences',
+      `${codingHead}\n${'c'.repeat(30000)}\n${codingTail}\n`,
+    )
+    writeDocument(
+      'system/human/prefs/workflow.md',
+      'Workflow preferences',
+      `${workflowHead}\n${'w'.repeat(30000)}\n${workflowTail}\n`,
+    )
+    writeDocument(
+      'system/human/prefs/oversized.md',
+      'Oversized owner',
+      `${wideHead}\n${wideRun}\n${wideTail}\n`,
+    )
+    writeDocument(
+      'system/human/prefs/thai.md',
+      'Thai and emoji owner',
+      `${thaiHead}\n${thaiRun}\n${thaiTail}\n`,
+    )
+    writeDocument('projects/other-owner/system/hidden.md', 'Other project owner', `${hiddenTail}\n`)
+    writeDocument('reference/hidden-detail.md', 'Hidden reference detail', `${referenceSecret}\n`)
+    commitMemoryPaths({
+      memoryRoot,
+      relativePaths: [
+        'system/human/prefs/coding.md',
+        'system/human/prefs/workflow.md',
+        'system/human/prefs/oversized.md',
+        'system/human/prefs/thai.md',
+        'projects/other-owner/system/hidden.md',
+        'reference/hidden-detail.md',
+      ],
+      reason: 'test: seed transport chunk owners',
+    })
+
+    const steps = generatePreInvocationContext(
+      JSON.stringify({ workspacePaths: [workspace] }),
+      memoryRoot,
+    ).injectSteps
+    assert.strictEqual(steps.length > 1, true)
+    assert.strictEqual(steps[0]?.ephemeralMessage.startsWith(AUTHORITY_BOUNDARY_STANZA), true)
+    assert.strictEqual(
+      steps.slice(1).every((step) => !step.ephemeralMessage.startsWith(AUTHORITY_BOUNDARY_STANZA)),
+      true,
+    )
+    assert.strictEqual(
+      steps.every((step) => utf8ByteLength(step.ephemeralMessage) <= ACTIVE_MEMORY_TRANSPORT_BYTES),
+      true,
+    )
+    for (const step of steps) {
+      assert.strictEqual(step.ephemeralMessage.includes('\uFFFD'), false)
+      assert.strictEqual(
+        Buffer.from(step.ephemeralMessage, 'utf8').toString('utf8'),
+        step.ephemeralMessage,
+      )
+    }
+    for (const [index, step] of steps.entries()) {
+      assert.strictEqual(
+        step.ephemeralMessage.includes(`[MemFS Transport ${index + 1}/${steps.length}]`),
+        true,
+      )
+    }
+    const codingStep = steps.find((step) => step.ephemeralMessage.includes(codingTail))
+    const workflowStep = steps.find((step) => step.ephemeralMessage.includes(workflowTail))
+    assert.ok(codingStep)
+    assert.ok(workflowStep)
+    assert.notStrictEqual(codingStep, workflowStep)
+    assert.strictEqual(codingStep.ephemeralMessage.includes(codingHead), true)
+    assert.strictEqual(workflowStep.ephemeralMessage.includes(workflowHead), true)
+    assert.strictEqual(codingStep.ephemeralMessage.includes(workflowTail), false)
+    assert.strictEqual(workflowStep.ephemeralMessage.includes(codingTail), false)
+    const payload = activeMemoryPayload(steps)
+    const expectedPayload = renderCommittedMemoryProjection(
+      memoryRoot,
+      inspectCommittedMemoryProjection(memoryRoot, resolveProjectSlug(workspace, memoryRoot)),
+    )
+    assert.strictEqual(payload, expectedPayload)
+    assert.strictEqual(payload.includes(codingHead), true)
+    assert.strictEqual(payload.includes(codingTail), true)
+    assert.strictEqual(payload.includes(workflowHead), true)
+    assert.strictEqual(payload.includes(workflowTail), true)
+    assert.strictEqual(payload.includes(wideHead), true)
+    assert.strictEqual(payload.includes(wideTail), true)
+    assert.strictEqual(payload.includes(wideRun), true)
+    assert.strictEqual(payload.includes(thaiHead), true)
+    assert.strictEqual(payload.includes(thaiTail), true)
+    assert.strictEqual(payload.includes(thaiRun), true)
+    assert.strictEqual(payload.includes('\uFFFD'), false)
+    assert.strictEqual(
+      steps.every((step) => !step.ephemeralMessage.includes(wideRun)),
+      true,
+    )
+    assert.strictEqual(
+      steps.every((step) => !step.ephemeralMessage.includes(thaiRun)),
+      true,
+    )
+    assert.strictEqual(payload.includes(hiddenTail), false)
+    assert.strictEqual(payload.includes(referenceSecret), false)
+    assert.strictEqual(payload.includes('reference/hidden-detail.md'), true)
+    const health = inspectMemoryHealth(memoryRoot, [workspace])
+    assert.strictEqual(health.workspaces[0]?.estimatedTokens, Math.ceil(payload.length / 4))
+    assert.strictEqual(health.workspaces[0]?.withinBudget, true)
+    assert.strictEqual(
+      steps.some((step) => step.ephemeralMessage.includes('MemFS Budget Notice')),
+      false,
+    )
+
+    fs.rmSync(memoryRoot, { recursive: true, force: true })
+    fs.rmSync(workspace, { recursive: true, force: true })
   })
 
   it('re-resolves project memory when one conversation changes workspaces', () => {
@@ -537,13 +716,17 @@ describe('Unit Coverage Extensions', () => {
         conversationId,
         workspacePaths: [path.join(TEST_TEMP_ROOT, 'switch-alpha')],
       }),
-    ).injectSteps[0]?.ephemeralMessage
+    )
+      .injectSteps.map((step) => step.ephemeralMessage)
+      .join('\n')
     const beta = generatePreInvocationContext(
       JSON.stringify({
         conversationId,
         workspacePaths: [path.join(TEST_TEMP_ROOT, 'switch-beta')],
       }),
-    ).injectSteps[0]?.ephemeralMessage
+    )
+      .injectSteps.map((step) => step.ephemeralMessage)
+      .join('\n')
     assert.strictEqual(alpha?.includes('Marker: switch-alpha.'), true)
     assert.strictEqual(alpha?.includes('Marker: switch-beta.'), false)
     assert.strictEqual(beta?.includes('Marker: switch-beta.'), true)
@@ -1973,8 +2156,12 @@ describe('Unit Coverage Extensions', () => {
       JSON.stringify({ workspacePaths: [path.join(TEST_TEMP_ROOT, populatedSlug)] }),
       emptyMemRoot,
     )
-    const dirtyMessage = dirtyResult.injectSteps[0]?.ephemeralMessage || ''
-    assert.strictEqual(dirtyMessage.startsWith(AUTHORITY_BOUNDARY_STANZA), true)
+    assert.strictEqual(
+      dirtyResult.injectSteps[0]?.ephemeralMessage.startsWith(AUTHORITY_BOUNDARY_STANZA),
+      true,
+    )
+    const dirtyMessage = dirtyResult.injectSteps.map((step) => step.ephemeralMessage).join('\n')
+    assert.strictEqual(dirtyMessage.includes('Uncommitted memory is not active'), true)
     assert.strictEqual(
       dirtyMessage.indexOf('Uncommitted memory is not active') >
         dirtyMessage.indexOf(AUTHORITY_BOUNDARY_STANZA),
@@ -1982,44 +2169,69 @@ describe('Unit Coverage Extensions', () => {
     )
     fs.rmSync(dirtyMarkerPath, { force: true })
 
-    // 5. Memory-budget separation: stanza is outside the 1,400 token calculation
+    // 5. Memory-budget separation: stanza, header, and notice stay outside the active payload
     const budgetProjPath = path.join(projDir, 'project.md')
-    const curBase =
+    const curActiveMem = activeMemoryPayload(
       generatePreInvocationContext(
         JSON.stringify({ workspacePaths: [path.join(TEST_TEMP_ROOT, populatedSlug)] }),
         emptyMemRoot,
-      ).injectSteps[0]?.ephemeralMessage || ''
-    const curActiveMem = curBase.slice(AUTHORITY_BOUNDARY_STANZA.length + 2)
-    const padNeeded = 1400 * 4 - curActiveMem.length
+      ).injectSteps,
+    )
+    const padNeeded = ACTIVE_MEMORY_BUDGET_TOKENS * 4 - curActiveMem.length
     fs.writeFileSync(budgetProjPath, `# Ordering Test\n${'y'.repeat(padNeeded - 1)}`)
     commitMemoryPaths({
       memoryRoot: emptyMemRoot,
       relativePaths: [`projects/${populatedSlug}/project.md`],
-      reason: 'test: pad active memory to exact 1400 token boundary',
+      reason: 'test: pad active memory to exact token boundary',
     })
 
     const exactBoundaryResult = generatePreInvocationContext(
       JSON.stringify({ workspacePaths: [path.join(TEST_TEMP_ROOT, populatedSlug)] }),
       emptyMemRoot,
     )
-    const exactBoundaryMsg = exactBoundaryResult.injectSteps[0]?.ephemeralMessage || ''
-    // Total message has stanza (~150 tokens) + 1400 tokens = ~1550 tokens, but budget notice must NOT fire
+    const exactBoundaryMsg = exactBoundaryResult.injectSteps
+      .map((step) => step.ephemeralMessage)
+      .join('\n')
+    // Stanza, header, and notice stay outside the active projection.
     assert.strictEqual(exactBoundaryMsg.includes('MemFS Budget Notice'), false)
 
-    // Add 1 char to exceed 1,400 active memory tokens
+    // Add 1 char to exceed the active memory token boundary
     fs.appendFileSync(budgetProjPath, 'y')
     commitMemoryPaths({
       memoryRoot: emptyMemRoot,
       relativePaths: [`projects/${populatedSlug}/project.md`],
-      reason: 'test: exceed active memory 1400 token boundary by 1 char',
+      reason: 'test: exceed active memory token boundary by 1 char',
     })
     const overBoundaryResult = generatePreInvocationContext(
       JSON.stringify({ workspacePaths: [path.join(TEST_TEMP_ROOT, populatedSlug)] }),
       emptyMemRoot,
     )
-    const overBoundaryMsg = overBoundaryResult.injectSteps[0]?.ephemeralMessage || ''
+    const overBoundaryMsg = overBoundaryResult.injectSteps
+      .map((step) => step.ephemeralMessage)
+      .join('\n')
     assert.strictEqual(overBoundaryMsg.includes('MemFS Budget Notice'), true)
-    assert.strictEqual(overBoundaryMsg.includes('~1401 tokens'), true)
+    assert.strictEqual(overBoundaryMsg.includes(`~${ACTIVE_MEMORY_BUDGET_TOKENS + 1} tokens`), true)
+    assert.strictEqual(overBoundaryMsg.includes('did not drop active content'), true)
+    assert.strictEqual(overBoundaryMsg.includes('was not truncated'), false)
+    assert.strictEqual(overBoundaryMsg.includes('Run /doctor to inspect and curate'), true)
+    assert.strictEqual(overBoundaryMsg.includes('/dream'), false)
+    assert.strictEqual(overBoundaryResult.injectSteps.length > 1, true)
+    assert.strictEqual(
+      overBoundaryResult.injectSteps.every(
+        (step) => utf8ByteLength(step.ephemeralMessage) <= ACTIVE_MEMORY_TRANSPORT_BYTES,
+      ),
+      true,
+    )
+    assert.strictEqual(
+      overBoundaryResult.injectSteps.filter((step) =>
+        step.ephemeralMessage.includes('MemFS Budget Notice'),
+      ).length,
+      1,
+    )
+    assert.strictEqual(
+      overBoundaryResult.injectSteps.at(-1)?.ephemeralMessage.includes('MemFS Budget Notice'),
+      true,
+    )
 
     // Cleanup
     fs.rmSync(emptyMemRoot, { recursive: true, force: true })
@@ -2254,8 +2466,8 @@ describe('Unit Coverage Extensions', () => {
     const biomeJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'biome.json'), 'utf8'))
 
     // 1. Development candidate intent and mirror equality
-    assert.strictEqual(packageJson.version, '1.21.0')
-    assert.strictEqual(pluginJson.version, '1.21.0')
+    assert.strictEqual(packageJson.version, '1.22.0')
+    assert.strictEqual(pluginJson.version, '1.22.0')
     assert.strictEqual(packageJson.version, pluginJson.version)
     const exactEvidenceOverride = biomeJson.overrides.find(
       (override: { includes?: string[]; formatter?: { enabled?: boolean } }) =>
@@ -2278,8 +2490,8 @@ describe('Unit Coverage Extensions', () => {
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(contractDoc.includes('**Package version:** `1.21.0`'), true)
-    assert.strictEqual(contractDoc.includes('Released as `v1.21.0` on 2026-09-24'), true)
+    assert.strictEqual(contractDoc.includes('**Package version:** `1.22.0`'), true)
+    assert.strictEqual(contractDoc.includes('Released as `v1.22.0` on 2026-09-26'), true)
     assert.strictEqual(
       contractDoc.includes(
         'Every schema-valid invocation that runs to completion within the host hook',
@@ -2299,9 +2511,10 @@ describe('Unit Coverage Extensions', () => {
       true,
     )
     assert.strictEqual(
-      contractDoc.includes('fixed authority stanza overhead is outside the existing 1,400-token'),
+      contractDoc.includes('fixed authority stanza overhead is outside the existing 32,000-token'),
       true,
     )
+    assert.strictEqual(contractDoc.includes('100,098-character'), true)
     assert.strictEqual(
       contractDoc.includes('model-guided historical evidence rather than current authorization'),
       true,
@@ -2319,24 +2532,36 @@ describe('Unit Coverage Extensions', () => {
 
     // 3. README.md product-first onboarding and current release boundary
     const readmeDoc = fs.readFileSync(path.join(ROOT_DIR, 'README.md'), 'utf8')
-    assert.strictEqual(readmeDoc.includes('**Current release:** `v1.21.0`'), true)
+    assert.strictEqual(readmeDoc.includes('**Current release:** `v1.22.0`'), true)
     assert.strictEqual(readmeDoc.includes('## Why it exists'), true)
     assert.strictEqual(readmeDoc.includes('## Quick start'), true)
     assert.strictEqual(readmeDoc.includes('## How it works'), true)
     assert.strictEqual(readmeDoc.includes('## Everyday commands'), true)
     assert.strictEqual(readmeDoc.includes('one-line installer follows `main`'), true)
-    assert.strictEqual(readmeDoc.includes('clone --branch v1.21.0 --depth 1'), true)
+    assert.strictEqual(readmeDoc.includes('clone --branch v1.22.0 --depth 1'), true)
     assert.strictEqual(readmeDoc.includes('Calling `/init` is the confirmation'), true)
     assert.strictEqual(readmeDoc.includes('asks before writing'), false)
     assert.strictEqual(readmeDoc.includes('better continuity and fewer unsupported claims'), true)
     assert.strictEqual(readmeDoc.includes("does not improve Gemini's base"), true)
     assert.strictEqual(readmeDoc.includes('`Stop` never auto-commits'), true)
-    assert.strictEqual(readmeDoc.includes('206/206 Node tests'), true)
+    assert.strictEqual(readmeDoc.includes('208/208 Node tests'), true)
     assert.strictEqual(readmeDoc.includes('11/11 generated integration scenarios'), true)
-    assert.strictEqual(
-      readmeDoc.includes('86.56% lines / 74.75% branches / 90.66% functions'),
-      true,
+    assert.strictEqual(readmeDoc.includes('release-preparation coverage snapshot'), true)
+    assert.strictEqual(readmeDoc.includes('./docs/releases/v1.22.0.md'), true)
+    const latestReleaseDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'releases', 'v1.22.0.md'),
+      'utf8',
     )
+    for (const requiredText of [
+      '# v1.22.0 — Lossless Active-Memory Transport & Safe Agy Curation',
+      '**208/208 Node tests passed**',
+      '**14 skills, 9 agents, 3 hooks, zero errors**',
+      '**86.81% lines / 75.45% branches / 90.85% functions**',
+      '40,000 UTF-8 bytes',
+      '1726af9973a61e46608995c428848fb4432aa955',
+    ]) {
+      assert.strictEqual(latestReleaseDoc.includes(requiredText), true)
+    }
     assert.strictEqual(readmeDoc.includes('./docs/agy-main-phase4b-readiness-2026-09-13.md'), true)
     assert.strictEqual(
       readmeDoc.includes('./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md'),

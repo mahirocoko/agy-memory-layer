@@ -328,7 +328,9 @@ if (process.argv[1]?.endsWith('recall-engine.ts')) {
     }
     const query = queryParts.join(' ')
     if (!query) {
-      console.error('❌ Usage: node recall-engine.ts [search] "<query>" [--semantic | --keyword] [--exclude <conv-id>]')
+      console.error(
+        '❌ Usage: node recall-engine.ts [search] "<query>" [--semantic | --keyword] [--exclude <conv-id>]',
+      )
       process.exit(1)
     }
 
@@ -336,7 +338,10 @@ if (process.argv[1]?.endsWith('recall-engine.ts')) {
     if (args.includes('--semantic')) mode = 'semantic'
     if (args.includes('--keyword')) mode = 'keyword'
 
-    searchRecall(query, { mode, excludeConversationIds: excludeIds.length > 0 ? excludeIds : undefined }).then((hits) => {
+    searchRecall(query, {
+      mode,
+      excludeConversationIds: excludeIds.length > 0 ? excludeIds : undefined,
+    }).then((hits) => {
       console.log(`\n🔍 Hybrid Semantic Recall Results (${hits.length} hits | Mode: ${mode}):\n`)
       if (hits.length === 0) {
         console.log('  No matching conversation sessions found.')

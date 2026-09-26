@@ -18,7 +18,8 @@ This guide outlines core development patterns, performance constraints, and memo
 - **Compact Signal**: Memory blocks injected into the prompt must be dense, clear, and high-signal Markdown.
 - Avoid dumping logs or large snippets into active `system/**/*.md`. Put detailed
   evidence in `reference/` and obsolete/exact source history in `archives/`.
-- The active TypeScript hook emits a **Budget Notice** above `1,400` estimated tokens but does not truncate memory. `memory-health.ts --strict` owns the failing offline gate; curate focused global/project owners when it fails.
+- The active TypeScript hook emits a **Budget Notice** above `32,000` estimated tokens of the aggregate active payload. That gate does not drop active content. The notice is on the final transport step and points to `/doctor` for inspection and curation; deterministic `/dream` does not consolidate the active projection. `memory-health.ts --strict` uses the same pre-chunk payload and excludes the authority stanza, chunk labels, header, and notice.
+- Each inject step stays within `40,000` UTF-8 bytes. A disposable Agy 1.2.11 / Opus 4.6 session received one 100,098-character message; the host omitted bytes and recorded `<truncated 51851 bytes>` around the end of `coding.md`, and the workflow tail was NOT VISIBLE. A follow-up probe delivered five ordered byte-bounded messages without transcript truncation, and the model quoted unique tail rules from both `coding.md` and `workflow.md`. This proves the current bounded fixture, not every future host version.
 - Only `projects/<slug>/learnings/working-hypothesis.md` can be prompt-active, and it must declare both `memory_status: active` and `memory_kind: working-hypothesis`. The exact path requires explicit approval. Any active marker outside it fails closed. Keep uncurated, superseded, Dream, and historical material under `archives/`, where `/memory search` can still retrieve it.
 - Uncommitted Markdown is not active prompt state. Fix or commit it through the shared writer instead of relying on the hook to legitimize it.
 
@@ -48,6 +49,8 @@ This guide outlines core development patterns, performance constraints, and memo
 - Refuse unrelated dirty paths rather than staging around them.
 - Store pending proposal/cursor state outside the Git working tree.
 - Take the shared cross-process lock before any high-level mutation.
+- Refuse an existing Git `index.lock` before writing curation targets; inspect
+  its owner/age outside the curation path and never delete it automatically.
 - Treat moves, demotions, paraphrases, and removals as curation: disposition
   every durable source unit and archive exact source bytes before activation.
 - Treat `--confirm-init`, reviewed `--confirm-import`, or verified backup
