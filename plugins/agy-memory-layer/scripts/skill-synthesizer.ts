@@ -125,35 +125,45 @@ function extractMarkdownTitle(content: string, fallback: string): string {
  */
 export function scanMemfsLearnings(customMemoryRoot?: string): LearningEntry[] {
   const memoryRoot = customMemoryRoot || path.join(process.env.HOME || '', '.gemini', 'memory')
-  const projectsDir = path.join(memoryRoot, 'projects')
-
-  if (!fs.existsSync(projectsDir)) return []
 
   const entries: LearningEntry[] = []
-  const projectSlugs = fs
-    .readdirSync(projectsDir)
-    .filter((s) => fs.statSync(path.join(projectsDir, s)).isDirectory())
 
-  for (const slug of projectSlugs) {
-    const learningsDir = path.join(projectsDir, slug, 'learnings')
-    if (!fs.existsSync(learningsDir)) continue
+  // Scan both active project learnings and archived dream learnings
+  const roots = [
+    path.join(memoryRoot, 'projects'),
+    path.join(memoryRoot, 'archives', 'projects'),
+  ]
 
-    const files = fs.readdirSync(learningsDir).filter((f) => f.endsWith('.md'))
+  for (const projectsDir of roots) {
+    if (!fs.existsSync(projectsDir)) continue
 
-    for (const file of files) {
-      const filePath = path.join(learningsDir, file)
-      const content = fs.readFileSync(filePath, 'utf-8')
-      const title = extractMarkdownTitle(content, file)
-      const vector = buildVectorProfile(content)
+    const projectSlugs = fs
+      .readdirSync(projectsDir)
+      .filter((s) => fs.statSync(path.join(projectsDir, s)).isDirectory())
 
-      entries.push({
-        filePath,
-        fileName: file,
-        projectSlug: slug,
-        title,
-        content,
-        vector,
-      })
+    for (const slug of projectSlugs) {
+      const learningsDir = path.join(projectsDir, slug, 'learnings')
+      if (!fs.existsSync(learningsDir)) continue
+
+      const files = fs.readdirSync(learningsDir).filter((f) => f.endsWith('.md'))
+
+      for (const file of files) {
+        const filePath = path.join(learningsDir, file)
+        // Deduplicate by absolute path (in case both roots contain the same file)
+        if (entries.some((e) => e.filePath === filePath)) continue
+        const content = fs.readFileSync(filePath, 'utf-8')
+        const title = extractMarkdownTitle(content, file)
+        const vector = buildVectorProfile(content)
+
+        entries.push({
+          filePath,
+          fileName: file,
+          projectSlug: slug,
+          title,
+          content,
+          vector,
+        })
+      }
     }
   }
 

@@ -149,45 +149,57 @@ export function findCrossProjectSynapses(
   if (!query || query.trim().length === 0) return []
 
   const memoryRoot = customMemoryRoot || path.join(process.env.HOME || '', '.gemini', 'memory')
-  const projectsDir = path.join(memoryRoot, 'projects')
-
-  if (!fs.existsSync(projectsDir)) return []
 
   const queryVector = buildVectorProfile(query)
   const currentSlug = options.currentProjectSlug || ''
   const minSimilarity = options.minSimilarity || DEFAULT_SYNAPSE_MIN_SIMILARITY
   const limit = options.limit || DEFAULT_SYNAPSE_LIMIT
 
-  const projectSlugs = fs
-    .readdirSync(projectsDir)
-    .filter((s) => s !== currentSlug && fs.statSync(path.join(projectsDir, s)).isDirectory())
-
   const hits: SynapseHit[] = []
+  const seenPaths = new Set<string>()
 
-  for (const slug of projectSlugs) {
-    const learningsDir = path.join(projectsDir, slug, 'learnings')
-    if (!fs.existsSync(learningsDir)) continue
+  // Scan both active project learnings and archived dream learnings
+  const roots = [
+    path.join(memoryRoot, 'projects'),
+    path.join(memoryRoot, 'archives', 'projects'),
+  ]
 
-    const files = fs.readdirSync(learningsDir).filter((f) => f.endsWith('.md'))
+  for (const projectsDir of roots) {
+    if (!fs.existsSync(projectsDir)) continue
 
-    for (const file of files) {
-      const filePath = path.join(learningsDir, file)
-      const content = fs.readFileSync(filePath, 'utf-8')
-      const docVector = buildVectorProfile(content)
-      const similarity = cosineSimilarity(queryVector, docVector)
+    const projectSlugs = fs
+      .readdirSync(projectsDir)
+      .filter((s) => s !== currentSlug && fs.statSync(path.join(projectsDir, s)).isDirectory())
 
-      if (similarity >= minSimilarity) {
-        const title = extractTitle(content, file)
-        const snippet = extractSnippet(content)
+    for (const slug of projectSlugs) {
+      const learningsDir = path.join(projectsDir, slug, 'learnings')
+      if (!fs.existsSync(learningsDir)) continue
 
-        hits.push({
-          projectSlug: slug,
-          fileName: file,
-          title,
-          snippet,
-          similarity,
-          filePath,
-        })
+      const files = fs.readdirSync(learningsDir).filter((f) => f.endsWith('.md'))
+
+      for (const file of files) {
+        const filePath = path.join(learningsDir, file)
+        // Deduplicate by absolute path
+        if (seenPaths.has(filePath)) continue
+        seenPaths.add(filePath)
+
+        const content = fs.readFileSync(filePath, 'utf-8')
+        const docVector = buildVectorProfile(content)
+        const similarity = cosineSimilarity(queryVector, docVector)
+
+        if (similarity >= minSimilarity) {
+          const title = extractTitle(content, file)
+          const snippet = extractSnippet(content)
+
+          hits.push({
+            projectSlug: slug,
+            fileName: file,
+            title,
+            snippet,
+            similarity,
+            filePath,
+          })
+        }
       }
     }
   }
