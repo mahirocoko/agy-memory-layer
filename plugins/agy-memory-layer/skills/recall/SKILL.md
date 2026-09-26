@@ -21,6 +21,8 @@ Search and retrieve past discussions, user instructions, bug fixes, and architec
 ## Execution
 ```bash
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../../scripts"
+# ANTIGRAVITY_CONVERSATION_ID is set by the Agy host; recall-engine reads it
+# to auto-exclude the current conversation and prevent self-matching.
 node --experimental-strip-types "$SCRIPT_DIR/recall-engine.ts" "$@"
 ```
 
