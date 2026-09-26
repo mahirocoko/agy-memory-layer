@@ -18,6 +18,7 @@ export type RecallSearchOptions = {
   workspace?: string | null
   bm25Weight?: number
   vectorWeight?: number
+  excludeConversationIds?: string[]
 }
 
 export type RecallHit = {
@@ -204,7 +205,8 @@ export async function searchRecall(
   const limit: number = options.limit || 5
   const queryTokens = tokenize(query)
   const queryVector = buildVectorProfile(query)
-  const docs = scanAllConversations()
+  const excludeSet = new Set(options.excludeConversationIds || [])
+  const docs = scanAllConversations().filter((d) => !excludeSet.has(d.id))
 
   if (docs.length === 0) return []
 
@@ -309,12 +311,24 @@ if (process.argv[1]?.endsWith('recall-engine.ts')) {
     }
   } else if (cmd) {
     const queryStart = cmd === 'search' || cmd === 'find' ? 1 : 0
-    const query = args
-      .slice(queryStart)
-      .filter((arg) => arg !== '--semantic' && arg !== '--keyword')
-      .join(' ')
+    const excludeIds: string[] = []
+    const queryParts: string[] = []
+    for (let i = queryStart; i < args.length; i++) {
+      if (args[i] === '--exclude' && args[i + 1]) {
+        excludeIds.push(args[i + 1])
+        i++ // skip next arg
+      } else if (!args[i].startsWith('--')) {
+        queryParts.push(args[i])
+      }
+    }
+    // Also read from env var (set by Agy host as ANTIGRAVITY_CONVERSATION_ID)
+    const envConvId = process.env.ANTIGRAVITY_CONVERSATION_ID || process.env.AGY_CONVERSATION_ID
+    if (envConvId && !excludeIds.includes(envConvId)) {
+      excludeIds.push(envConvId)
+    }
+    const query = queryParts.join(' ')
     if (!query) {
-      console.error('❌ Usage: node recall-engine.ts [search] "<query>" [--semantic | --keyword]')
+      console.error('❌ Usage: node recall-engine.ts [search] "<query>" [--semantic | --keyword] [--exclude <conv-id>]')
       process.exit(1)
     }
 
@@ -322,7 +336,7 @@ if (process.argv[1]?.endsWith('recall-engine.ts')) {
     if (args.includes('--semantic')) mode = 'semantic'
     if (args.includes('--keyword')) mode = 'keyword'
 
-    searchRecall(query, { mode }).then((hits) => {
+    searchRecall(query, { mode, excludeConversationIds: excludeIds.length > 0 ? excludeIds : undefined }).then((hits) => {
       console.log(`\n🔍 Hybrid Semantic Recall Results (${hits.length} hits | Mode: ${mode}):\n`)
       if (hits.length === 0) {
         console.log('  No matching conversation sessions found.')
