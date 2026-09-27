@@ -2,9 +2,9 @@
 
 This reference documents all testing, verification, script runners, and daemon commands available in this codebase.
 
-**Latest published release:** `v1.22.0` (interactive and human-supervised)
+**Latest published release:** `v1.23.0` (interactive and human-supervised)
 
-**Current development state:** matches `v1.22.0`; no newer candidate is declared
+**Current development state:** matches `v1.23.0`; no newer candidate is declared
 
 ---
 
@@ -97,7 +97,112 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts
 node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --uninstall-cron
 ```
 
-Cron installation is an explicit user choice. Treat it as an Agy utility, not as proven Letta reflection parity.
+Cron installation is an explicit user choice. Treat it as an Agy utility, not as proven Letta reflection parity. `--install-cron` and `--uninstall-cron` schedule regex Dream only. Combining either with `--llm` exits before crontab is read. Regex uninstall does not remove an LLM cron line.
+
+## Opt-in LLM reflection
+
+Regex Dream remains the default. `reflection.enabled` gates automatic or
+scheduled LLM only and defaults to `false`. This tree does not install an LLM
+schedule, including when the flag is true. Explicit `--run-now --llm` is a
+manual operator override and is not blocked by that flag.
+
+```bash
+# Status labels reflection.enabled as automatic/scheduled state.
+# Schedule installation is reported as not inspected; status does not read crontab.
+# Manual --run-now --llm stays an operator override.
+# It does not print prompts, transcript bodies, or reference bodies.
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --status
+
+# One conversation. Writes explicit pending proposals and does not commit MemFS.
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now --llm
+
+# Bypass only the next-eligibility clock. The 50-step gate, schema, path, snapshot, approval, and lock guards remain.
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --run-now --llm --force
+
+# Review the proposal with the existing approval owner.
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-approval.ts list
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-approval.ts approve <proposalId>
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-approval.ts reject <proposalId>
+```
+
+Malformed, unknown, or out-of-range reflection fields are rejected. LLM
+reflection does not run on that file, and regex Dream does not rewrite the
+invalid reflection object. Manual and automatic LLM eligibility both require
+50 new steps. Backoff starts only after one conversation is selected. Each later failed class for
+that conversation waits 15, 30, 60, 120, 240, then 360 minutes. A skipped
+backoff run does not call the model, create proposals, advance the reflection
+cursor, or add another failure. A successful no-op or created proposal resets
+that failure record. Rejection does not requeue the reviewed slice. `--force`
+bypasses only the next-eligibility time. It does not lower the 50-step gate.
+
+The requested primary model is `claude-opus-4-6-thinking`. `fallbackModel`
+stays `null`. A fake transport is the test boundary. A live adapter can spawn
+`agy --print`, but a JSON response does not prove exclusive model routing,
+host no-tools execution, or an active schedule. The private temp directory is
+removed after the attempt and does not prove host isolation. Do not substitute
+a Gemini 3.x model. `gemini-4.8-high` is not an earned fallback.
+
+For current Agy 1.2.12 JSON-schema runs, the accepted generation envelope must
+contain the ordinary status, usage, and display `response` fields plus
+`structured_output` and `json_schema`. The echoed schema must be semantically
+identical to the requested schema. Dream treats `structured_output` as the only
+planner result; the display response is required but non-authoritative. Missing,
+extra, mismatched, denied-action, duplicate-key, or malformed fields fail
+closed over the raw envelope before a proposal or cursor update.
+
+The final bounded Agy 1.2.12 proof used one exact-model generation call and
+passed through this envelope boundary: one explicit proposal was created and
+the disposable reflection cursor advanced through step 50. The proposal was
+not approved or committed, live MemFS/state and the source worktree stayed
+invariant, `reflection.enabled` remained false, and no schedule was installed.
+This does not prove exclusive provider routing or host no-tools isolation.
+Mahiro accepted this explicit manual path only; automatic reflection and a
+persistent LLM schedule remain disabled and are not approved.
+
+One reflection reservation may exist under the external state root. A live,
+dead, or unreadable reservation blocks the provider call and does not change
+backoff or the cursor. Nothing in that path deletes the file automatically.
+Inspect it, then reclaim a dead owner only with the matching token:
+
+```bash
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --inspect-reflection-reservation
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --reclaim-reflection-reservation --reservation-token=<token>
+```
+
+A dead reservation is not crash-safe replay. If the process died after creating
+proposals and before advancing the cursor, reclaim does not repair that pair.
+Inspect pending proposals before reclaiming.
+
+LLM cron source is present and unactivated. Preview does not read or write
+crontab. Status does not inspect crontab, so installation state is
+`not-inspected` and stays separate from `reflection.enabled`. Installation
+requires `reflection.enabled=true` and the exact confirmation
+`install-llm-reflection-schedule`. A failed crontab read refuses installation
+and writes nothing. The LLM line is separate from regex cron, shell-quotes the
+node and script paths, and passes `--all-projects` because a cron process has
+no workspace cwd. No schedule is installed in this tree:
+
+```bash
+node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --preview-llm-cron
+# Do not run until Mahiro activates scheduling:
+# node --experimental-strip-types plugins/agy-memory-layer/scripts/dream-daemon.ts --install-llm-cron --confirm-llm-cron=install-llm-reflection-schedule
+```
+
+The preview line runs `--run-scheduled-llm --all-projects`, which refuses while
+`reflection.enabled` is false. That is distinct from manual `--run-now --llm`.
+A successful install says the entry is installed and eligible at the next
+scheduled time while enabled. Phase 4 source and disposable regressions are
+independently verified. Regex Dream stays the default. There is no provider
+proof, no active schedule, and crash-after-proposal is not replay. Host
+isolation is unverified. Mixed old and new Dream writer processes are
+unsupported during the protocol upgrade.
+
+Recovery: fix invalid `dream-state.json` without dropping regex cursors; wait
+for `nextEligibleAt` or pass `--force`; use `memory-approval.ts reject` to drop
+a proposal without a MemFS commit; use `memory-curation.ts` for delete or
+paraphrase. Dream records delete suggestions as `CURATION_REQUIRED` and does
+not delete active memory. Do not delete a reservation by hand unless inspect
+shows it is dead and no writer is active.
 
 ## 🩺 Deterministic Memory Health
 

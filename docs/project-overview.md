@@ -8,9 +8,9 @@ The project is inspired by Letta Code, but adapts the behavior to one Agy user
 repository rather than copying Letta's per-agent storage and service APIs. The
 canonical boundary is [`letta-parity.md`](./letta-parity.md).
 
-**Latest published release:** `v1.20.0` (interactive and human-supervised)
+**Latest published release:** `v1.23.0` (interactive and human-supervised)
 
-**Current development state:** matches `v1.20.0`; no newer candidate is declared
+**Current development state:** matches `v1.23.0`; no newer candidate is declared
 
 ## Core Value
 
@@ -73,7 +73,7 @@ Antigravity CLI
 | Curation | `scripts/memory-curation.ts` | Exhaustive dispositions plus exact provenance archive |
 | Layered migration | `scripts/layered-memory-migration.ts` | Read-only plan, hash-confirmed apply, additive rollback |
 | Transcript recall | `scripts/recall-engine.ts` | Local BM25 + n-gram search |
-| Dream correction archive | `scripts/dream-daemon.ts` | Local Agy workspace history plus actionable durable intent; writes recall-only evidence and skips unknown/vague input |
+| Dream correction archive | `scripts/dream-daemon.ts`, `scripts/dream-reflection-reservation.ts`, `scripts/dream-reflection-schedule.ts` | Regex Dream writes recall-only evidence. Manual `--run-now --llm` creates explicit proposals. One external reservation and a guarded LLM cron installer exist in source; schedule status is not-inspected, no schedule is active, and host isolation is unverified. Phase 4 source and disposable regressions are independently verified. After the first Agy 1.2.12 proof failed closed on newly observed `structured_output` / `json_schema` fields, the exact adapter and duplicate-key correction were verified; the final bounded one-call proof created one explicit proposal and advanced only disposable state. Mahiro accepted the explicit manual path only; automatic reflection and persistent scheduling remain disabled. |
 | Memory health | `tools/memory-health.ts` | Deterministic budget, scope, residue, and low-signal checks |
 | Letta import | `scripts/letta-sync.ts` | Explicit agent selection and reference-only import |
 | Memory Palace | `scripts/palace-generator.ts` | Read-only committed-projection visualization |
@@ -86,7 +86,7 @@ Antigravity CLI
   [`execution-continuity pilot`](./execution-continuity-pilot.md) completed Stage 0 and a separately
   authorized 15-run Stage 1 screen, but neither candidate advanced; no Stage 2 rerun or runtime
   design is selected or authorized;
-- isolated, cursor-based model reflection with a clean memory worktree;
+- a clean MemFS reflection worktree, merge policy, and post-merge activation; the private provider temp directory and external reservation are not that worktree;
 - a release-acquiring updater with validation and rollback;
 - self-contained runtime artifacts for remote TypeScript execution;
 - host-level evidence for subagent capability enforcement.

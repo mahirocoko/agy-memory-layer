@@ -58,8 +58,13 @@ scopes win; otherwise Git-root identity prevents generic nested paths such as
 ```
 
 Stop never stages, commits, deletes locks, or launches Dream. Explicit writers
-own persistence. Dream is a separate manual or explicitly installed cron
-surface.
+own persistence. Regex Dream is a separate manual or explicitly installed cron
+surface. `reflection.enabled` does not install or start LLM scheduling. The LLM
+cron installer is source-only. Status reports it as not inspected, and no
+schedule is activated. The scheduled LLM line uses `--all-projects`. Phase 4
+source and disposable regressions plus the bounded provider proposal flow are
+independently verified. Mahiro accepted explicit manual LLM use only; automatic
+reflection and persistent scheduling remain disabled.
 
 ## 3. Targeted Memory Writer
 

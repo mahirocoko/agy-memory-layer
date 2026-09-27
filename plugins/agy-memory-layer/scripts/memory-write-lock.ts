@@ -12,6 +12,22 @@ export type MemoryWriteLock = {
   pid: number
 }
 
+export type MemoryWriteLockErrorCode =
+  | 'LOCK_CONTENTION'
+  | 'LOCK_STALE'
+  | 'LOCK_UNREADABLE'
+  | 'LOCK_RELEASE'
+
+export class MemoryWriteLockError extends Error {
+  readonly code: MemoryWriteLockErrorCode
+
+  constructor(code: MemoryWriteLockErrorCode, message: string) {
+    super(message)
+    this.name = 'MemoryWriteLockError'
+    this.code = code
+  }
+}
+
 type LockOwner = {
   token: string
   operation: string
@@ -19,8 +35,11 @@ type LockOwner = {
   pid: number
 }
 
-const getMemoryStateRoot = (memoryRoot: string): string =>
+export const memoryStateRootFor = (memoryRoot: string): string =>
   process.env.AGY_MEMORY_STATE_DIR || `${path.resolve(memoryRoot)}.state`
+
+const lockPathForStateRoot = (stateRoot: string): string =>
+  path.join(stateRoot, 'locks', 'memory-write.lock')
 
 const isProcessAlive = (pid: number): boolean => {
   if (!Number.isInteger(pid) || pid <= 0) return false
@@ -49,10 +68,9 @@ const readLockOwner = (lockPath: string): LockOwner | null => {
   }
 }
 
-export const acquireMemoryWriteLock = (memoryRoot: string, operation: string): MemoryWriteLock => {
-  const stateRoot = getMemoryStateRoot(memoryRoot)
+const acquireMemoryWriteLockAt = (stateRoot: string, operation: string): MemoryWriteLock => {
   const locksRoot = path.join(stateRoot, 'locks')
-  const lockPath = path.join(locksRoot, 'memory-write.lock')
+  const lockPath = lockPathForStateRoot(stateRoot)
   fs.mkdirSync(locksRoot, { recursive: true })
 
   const createLock = (): MemoryWriteLock => {
@@ -88,21 +106,34 @@ export const acquireMemoryWriteLock = (memoryRoot: string, operation: string): M
 
   const owner = readLockOwner(lockPath)
   if (owner && isProcessAlive(owner.pid)) {
-    throw new Error(
+    throw new MemoryWriteLockError(
+      'LOCK_CONTENTION',
       `Memory write lock is held by PID ${owner.pid} for ${owner.operation} since ${owner.createdAt}.`,
     )
   }
-  throw new Error(
+  throw new MemoryWriteLockError(
+    owner ? 'LOCK_STALE' : 'LOCK_UNREADABLE',
     owner
       ? `Stale memory write lock from PID ${owner.pid} for ${owner.operation}; remove ${lockPath} only after verifying no writer is active.`
       : `Unreadable memory write lock at ${lockPath}; remove it only after verifying no writer is active.`,
   )
 }
 
+export const acquireMemoryWriteLockAtStateRoot = (
+  stateRoot: string,
+  operation: string,
+): MemoryWriteLock => acquireMemoryWriteLockAt(stateRoot, operation)
+
+export const acquireMemoryWriteLock = (memoryRoot: string, operation: string): MemoryWriteLock =>
+  acquireMemoryWriteLockAt(memoryStateRootFor(memoryRoot), operation)
+
 export const releaseMemoryWriteLock = (lock: MemoryWriteLock): void => {
   const owner = readLockOwner(lock.lockPath)
   if (!owner || owner.token !== lock.token || owner.pid !== lock.pid) {
-    throw new Error('Refusing to release a memory write lock owned by another process.')
+    throw new MemoryWriteLockError(
+      'LOCK_RELEASE',
+      'Refusing to release a memory write lock owned by another process.',
+    )
   }
   fs.unlinkSync(lock.lockPath)
 }
@@ -121,8 +152,7 @@ export const withMemoryWriteLock = <T>(
 }
 
 export const reclaimStaleMemoryWriteLock = (memoryRoot: string): boolean => {
-  const stateRoot = getMemoryStateRoot(memoryRoot)
-  const lockPath = path.join(stateRoot, 'locks', 'memory-write.lock')
+  const lockPath = lockPathForStateRoot(memoryStateRootFor(memoryRoot))
   if (!fs.existsSync(lockPath)) return false
   const owner = readLockOwner(lockPath)
   if (!owner || !isProcessAlive(owner.pid)) {

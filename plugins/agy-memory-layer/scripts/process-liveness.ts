@@ -22,8 +22,12 @@ export type ProcessLivenessStatus = {
   isOrphan: boolean
 }
 
+export type ProcessLiveness = 'live' | 'dead' | 'ambiguous'
+
 /**
  * Checks whether a given process ID is alive using signal 0.
+ * Unexpected probe errors are reported as not alive. Reclaim paths that need
+ * positive proof of death must use classifyProcessLiveness instead.
  */
 export function isProcessAlive(pid: number): boolean {
   if (!Number.isInteger(pid) || pid <= 0) return false
@@ -32,6 +36,23 @@ export function isProcessAlive(pid: number): boolean {
     return true
   } catch (error) {
     return (error as NodeJS.ErrnoException).code === 'EPERM'
+  }
+}
+
+/**
+ * Distinguishes a live process, a proven-dead process (ESRCH), and an
+ * unexpected probe failure. Only `dead` is positive evidence that the PID is gone.
+ */
+export const classifyProcessLiveness = (pid: number): ProcessLiveness => {
+  if (!Number.isInteger(pid) || pid <= 0) return 'ambiguous'
+  try {
+    process.kill(pid, 0)
+    return 'live'
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code
+    if (code === 'EPERM') return 'live'
+    if (code === 'ESRCH') return 'dead'
+    return 'ambiguous'
   }
 }
 

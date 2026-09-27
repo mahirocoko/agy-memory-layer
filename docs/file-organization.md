@@ -44,6 +44,7 @@ learn-letta-code/
 │   ├── releases/v1.19.0.md                  # Approval-bound contract snapshot and alignment release
 │   ├── releases/v1.20.0.md                  # Interactive Agy Main guard and claim-review release
 │   ├── releases/v1.21.0.md                  # Cross-project dream daemon release
+│   ├── releases/v1.23.0.md                  # Human-gated Dream v2 reflection release
 │   ├── releases/v1.22.0.md                  # Lossless memory transport and curation safety release
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
@@ -115,7 +116,11 @@ learn-letta-code/
 │       ├── memory-write-lock.ts              # External cross-process MemFS writer lock
 │       ├── memory-curation.ts                # Receipt-led curation proposal and approval
 │       ├── workspace-identity.ts             # Shared project scope and conversation workspace resolution
-│       ├── dream-daemon.ts                  # Manual/optional-cron correction evidence archive
+│       ├── dream-daemon.ts                  # Regex Dream archive plus opt-in LLM proposals; schedule status not inspected
+│       ├── dream-reflector.ts               # Pure reflection prompt, schema, and operation planner
+│       ├── dream-reflection-transport.ts    # Fake and bounded Agy adapter; host isolation unverified
+│       ├── dream-reflection-reservation.ts  # One external reflection reservation; no automatic delete
+│       ├── dream-reflection-schedule.ts     # Regex cron and guarded LLM cron preview/install
 │       ├── recall-engine.ts                 # Subword N-Gram Vector & BM25 hybrid recall
 │       ├── memory-search.ts                 # MemFS status and ranked text search
 │       ├── init-project-memory.ts           # Codebase onboarding and memory seeding

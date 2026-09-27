@@ -50,6 +50,41 @@ export type ProposeResult = {
   message: string
 }
 
+export type ProposeMemoryUpdateOptions = {
+  reason?: string
+  author?: string
+  requireExplicit?: boolean
+}
+
+export type ExplicitProposalWrite = {
+  targetRelPath: string
+  newContent: string
+  reason?: string
+  author?: string
+}
+
+export type ExplicitProposalSetResult = {
+  proposalIds: string[]
+  results: ProposeResult[]
+}
+
+export type ExplicitProposalSetOptions = {
+  expectedHead?: string
+  beforePersist?: (proposal: ApprovalProposal, index: number) => void
+}
+
+export type MemoryProposalSetErrorCode = 'HEAD_RACE' | 'PERSIST_FAILED'
+
+export class MemoryProposalSetError extends Error {
+  readonly code: MemoryProposalSetErrorCode
+
+  constructor(code: MemoryProposalSetErrorCode, message: string) {
+    super(message)
+    this.name = 'MemoryProposalSetError'
+    this.code = code
+  }
+}
+
 export type ReviewResult = {
   success: boolean
   decision: 'approve' | 'reject'
@@ -169,88 +204,185 @@ function generateSimpleDiff(oldText: string, newText: string, filename: string):
   return diffLines.join('\n')
 }
 
-export function proposeMemoryUpdate(
+const PROPOSAL_ID_PATTERN = /^prop-[a-z0-9-]+$/
+
+const createProposalId = (): string =>
+  `prop-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`
+
+type PreparedMemoryChange = {
+  normalizedRel: string
+  oldContent: string
+  newContent: string
+  diff: string
+  reason: string
+  author: string
+  identical: boolean
+}
+
+const identicalProposalResult = (): ProposeResult => ({
+  status: 'COMMITTED',
+  message: 'No changes detected. Content is already identical.',
+})
+
+const prepareMemoryChange = (
   targetRelPath: string,
   newContent: string,
-  options: { reason?: string; author?: string } = {},
-): ProposeResult {
+  options: ProposeMemoryUpdateOptions,
+): PreparedMemoryChange => {
   const { relativePath: normalizedRel } = resolveMemoryPath(memoryRoot, targetRelPath)
   assertMemoryRepositoryCleanForWrite(memoryRoot)
-  const mode = getApprovalModeForFile(normalizedRel)
   const oldContent = readCommittedMemoryFile(memoryRoot, normalizedRel) || ''
-
+  const reason = options.reason || 'Autonomous reflection or rule update'
+  const author = options.author || 'Antigravity Agent'
   if (oldContent.trim() === newContent.trim()) {
     return {
-      status: 'COMMITTED',
-      message: 'No changes detected. Content is already identical.',
+      normalizedRel,
+      oldContent,
+      newContent,
+      diff: '',
+      reason,
+      author,
+      identical: true,
     }
   }
 
   const diff = generateSimpleDiff(oldContent, newContent, normalizedRel)
   assertNoDurableUnitsRemoved(normalizedRel, oldContent, newContent)
-  const reason = options.reason || 'Autonomous reflection or rule update'
-  const author = options.author || 'Antigravity Agent'
+  return { normalizedRel, oldContent, newContent, diff, reason, author, identical: false }
+}
 
-  if (mode === 'auto') {
-    return withMemoryWriteLock(memoryRoot, `auto update ${normalizedRel}`, () => {
-      assertMemoryRepositoryCleanForWrite(memoryRoot)
-      const baseRevision = getMemoryHeadRevision(memoryRoot)
-      if (!baseRevision) throw new Error('Automatic memory update requires committed MemFS HEAD.')
-      try {
-        writeMemoryFile(memoryRoot, normalizedRel, newContent)
-        const commit = commitMemoryPaths({
-          memoryRoot,
-          relativePaths: [normalizedRel],
-          reason: `chore(memory): auto-merged update to ${normalizedRel}`,
-          authorName: author,
-        })
-
-        return {
-          status: 'COMMITTED',
-          diff,
-          message: commit.committed
-            ? `Directly merged and committed changes to ${normalizedRel}`
-            : `No effective Git change remained for ${normalizedRel}`,
-        }
-      } catch (error) {
-        restoreDeclaredMemoryPaths(memoryRoot, baseRevision, [normalizedRel])
-        throw error
+const commitPreparedChange = (change: PreparedMemoryChange): ProposeResult =>
+  withMemoryWriteLock(memoryRoot, `auto update ${change.normalizedRel}`, () => {
+    assertMemoryRepositoryCleanForWrite(memoryRoot)
+    const baseRevision = getMemoryHeadRevision(memoryRoot)
+    if (!baseRevision) throw new Error('Automatic memory update requires committed MemFS HEAD.')
+    try {
+      writeMemoryFile(memoryRoot, change.normalizedRel, change.newContent)
+      const commit = commitMemoryPaths({
+        memoryRoot,
+        relativePaths: [change.normalizedRel],
+        reason: `chore(memory): auto-merged update to ${change.normalizedRel}`,
+        authorName: change.author,
+      })
+      return {
+        status: 'COMMITTED',
+        diff: change.diff,
+        message: commit.committed
+          ? `Directly merged and committed changes to ${change.normalizedRel}`
+          : `No effective Git change remained for ${change.normalizedRel}`,
       }
-    })
-  }
+    } catch (error) {
+      restoreDeclaredMemoryPaths(memoryRoot, baseRevision, [change.normalizedRel])
+      throw error
+    }
+  })
 
-  // Mode: Explicit - Create Pending Approval Proposal
-  if (!fs.existsSync(pendingDir)) {
-    fs.mkdirSync(pendingDir, { recursive: true })
-  }
+const buildProposal = (change: PreparedMemoryChange): ApprovalProposal => ({
+  id: createProposalId(),
+  baseRevision: getMemoryHeadRevision(memoryRoot),
+  targetRelPath: change.normalizedRel,
+  oldContent: change.oldContent,
+  oldSha256: crypto.createHash('sha256').update(change.oldContent).digest('hex'),
+  newContent: change.newContent,
+  newSha256: crypto.createHash('sha256').update(change.newContent).digest('hex'),
+  reason: change.reason,
+  author: change.author,
+  diff: change.diff,
+  createdAt: new Date().toISOString(),
+})
 
-  const proposalId = `prop-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`
-  const proposal: ApprovalProposal = {
-    id: proposalId,
-    baseRevision: getMemoryHeadRevision(memoryRoot),
-    targetRelPath: normalizedRel,
-    oldContent,
-    oldSha256: crypto.createHash('sha256').update(oldContent).digest('hex'),
-    newContent,
-    newSha256: crypto.createHash('sha256').update(newContent).digest('hex'),
-    reason,
-    author,
-    diff,
-    createdAt: new Date().toISOString(),
-  }
+const pendingProposalResult = (proposal: ApprovalProposal): ProposeResult => ({
+  status: 'PENDING_APPROVAL',
+  proposalId: proposal.id,
+  diff: proposal.diff,
+  message: `Proposal created for ${proposal.targetRelPath}. Awaiting human approval before applying.`,
+})
 
-  fs.writeFileSync(
-    path.join(pendingDir, `${proposalId}.json`),
-    JSON.stringify(proposal, null, 2),
-    'utf-8',
+const writeProposalFile = (proposal: ApprovalProposal): void => {
+  fs.mkdirSync(pendingDir, { recursive: true })
+  const target = path.join(pendingDir, `${proposal.id}.json`)
+  const tempPath = `${target}.${process.pid}.tmp`
+  fs.writeFileSync(tempPath, JSON.stringify(proposal, null, 2), 'utf-8')
+  try {
+    fs.renameSync(tempPath, target)
+  } catch (error) {
+    fs.rmSync(tempPath, { force: true })
+    throw error
+  }
+}
+
+const assertHeadBeforeProposalPersist = (expectedHead: string | undefined): void => {
+  assertMemoryRepositoryCleanForWrite(memoryRoot)
+  const head = getMemoryHeadRevision(memoryRoot)
+  if (!head) throw new Error('Memory proposal requires committed MemFS HEAD.')
+  if (expectedHead !== undefined && head !== expectedHead) {
+    throw new MemoryProposalSetError('HEAD_RACE', 'MemFS HEAD changed before proposal persistence.')
+  }
+}
+
+export function discardExplicitProposals(proposalIds: readonly string[]): void {
+  for (const proposalId of proposalIds) {
+    if (!PROPOSAL_ID_PATTERN.test(proposalId)) continue
+    fs.rmSync(path.join(pendingDir, `${proposalId}.json`), { force: true })
+  }
+}
+
+export function proposeMemoryUpdate(
+  targetRelPath: string,
+  newContent: string,
+  options: ProposeMemoryUpdateOptions = {},
+): ProposeResult {
+  const change = prepareMemoryChange(targetRelPath, newContent, options)
+  if (change.identical) return identicalProposalResult()
+  const mode = options.requireExplicit ? 'explicit' : getApprovalModeForFile(change.normalizedRel)
+  if (mode === 'auto') return commitPreparedChange(change)
+  const proposal = buildProposal(change)
+  writeProposalFile(proposal)
+  return pendingProposalResult(proposal)
+}
+
+export function createExplicitProposalSet(
+  writes: readonly ExplicitProposalWrite[],
+  options: ExplicitProposalSetOptions = {},
+): ExplicitProposalSetResult {
+  const prepared = writes.map((write) =>
+    prepareMemoryChange(write.targetRelPath, write.newContent, {
+      reason: write.reason,
+      author: write.author,
+      requireExplicit: true,
+    }),
   )
+  assertHeadBeforeProposalPersist(options.expectedHead)
 
-  return {
-    status: 'PENDING_APPROVAL',
-    proposalId,
-    diff,
-    message: `Proposal created for ${normalizedRel}. Awaiting human approval before applying.`,
+  const results: ProposeResult[] = []
+  const proposalIds: string[] = []
+  const created: string[] = []
+  try {
+    let persistIndex = 0
+    for (const change of prepared) {
+      if (change.identical) {
+        results.push(identicalProposalResult())
+        continue
+      }
+      const proposal = buildProposal(change)
+      options.beforePersist?.(proposal, persistIndex)
+      assertHeadBeforeProposalPersist(options.expectedHead)
+      writeProposalFile(proposal)
+      created.push(proposal.id)
+      proposalIds.push(proposal.id)
+      results.push(pendingProposalResult(proposal))
+      persistIndex += 1
+    }
+  } catch (error) {
+    discardExplicitProposals(created)
+    if (error instanceof MemoryProposalSetError) throw error
+    throw new MemoryProposalSetError(
+      'PERSIST_FAILED',
+      error instanceof Error ? error.message : String(error),
+    )
   }
+
+  return { proposalIds, results }
 }
 
 export function listPendingProposals(): ApprovalProposal[] {

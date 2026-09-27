@@ -2466,8 +2466,8 @@ describe('Unit Coverage Extensions', () => {
     const biomeJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'biome.json'), 'utf8'))
 
     // 1. Development candidate intent and mirror equality
-    assert.strictEqual(packageJson.version, '1.22.0')
-    assert.strictEqual(pluginJson.version, '1.22.0')
+    assert.strictEqual(packageJson.version, '1.23.0')
+    assert.strictEqual(pluginJson.version, '1.23.0')
     assert.strictEqual(packageJson.version, pluginJson.version)
     const exactEvidenceOverride = biomeJson.overrides.find(
       (override: { includes?: string[]; formatter?: { enabled?: boolean } }) =>
@@ -2490,8 +2490,8 @@ describe('Unit Coverage Extensions', () => {
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(contractDoc.includes('**Package version:** `1.22.0`'), true)
-    assert.strictEqual(contractDoc.includes('Released as `v1.22.0` on 2026-09-26'), true)
+    assert.strictEqual(contractDoc.includes('**Package version:** `1.23.0`'), true)
+    assert.strictEqual(contractDoc.includes('Released as `v1.23.0` on 2026-09-27'), true)
     assert.strictEqual(
       contractDoc.includes(
         'Every schema-valid invocation that runs to completion within the host hook',
@@ -2532,33 +2532,33 @@ describe('Unit Coverage Extensions', () => {
 
     // 3. README.md product-first onboarding and current release boundary
     const readmeDoc = fs.readFileSync(path.join(ROOT_DIR, 'README.md'), 'utf8')
-    assert.strictEqual(readmeDoc.includes('**Current release:** `v1.22.0`'), true)
+    assert.strictEqual(readmeDoc.includes('**Current release:** `v1.23.0`'), true)
     assert.strictEqual(readmeDoc.includes('## Why it exists'), true)
     assert.strictEqual(readmeDoc.includes('## Quick start'), true)
     assert.strictEqual(readmeDoc.includes('## How it works'), true)
     assert.strictEqual(readmeDoc.includes('## Everyday commands'), true)
     assert.strictEqual(readmeDoc.includes('one-line installer follows `main`'), true)
-    assert.strictEqual(readmeDoc.includes('clone --branch v1.22.0 --depth 1'), true)
+    assert.strictEqual(readmeDoc.includes('clone --branch v1.23.0 --depth 1'), true)
     assert.strictEqual(readmeDoc.includes('Calling `/init` is the confirmation'), true)
     assert.strictEqual(readmeDoc.includes('asks before writing'), false)
     assert.strictEqual(readmeDoc.includes('better continuity and fewer unsupported claims'), true)
     assert.strictEqual(readmeDoc.includes("does not improve Gemini's base"), true)
     assert.strictEqual(readmeDoc.includes('`Stop` never auto-commits'), true)
-    assert.strictEqual(readmeDoc.includes('208/208 Node tests'), true)
+    assert.strictEqual(readmeDoc.includes('274/274 Node tests'), true)
     assert.strictEqual(readmeDoc.includes('11/11 generated integration scenarios'), true)
     assert.strictEqual(readmeDoc.includes('release-preparation coverage snapshot'), true)
-    assert.strictEqual(readmeDoc.includes('./docs/releases/v1.22.0.md'), true)
+    assert.strictEqual(readmeDoc.includes('./docs/releases/v1.23.0.md'), true)
     const latestReleaseDoc = fs.readFileSync(
-      path.join(ROOT_DIR, 'docs', 'releases', 'v1.22.0.md'),
+      path.join(ROOT_DIR, 'docs', 'releases', 'v1.23.0.md'),
       'utf8',
     )
     for (const requiredText of [
-      '# v1.22.0 — Lossless Active-Memory Transport & Safe Agy Curation',
-      '**208/208 Node tests passed**',
+      '# v1.23.0 — Human-Gated Dream v2 Reflection',
+      '**274/274 Node tests passed**',
       '**14 skills, 9 agents, 3 hooks, zero errors**',
-      '**86.81% lines / 75.45% branches / 90.85% functions**',
-      '40,000 UTF-8 bytes',
-      '1726af9973a61e46608995c428848fb4432aa955',
+      '**87.47% lines / 76.96% branches / 92.36% functions**',
+      'claude-opus-4-6-thinking',
+      '874b193358395005031c148f09b8ebaca7e42c5b0760b4b4a917d49906b35f7d',
     ]) {
       assert.strictEqual(latestReleaseDoc.includes(requiredText), true)
     }

@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.22.0`
+**Package version:** `1.23.0`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.22.0` on 2026-09-26 for interactive,
+**Release state:** Released as `v1.23.0` on 2026-09-27 for interactive,
 human-supervised use
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
@@ -242,8 +242,24 @@ Stop returns `{"decision":"stop"}` and reports non-clean MemFS state on stderr.
   never bypasses explicit project-system proposals.
 - Deterministic Dream is not equivalent to Letta's model-backed reflection
   worktree lifecycle.
-- Dream is manual or an explicitly installed cron surface. Stop does not invoke
-  it.
+- Dream is manual or an explicitly installed regex cron surface. Stop does not
+  invoke it. Manual `--run-now --llm` can create explicit proposals. One
+  external reservation and a guarded LLM cron installer exist in source. Status
+  reports schedule installation as not inspected. The scheduled LLM command
+  uses `--all-projects` and is not installed by this tree. A private temp
+  directory does not prove host no-tools isolation, and a dead reservation is
+  not automatic crash replay. Phase 4 source and disposable regressions are
+  independently verified. The first authorized synthetic provider proof
+  resolved exact Opus 4.6 and reached a successful Agy 1.2.12 generation, then
+  failed closed because the live JSON-schema envelope added `structured_output`
+  and `json_schema`. A separately authorized diagnostic captured those keys;
+  the adapter now requires the echoed schema to match and consumes only the
+  structured output. The separately authorized final bounded proof then passed:
+  one Agy 1.2.12 generation created one explicit proposal and advanced only the
+  disposable cursor through step 50. The disposable MemFS stayed clean, source
+  and live MemFS/state stayed invariant. Mahiro accepted explicit manual
+  `--run-now --llm` behavior only; automatic reflection and persistent LLM
+  scheduling remain disabled and were not approved.
 
 ### 7. Letta import
 
@@ -588,7 +604,7 @@ The retained pre-release readiness owner is
 [`docs/agy-main-phase4b-readiness-2026-09-13.md`](./docs/agy-main-phase4b-readiness-2026-09-13.md),
 with bounded retained evidence under
 [`docs/evidence/agy-main-phase4b-canary-2026-09-13/`](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md).
-The strongest supported verdict is an interactive, human-supervised `v1.22.0`
+The strongest supported verdict is an interactive, human-supervised `v1.23.0`
 release, not an unsupervised safety-trusted main. The retained `v1.20.0`
 readiness packet still owns the original supervision evidence. Herdr may report
 `done` while its pane still awaits permission, and the reviewer model may not
@@ -605,8 +621,16 @@ observe that permission UI; interactive pane supervision remains required.
    Letta-led mode for terminal missions with open agent criteria. The corrected test-only scorer now
    rejects both shapes, but no model rerun, Stage 2 repeat, runtime supervisor, OS sandbox, compaction
    recovery, or human-acceptance proof is authorized or implemented.
-2. Isolated Dream/reflection worktree, per-conversation cursor, one-active-run
-   lock, merge policy, and activation after successful integration.
+2. A clean MemFS reflection worktree, merge policy, and activation after
+   successful integration. Source now has a per-conversation reflection cursor,
+   one external reservation, and an unactivated LLM cron installer. Those do
+   not provide worktree merge, crash-safe replay, or host no-tools isolation.
+   Phase 4 source and disposable regressions are independently verified. One
+   authorized provider attempt failed closed on newly evidenced Agy 1.2.12
+   structured-envelope fields; after the exact correction and adversarial
+   duplicate-key guard, a separately authorized bounded proof passed through
+   proposal creation and disposable cursor advancement. Mahiro accepted the
+   explicit manual path only; persistent activation is not approved.
 3. Source-aware release acquisition, validation, atomic link switch, and
    rollback for remote installations.
 4. Built JavaScript artifacts or installed runtime dependencies for remote
@@ -615,7 +639,7 @@ observe that permission UI; interactive pane supervision remains required.
 6. An automated release workflow remains deferred. Releases use the existing
    manual tag/GitHub Release path only after source, host, and human gates pass;
    current release evidence lives in
-   [`docs/releases/v1.22.0.md`](./docs/releases/v1.22.0.md).
+   [`docs/releases/v1.23.0.md`](./docs/releases/v1.23.0.md).
 
 ## Distribution
 
