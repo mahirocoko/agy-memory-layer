@@ -8,6 +8,7 @@
  */
 
 import { normalizeMemoryRelativePath, validateProjectSlug } from './memory-paths.ts'
+import { FIXED_SHARED_OWNER, isSharedOwnerPath, loadSharedMemorySettings } from './shared-memory.ts'
 
 export const MAX_REFLECTION_OPERATIONS = 8
 export const DEFAULT_MEMORY_CODE_POINT_BUDGET = 40_000
@@ -58,6 +59,7 @@ export type ReflectionRejectionCode =
   | 'MISSING_SNAPSHOT'
   | 'EMPTY_DESTRUCTIVE_WRITE'
   | 'ANTI_LOSS'
+  | 'SHARED_OWNER'
   | 'INVALID_BUDGET'
   | 'INVALID_MAX_OPERATIONS'
   | 'INVALID_PROJECT_SLUG'
@@ -783,6 +785,12 @@ const assertAllowedTarget = (
     relativePath === `projects/${projectSlug}/rules.md`
   if (!allowedActiveOwner) {
     reject('NON_ACTIVE_OWNER', `Path is not an active memory owner: ${relativePath}`)
+  }
+  if (isSharedOwnerPath(relativePath) && loadSharedMemorySettings().enabled) {
+    reject(
+      'SHARED_OWNER',
+      `Protected shared owner ${FIXED_SHARED_OWNER} cannot be rewritten during reflection.`,
+    )
   }
   if (!files.has(relativePath)) {
     reject('MISSING_SNAPSHOT', `Missing snapshot path: ${relativePath}`)

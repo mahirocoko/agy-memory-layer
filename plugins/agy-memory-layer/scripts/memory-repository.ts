@@ -12,6 +12,12 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { isDirectCliInvocation } from './cli-entrypoint.ts'
 import { normalizeMemoryRelativePath } from './memory-paths.ts'
+import {
+  FIXED_SHARED_OWNER,
+  isSharedOwnerPath,
+  resolveEffectiveSharedMemorySettings,
+  type SharedMemorySettings,
+} from './shared-memory.ts'
 
 export {
   normalizeMemoryRelativePath,
@@ -32,12 +38,17 @@ export type ResolvedMemoryPath = {
   absolutePath: string
 }
 
+export type MemoryWriterOptions = {
+  sharedSettings?: Partial<SharedMemorySettings>
+}
+
 export type CommitMemoryPathsOptions = {
   memoryRoot: string
   relativePaths: string[]
   reason: string
   authorName?: string
   authorEmail?: string
+  sharedSettings?: Partial<SharedMemorySettings>
 }
 
 export type CommitMemoryPathsResult = {
@@ -236,10 +247,17 @@ export function restoreDeclaredMemoryPaths(
   memoryRoot: string,
   revision: string,
   relativePaths: string[],
+  options?: MemoryWriterOptions,
 ): void {
   if (!/^[a-f0-9]{40}$/i.test(revision)) throw new Error('Invalid restore revision.')
   const normalizedPaths = [...new Set(relativePaths.map(normalizeMemoryRelativePath))].sort()
   if (normalizedPaths.length === 0) return
+  const effective = resolveEffectiveSharedMemorySettings(options?.sharedSettings, memoryRoot)
+  if (normalizedPaths.some(isSharedOwnerPath) && effective.enabled) {
+    throw new Error(
+      `Refusing restore: shared owner "${FIXED_SHARED_OWNER}" is managed through shared memory and cannot be restored to native MemFS.`,
+    )
+  }
   for (const relativePath of normalizedPaths) resolveMemoryPath(memoryRoot, relativePath)
 
   runGit(memoryRoot, ['reset', revision, '--', ...normalizedPaths])
@@ -247,8 +265,8 @@ export function restoreDeclaredMemoryPaths(
     const previous = runGit(memoryRoot, ['show', `${revision}:${relativePath}`], {
       allowFailure: true,
     })
-    if (previous.status === 0) writeMemoryFile(memoryRoot, relativePath, previous.stdout)
-    else deleteMemoryFile(memoryRoot, relativePath)
+    if (previous.status === 0) writeMemoryFile(memoryRoot, relativePath, previous.stdout, options)
+    else deleteMemoryFile(memoryRoot, relativePath, options)
   }
 }
 
@@ -256,7 +274,14 @@ export function writeMemoryFile(
   memoryRoot: string,
   input: string,
   content: string,
+  options?: MemoryWriterOptions,
 ): ResolvedMemoryPath {
+  const effective = resolveEffectiveSharedMemorySettings(options?.sharedSettings, memoryRoot)
+  if (isSharedOwnerPath(input) && effective.enabled) {
+    throw new Error(
+      `Refusing direct write: shared owner "${input}" is managed through shared memory and cannot be directly written to MemFS. Use proposal workflow.`,
+    )
+  }
   const resolved = resolveMemoryPath(memoryRoot, input)
   fs.mkdirSync(path.dirname(resolved.absolutePath), { recursive: true })
   resolveMemoryPath(memoryRoot, input)
@@ -271,7 +296,14 @@ export function writeMemoryBuffer(
   memoryRoot: string,
   input: string,
   content: Uint8Array,
+  options?: MemoryWriterOptions,
 ): ResolvedMemoryPath {
+  const effective = resolveEffectiveSharedMemorySettings(options?.sharedSettings, memoryRoot)
+  if (isSharedOwnerPath(input) && effective.enabled) {
+    throw new Error(
+      `Refusing direct write: shared owner "${input}" is managed through shared memory and cannot be directly written to MemFS. Use proposal workflow.`,
+    )
+  }
   const resolved = resolveMemoryPath(memoryRoot, input)
   fs.mkdirSync(path.dirname(resolved.absolutePath), { recursive: true })
   const tempPath = path.join(
@@ -283,7 +315,17 @@ export function writeMemoryBuffer(
   return resolved
 }
 
-export function deleteMemoryFile(memoryRoot: string, input: string): ResolvedMemoryPath {
+export function deleteMemoryFile(
+  memoryRoot: string,
+  input: string,
+  options?: MemoryWriterOptions,
+): ResolvedMemoryPath {
+  const effective = resolveEffectiveSharedMemorySettings(options?.sharedSettings, memoryRoot)
+  if (isSharedOwnerPath(input) && effective.enabled) {
+    throw new Error(
+      `Refusing direct deletion: shared owner "${input}" is managed through shared memory and cannot be directly deleted from MemFS.`,
+    )
+  }
   const resolved = resolveMemoryPath(memoryRoot, input)
   if (fs.existsSync(resolved.absolutePath)) fs.unlinkSync(resolved.absolutePath)
   return resolved
@@ -292,6 +334,12 @@ export function deleteMemoryFile(memoryRoot: string, input: string): ResolvedMem
 export function commitMemoryPaths(options: CommitMemoryPathsOptions): CommitMemoryPathsResult {
   const relativePaths = [...new Set(options.relativePaths.map(normalizeMemoryRelativePath))]
   if (relativePaths.length === 0) return { committed: false }
+  const effective = resolveEffectiveSharedMemorySettings(options.sharedSettings, options.memoryRoot)
+  if (relativePaths.some(isSharedOwnerPath) && effective.enabled) {
+    throw new Error(
+      `Refusing memory commit: shared owner "${FIXED_SHARED_OWNER}" cannot be committed to native MemFS.`,
+    )
+  }
   for (const relativePath of relativePaths) resolveMemoryPath(options.memoryRoot, relativePath)
 
   const status = getMemoryRepositoryStatus(options.memoryRoot)

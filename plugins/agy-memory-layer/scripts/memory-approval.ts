@@ -21,6 +21,15 @@ import {
   writeMemoryFile,
 } from './memory-repository.ts'
 import { withMemoryWriteLock } from './memory-write-lock.ts'
+import {
+  assertNoSharedParagraphCopies,
+  createSharedProposal,
+  FIXED_SHARED_OWNER,
+  inspectSharedSource,
+  isSharedOwnerPath,
+  resolveEffectiveSharedMemorySettings,
+  type SharedMemorySettings,
+} from './shared-memory.ts'
 
 export type ApprovalMode = 'auto' | 'explicit'
 
@@ -54,6 +63,8 @@ export type ProposeMemoryUpdateOptions = {
   reason?: string
   author?: string
   requireExplicit?: boolean
+  memoryRoot?: string
+  sharedSettings?: Partial<SharedMemorySettings>
 }
 
 export type ExplicitProposalWrite = {
@@ -71,6 +82,8 @@ export type ExplicitProposalSetResult = {
 export type ExplicitProposalSetOptions = {
   expectedHead?: string
   beforePersist?: (proposal: ApprovalProposal, index: number) => void
+  memoryRoot?: string
+  sharedSettings?: Partial<SharedMemorySettings>
 }
 
 export type MemoryProposalSetErrorCode = 'HEAD_RACE' | 'PERSIST_FAILED'
@@ -94,11 +107,17 @@ export type ReviewResult = {
 
 export const PROTECTED_WORKING_HYPOTHESIS_PATTERN = 'projects/*/learnings/working-hypothesis.md'
 
-const memoryRoot =
-  process.env.AGY_MEMORY_DIR || path.join(process.env.HOME || '', '.gemini', 'memory')
-const memoryStateRoot = process.env.AGY_MEMORY_STATE_DIR || `${memoryRoot}.state`
-const policyFile = path.join(memoryStateRoot, 'approval-policy.json')
-const pendingDir = path.join(memoryStateRoot, 'pending-approvals')
+export const resolveApprovalMemoryRoot = (override?: string): string =>
+  override || process.env.AGY_MEMORY_DIR || path.join(process.env.HOME || '', '.gemini', 'memory')
+
+export const resolveApprovalStateRoot = (memoryRoot?: string): string =>
+  process.env.AGY_MEMORY_STATE_DIR || `${resolveApprovalMemoryRoot(memoryRoot)}.state`
+
+export const resolvePolicyFile = (memoryRoot?: string): string =>
+  path.join(resolveApprovalStateRoot(memoryRoot), 'approval-policy.json')
+
+export const resolvePendingDir = (memoryRoot?: string): string =>
+  path.join(resolveApprovalStateRoot(memoryRoot), 'pending-approvals')
 
 export const DEFAULT_APPROVAL_POLICY: ApprovalPolicy = {
   defaultMode: 'explicit',
@@ -117,7 +136,8 @@ export const DEFAULT_APPROVAL_POLICY: ApprovalPolicy = {
   },
 }
 
-export function getApprovalPolicy(): ApprovalPolicy {
+export function getApprovalPolicy(memoryRoot?: string): ApprovalPolicy {
+  const policyFile = resolvePolicyFile(memoryRoot)
   if (fs.existsSync(policyFile)) {
     try {
       return JSON.parse(fs.readFileSync(policyFile, 'utf-8'))
@@ -126,7 +146,8 @@ export function getApprovalPolicy(): ApprovalPolicy {
   return DEFAULT_APPROVAL_POLICY
 }
 
-export function saveApprovalPolicy(policy: ApprovalPolicy): void {
+export function saveApprovalPolicy(policy: ApprovalPolicy, memoryRoot?: string): void {
+  const policyFile = resolvePolicyFile(memoryRoot)
   fs.mkdirSync(path.dirname(policyFile), { recursive: true })
   fs.writeFileSync(policyFile, JSON.stringify(policy, null, 2), 'utf-8')
 }
@@ -136,8 +157,8 @@ export function matchPattern(relPath: string, pattern: string): boolean {
   return new RegExp(`^${regexPattern}$`).test(relPath)
 }
 
-export function getApprovalModeForFile(relPath: string): ApprovalMode {
-  const policy = getApprovalPolicy()
+export function getApprovalModeForFile(relPath: string, memoryRoot?: string): ApprovalMode {
+  const policy = getApprovalPolicy(memoryRoot)
   const normalized = normalizeMemoryRelativePath(relPath)
 
   if (matchPattern(normalized, PROTECTED_WORKING_HYPOTHESIS_PATTERN)) {
@@ -228,6 +249,7 @@ const prepareMemoryChange = (
   targetRelPath: string,
   newContent: string,
   options: ProposeMemoryUpdateOptions,
+  memoryRoot = resolveApprovalMemoryRoot(options.memoryRoot),
 ): PreparedMemoryChange => {
   const { relativePath: normalizedRel } = resolveMemoryPath(memoryRoot, targetRelPath)
   assertMemoryRepositoryCleanForWrite(memoryRoot)
@@ -251,7 +273,10 @@ const prepareMemoryChange = (
   return { normalizedRel, oldContent, newContent, diff, reason, author, identical: false }
 }
 
-const commitPreparedChange = (change: PreparedMemoryChange): ProposeResult =>
+const commitPreparedChange = (
+  change: PreparedMemoryChange,
+  memoryRoot = resolveApprovalMemoryRoot(),
+): ProposeResult =>
   withMemoryWriteLock(memoryRoot, `auto update ${change.normalizedRel}`, () => {
     assertMemoryRepositoryCleanForWrite(memoryRoot)
     const baseRevision = getMemoryHeadRevision(memoryRoot)
@@ -277,7 +302,10 @@ const commitPreparedChange = (change: PreparedMemoryChange): ProposeResult =>
     }
   })
 
-const buildProposal = (change: PreparedMemoryChange): ApprovalProposal => ({
+const buildProposal = (
+  change: PreparedMemoryChange,
+  memoryRoot = resolveApprovalMemoryRoot(),
+): ApprovalProposal => ({
   id: createProposalId(),
   baseRevision: getMemoryHeadRevision(memoryRoot),
   targetRelPath: change.normalizedRel,
@@ -298,7 +326,11 @@ const pendingProposalResult = (proposal: ApprovalProposal): ProposeResult => ({
   message: `Proposal created for ${proposal.targetRelPath}. Awaiting human approval before applying.`,
 })
 
-const writeProposalFile = (proposal: ApprovalProposal): void => {
+const writeProposalFile = (
+  proposal: ApprovalProposal,
+  memoryRoot = resolveApprovalMemoryRoot(),
+): void => {
+  const pendingDir = resolvePendingDir(memoryRoot)
   fs.mkdirSync(pendingDir, { recursive: true })
   const target = path.join(pendingDir, `${proposal.id}.json`)
   const tempPath = `${target}.${process.pid}.tmp`
@@ -311,7 +343,10 @@ const writeProposalFile = (proposal: ApprovalProposal): void => {
   }
 }
 
-const assertHeadBeforeProposalPersist = (expectedHead: string | undefined): void => {
+const assertHeadBeforeProposalPersist = (
+  expectedHead: string | undefined,
+  memoryRoot = resolveApprovalMemoryRoot(),
+): void => {
   assertMemoryRepositoryCleanForWrite(memoryRoot)
   const head = getMemoryHeadRevision(memoryRoot)
   if (!head) throw new Error('Memory proposal requires committed MemFS HEAD.')
@@ -320,7 +355,11 @@ const assertHeadBeforeProposalPersist = (expectedHead: string | undefined): void
   }
 }
 
-export function discardExplicitProposals(proposalIds: readonly string[]): void {
+export function discardExplicitProposals(
+  proposalIds: readonly string[],
+  memoryRoot = resolveApprovalMemoryRoot(),
+): void {
+  const pendingDir = resolvePendingDir(memoryRoot)
   for (const proposalId of proposalIds) {
     if (!PROPOSAL_ID_PATTERN.test(proposalId)) continue
     fs.rmSync(path.join(pendingDir, `${proposalId}.json`), { force: true })
@@ -332,12 +371,40 @@ export function proposeMemoryUpdate(
   newContent: string,
   options: ProposeMemoryUpdateOptions = {},
 ): ProposeResult {
-  const change = prepareMemoryChange(targetRelPath, newContent, options)
+  const memoryRoot = resolveApprovalMemoryRoot(options.memoryRoot)
+  const sharedSettings = resolveEffectiveSharedMemorySettings(options.sharedSettings, memoryRoot)
+  if (sharedSettings.enabled) {
+    if (isSharedOwnerPath(targetRelPath)) {
+      const oldContent = readCommittedMemoryFile(memoryRoot, FIXED_SHARED_OWNER) || ''
+      const diff = generateSimpleDiff(oldContent, newContent, FIXED_SHARED_OWNER)
+      const proposal = createSharedProposal({
+        memoryRoot,
+        targetPath: FIXED_SHARED_OWNER,
+        operation: 'write',
+        sourceRoot: sharedSettings.sourceRoot,
+        content: newContent,
+        description: options.reason,
+        message: options.author,
+      })
+      return {
+        status: 'PENDING_APPROVAL',
+        proposalId: proposal.id,
+        diff,
+        message: `Proposal created for ${FIXED_SHARED_OWNER}. Awaiting human approval before applying.`,
+      }
+    }
+    const inspection = inspectSharedSource(sharedSettings, memoryRoot)
+    assertNoSharedParagraphCopies(newContent, targetRelPath, inspection)
+  }
+
+  const change = prepareMemoryChange(targetRelPath, newContent, options, memoryRoot)
   if (change.identical) return identicalProposalResult()
-  const mode = options.requireExplicit ? 'explicit' : getApprovalModeForFile(change.normalizedRel)
-  if (mode === 'auto') return commitPreparedChange(change)
-  const proposal = buildProposal(change)
-  writeProposalFile(proposal)
+  const mode = options.requireExplicit
+    ? 'explicit'
+    : getApprovalModeForFile(change.normalizedRel, memoryRoot)
+  if (mode === 'auto') return commitPreparedChange(change, memoryRoot)
+  const proposal = buildProposal(change, memoryRoot)
+  writeProposalFile(proposal, memoryRoot)
   return pendingProposalResult(proposal)
 }
 
@@ -345,14 +412,29 @@ export function createExplicitProposalSet(
   writes: readonly ExplicitProposalWrite[],
   options: ExplicitProposalSetOptions = {},
 ): ExplicitProposalSetResult {
+  const memoryRoot = resolveApprovalMemoryRoot(options.memoryRoot)
+  const sharedSettings = resolveEffectiveSharedMemorySettings(options.sharedSettings, memoryRoot)
+  if (sharedSettings.enabled) {
+    if (writes.some((write) => isSharedOwnerPath(write.targetRelPath))) {
+      throw new Error(
+        `Refusing explicit proposal set: batch contains protected shared owner "${FIXED_SHARED_OWNER}". Mixed batches cannot be partially applied.`,
+      )
+    }
+  }
+
   const prepared = writes.map((write) =>
-    prepareMemoryChange(write.targetRelPath, write.newContent, {
-      reason: write.reason,
-      author: write.author,
-      requireExplicit: true,
-    }),
+    prepareMemoryChange(
+      write.targetRelPath,
+      write.newContent,
+      {
+        reason: write.reason,
+        author: write.author,
+        requireExplicit: true,
+      },
+      memoryRoot,
+    ),
   )
-  assertHeadBeforeProposalPersist(options.expectedHead)
+  assertHeadBeforeProposalPersist(options.expectedHead, memoryRoot)
 
   const results: ProposeResult[] = []
   const proposalIds: string[] = []
@@ -364,17 +446,17 @@ export function createExplicitProposalSet(
         results.push(identicalProposalResult())
         continue
       }
-      const proposal = buildProposal(change)
+      const proposal = buildProposal(change, memoryRoot)
       options.beforePersist?.(proposal, persistIndex)
-      assertHeadBeforeProposalPersist(options.expectedHead)
-      writeProposalFile(proposal)
+      assertHeadBeforeProposalPersist(options.expectedHead, memoryRoot)
+      writeProposalFile(proposal, memoryRoot)
       created.push(proposal.id)
       proposalIds.push(proposal.id)
       results.push(pendingProposalResult(proposal))
       persistIndex += 1
     }
   } catch (error) {
-    discardExplicitProposals(created)
+    discardExplicitProposals(created, memoryRoot)
     if (error instanceof MemoryProposalSetError) throw error
     throw new MemoryProposalSetError(
       'PERSIST_FAILED',
@@ -385,7 +467,8 @@ export function createExplicitProposalSet(
   return { proposalIds, results }
 }
 
-export function listPendingProposals(): ApprovalProposal[] {
+export function listPendingProposals(memoryRoot?: string): ApprovalProposal[] {
+  const pendingDir = resolvePendingDir(memoryRoot)
   if (!fs.existsSync(pendingDir)) return []
   const files = fs.readdirSync(pendingDir).filter((f) => f.endsWith('.json'))
   const proposals: ApprovalProposal[] = []
@@ -401,8 +484,12 @@ export function listPendingProposals(): ApprovalProposal[] {
   return proposals
 }
 
-export function getPendingProposal(proposalId: string): ApprovalProposal | null {
+export function getPendingProposal(
+  proposalId: string,
+  memoryRoot?: string,
+): ApprovalProposal | null {
   if (!/^prop-[a-z0-9-]+$/.test(proposalId)) return null
+  const pendingDir = resolvePendingDir(memoryRoot)
   const proposalPath = path.join(pendingDir, `${proposalId}.json`)
   if (!fs.existsSync(proposalPath)) return null
   try {
@@ -412,12 +499,18 @@ export function getPendingProposal(proposalId: string): ApprovalProposal | null 
   }
 }
 
-export function reviewProposal(proposalId: string, decision: 'approve' | 'reject'): ReviewResult {
-  const proposal = getPendingProposal(proposalId)
+export function reviewProposal(
+  proposalId: string,
+  decision: 'approve' | 'reject',
+  memoryRoot = resolveApprovalMemoryRoot(),
+  options?: { sharedSettings?: Partial<SharedMemorySettings> },
+): ReviewResult {
+  const proposal = getPendingProposal(proposalId, memoryRoot)
   if (!proposal) {
     throw new Error(`Proposal "${proposalId}" not found.`)
   }
 
+  const pendingDir = resolvePendingDir(memoryRoot)
   const proposalFile = path.join(pendingDir, `${proposalId}.json`)
 
   if (decision === 'reject') {
@@ -433,6 +526,12 @@ export function reviewProposal(proposalId: string, decision: 'approve' | 'reject
   }
 
   return withMemoryWriteLock(memoryRoot, `approve proposal ${proposalId}`, () => {
+    const effective = resolveEffectiveSharedMemorySettings(options?.sharedSettings, memoryRoot)
+    if (isSharedOwnerPath(proposal.targetRelPath) && effective.enabled) {
+      throw new Error(
+        `Shared memory proposals cannot be auto-committed into canonical source from native Agy; export the proposal using export and apply it to the source repository after review.`,
+      )
+    }
     const resolved = resolveMemoryPath(memoryRoot, proposal.targetRelPath)
     const currentContent = fs.existsSync(resolved.absolutePath)
       ? fs.readFileSync(resolved.absolutePath, 'utf-8')

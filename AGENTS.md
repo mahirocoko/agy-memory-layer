@@ -2,9 +2,9 @@
 
 Welcome to **`agy-memory-layer`** (`learn-letta-code`). This document defines the engineering standards, architecture rules, and non-negotiable conventions for all agents and pair programmers working in this repository.
 
-**Latest published release:** `v1.23.0` (interactive and human-supervised)
+**Release version:** `v1.24.0` (interactive and human-supervised; GitHub Releases owns publication status)
 
-**Current development state:** matches `v1.23.0`; no newer candidate is declared
+**Current package state:** `1.24.0` (opt-in shared communication adapter; no Letta installation required)
 
 ---
 
@@ -61,16 +61,23 @@ Host Workspace (learn-letta-code)
   - `CONTRACT.md`
 - User-owned MemFS is not a release metadata surface and must not be edited for a package version bump.
 
-### 7. Code Search & CocoIndex Governance
-- **Strict Preflight**: Never chain `ccc init && ccc index` without filename-only preflight.
-- **Portable Enforcement Boundary**: `.cocoindex_code/settings.yml` acts as the portable boundary for sensitive credential exclusion and noise filtering.
-- **Search Tooling Priority**: Prefer CocoIndex / `ccc search` for semantic exploration; use `grep_search` / `rg` for exact tokens, syntax, and literal strings.
+### 7. Code Search & Retrieval Governance
+- **Exact & Structured Search**: Prefer exact filenames and `rg` / ripgrep for tokens, syntax, and literal strings. CocoIndex/CCC is retired; do not invoke `ccc`.
+- **Portable Enforcement Boundary**: `.cocoindex_code/settings.yml` acts as the portable boundary for sensitive credential exclusion and noise filtering (historical reference).
 
 ### 8. Release Control Boundaries
 - **Atomic confirmation requests**: PreToolUse denies ambiguous bundles, malformed inputs, destructive actions, and protected targets, while one recognized scoped mutation receives `force_ask`. This classifier does not authenticate authorization or grants and does not universally cover shell semantics.
 - **Material claims**: Bind consequential claims to current owner and consumer bytes, explicit counterexample probes/outcomes, and fresh reviewer metadata. Packet verification is structural/current-byte evidence, not semantic proof; reviewer identity remains `not-authenticated`.
 - **Continuity**: Bounded re-grounding and fresh-conversation rotation are model-guided policy only. There is no compaction interceptor, mission supervisor, deterministic rotation, or automatic continuation.
-- **Supervision**: The current `v1.23.0` release retains the interactive pane-supervision boundary established by `v1.20.0`: host lifecycle status may be stale while permission UI or a final response remains pending, and a reviewer model may not observe that UI.
+- **Supervision**: `v1.24.0` retains the interactive pane-supervision boundary established by `v1.20.0`: host lifecycle status may be stale while permission UI or a final response remains pending, and a reviewer model may not observe that UI.
+
+### 9. Shared Communication Adapter (`v1.24.0`)
+- **Opt-In / Off-By-Default**: Activated only via `AGY_SHARED_MEMORY_ENABLED=1` or config file outside Git memory (`AGY_SHARED_MEMORY_CONFIG` or `~/.gemini/memory.state/shared-memory.json`).
+- **Fixed Shared Owner**: `system/human/prefs/communication.md`.
+- **Standalone First**: Native memory requires no Letta installation. Optional sharing accepts any distinct local Git source satisfying the fixed-owner and validation contract; Letta is only one possible source.
+- **Pinned Source Revision**: Committed HEAD of explicit Git `sourceRoot`. Symlink escapes and secrets are strictly rejected; reads use committed Git objects exclusively so uncommitted working-tree edits are never injected.
+- **Deduplication & Provenance**: Paragraph-level deduplication keeps source canonical, preserves all distinct native additions/rules, and explains unresolved semantic differences under same headings.
+- **Protected Mutation**: Edits to the shared owner are diverted to pending proposals in `memory.state/shared-proposals/`. Direct Git commits, writes, curation, migration, and reflection rewrites are prohibited and preflight-rejected on mixed batches.
 
 ---
 
@@ -138,6 +145,7 @@ Detailed operational documentation is split into modular files under [`docs/`](d
 - [`docs/agy-main-phase4a-external-product-attribution-2026-09-13.md`](docs/agy-main-phase4a-external-product-attribution-2026-09-13.md) — Historical external-product attribution baseline; not the current release owner.
 - [`docs/agy-main-phase4b-readiness-2026-09-13.md`](docs/agy-main-phase4b-readiness-2026-09-13.md) — Retained `v1.20.0` pre-release readiness evidence and interactive/human-supervised boundary; links the retained canary evidence.
 - [`docs/releases/v1.23.0.md`](docs/releases/v1.23.0.md) — Human-gated Dream v2 LLM reflection release.
+- [`docs/releases/v1.24.0.md`](docs/releases/v1.24.0.md) — Optional shared communication and standalone/no-Letta operation.
 - [`docs/releases/v1.22.0.md`](docs/releases/v1.22.0.md) — Lossless active-memory transport and Agy-adapted curation release.
 - [`docs/releases/v1.21.0.md`](docs/releases/v1.21.0.md) — Cross-project dream daemon release, verification, and usage.
 - [`docs/releases/v1.20.0.md`](docs/releases/v1.20.0.md) — Interactive Agy Main controls, verification, host evidence, and limitations.

@@ -1,7 +1,7 @@
 # 🧠 agy-memory-layer
 
-[![Release](https://img.shields.io/badge/Release-v1.23.0-blue.svg)](./docs/releases/v1.23.0.md)
-[![Release Coverage](https://img.shields.io/badge/Release%20Coverage-87.47%25-green.svg)](./CONTRACT.md)
+[![Release](https://img.shields.io/badge/Release-v1.24.0-blue.svg)](./docs/releases/v1.24.0.md)
+[![Historical v1.23.0 Coverage](https://img.shields.io/badge/v1.23.0%20Coverage-87.47%25-green.svg)](./docs/releases/v1.23.0.md)
 [![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -13,10 +13,10 @@ summaries, uncommitted notes, or model confidence as current truth. It injects o
 and current-project memory, keeps learning explicit, and adds bounded safeguards for consequential
 actions and completion claims.
 
-> **Current release:** `v1.23.0` — ready for interactive, human-supervised use. It adds explicit,
-> human-gated model-backed Dream reflection while keeping deterministic regex Dream as the default;
+> **Current release:** `v1.24.0` — for interactive, human-supervised use. It adds optional
+> shared communication while preserving native memory and standalone operation without Letta;
 > it does not turn Gemini into an autonomous or safety-trusted supervisor. See the
-> [release notes](./docs/releases/v1.23.0.md).
+> [release notes](./docs/releases/v1.24.0.md).
 
 ## Why it exists
 
@@ -56,10 +56,10 @@ curl -fsSL https://raw.githubusercontent.com/mahirocoko/agy-memory-layer/main/in
 ```
 
 The one-line installer follows `main`: on a later run it fast-forwards its cached source checkout.
-For a reproducible release-pinned installation, clone `v1.23.0` explicitly instead:
+For a reproducible release-pinned installation, clone `v1.24.0` explicitly instead:
 
 ```bash
-git clone --branch v1.23.0 --depth 1 https://github.com/mahirocoko/agy-memory-layer.git
+git clone --branch v1.24.0 --depth 1 https://github.com/mahirocoko/agy-memory-layer.git
 cd agy-memory-layer
 ./install.sh
 ```
@@ -230,6 +230,26 @@ human-accepted readiness boundary live in the
 [Phase 4B readiness report](./docs/agy-main-phase4b-readiness-2026-09-13.md) and its
 [bounded canary packet](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md).
 
+## Shared human communication adapter (v1.24.0)
+
+When switching between Letta, Cursor, and Antigravity, common human communication preferences (such as preferred response language, conciseness, or formatting rules) can be shared across agents without copying personas, project context, or full memory stores:
+
+**No Letta required:** normal native Agy memory, recall, and Dream work independently of Letta. Shared mode is optional and disabled by default. To share without Letta, point it at any distinct local Git repository containing a committed, regular Markdown file at `system/human/prefs/communication.md`; use the Git repository root, not a file path or subdirectory. The source still needs to pass content, size, and containment checks. Letta is one possible source, not a required service, account, runtime, or package.
+
+- **Opt-In / Off-By-Default**: Enable via `AGY_SHARED_MEMORY_ENABLED=1` or config file outside Git memory (`~/.gemini/memory.state/shared-memory.json` or `AGY_SHARED_MEMORY_CONFIG`).
+- **Fixed Shared Owner**: `system/human/prefs/communication.md`.
+- **Pinned Source Revision**: Inspects committed HEAD of the explicit source repository. Symlink escapes and detected secret-like content are rejected. Uncommitted working-tree edits are never injected; unrelated dirty files do not prevent reading the committed baseline.
+- **Paragraph-Level Deduplication**: Merges shared baseline while preserving distinct native additions and runtime rules. Unresolved conflicts under same headings are explained rather than overridden.
+- **Protected Mutation**: Edits to the shared owner are diverted to a pending proposals queue (`memory.state/shared-proposals/`) for manual review and upstream application. Direct commits, writes, curation, migration, and reflection rewrites are prohibited.
+- **Introspection Commands**:
+  - `node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts status`
+  - `node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts list`
+  - `node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts show <id>`
+  - `node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts export <id>`
+  - `node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts reject <id>`
+  - `node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts enable <sourceRoot>`
+  - `node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts disable`
+
 ## Development and verification
 
 ```bash
@@ -240,9 +260,9 @@ pnpm test:coverage
 agy plugin validate plugins/agy-memory-layer
 ```
 
-The `v1.23.0` release passed **274/274 Node tests**, **11/11 generated integration scenarios**, and
+The `v1.24.0` release checks passed **316/316 Node tests**, **11/11 generated integration scenarios**, and
 plugin validation for **14 skills, 9 agents, and 3 hooks** with zero errors. Its exact
-release-preparation coverage snapshot is recorded in the [release notes](./docs/releases/v1.23.0.md).
+historical v1.23.0 release-preparation coverage snapshot remains in its release notes; current checks and boundaries are in the [release notes](./docs/releases/v1.24.0.md).
 
 ## Documentation map
 
@@ -251,7 +271,7 @@ release-preparation coverage snapshot is recorded in the [release notes](./docs/
 - [Development commands](./docs/development-commands.md) — script and maintenance reference
 - [File organization](./docs/file-organization.md) — source ownership map
 - [Letta parity](./docs/letta-parity.md) — current parity and non-parity boundaries
-- [v1.23.0 release notes](./docs/releases/v1.23.0.md) — human-gated Dream v2 reflection, provider proof, checks, and limitations
+- [v1.24.0 release notes](./docs/releases/v1.24.0.md) — optional shared communication, standalone use, checks, and limitations
 - [v1.22.0 release notes](./docs/releases/v1.22.0.md) — lossless memory transport and curation safety
 - [Generated test report](./TEST_REPORT.md) — latest integration scenario evidence
 

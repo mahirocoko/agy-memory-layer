@@ -27,7 +27,11 @@ Inspect active memory blocks, Git snapshot commit history, or search across hist
 
 2. **Search Mode (`/memory search <query>`)**:
    - Searches across all files in `~/.gemini/memory/` (including historical `learnings/*.md`).
+   - When the shared communication adapter is enabled, searches the projected shared view.
    - Returns ranked match snippets with file paths, line numbers, and context.
+
+3. **Shared Memory Inspection (`shared-memory.ts status`)**:
+   - Displays the opt-in shared communication adapter status, source root, and pending proposals.
 
 ## Direct Script Execution
 

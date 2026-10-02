@@ -23,6 +23,12 @@ import {
   writeMemoryFile,
 } from './memory-repository.ts'
 import { withMemoryWriteLock } from './memory-write-lock.ts'
+import {
+  FIXED_SHARED_OWNER,
+  isSharedOwnerPath,
+  resolveEffectiveSharedMemorySettings,
+  type SharedMemorySettings,
+} from './shared-memory.ts'
 
 export type MemoryCurationSpec = {
   schemaVersion: 1
@@ -129,7 +135,21 @@ const validateSpec = (spec: MemoryCurationSpec): void => {
 export const planMemoryCuration = (
   memoryRoot: string,
   spec: MemoryCurationSpec,
+  options?: { sharedSettings?: Partial<SharedMemorySettings> },
 ): MemoryCurationPlan => {
+  const sharedSettings = resolveEffectiveSharedMemorySettings(options?.sharedSettings, memoryRoot)
+  if (sharedSettings.enabled) {
+    if (
+      (Array.isArray(spec.sources) &&
+        spec.sources.some((s) => isSharedOwnerPath(s.relativePath))) ||
+      (Array.isArray(spec.targets) && spec.targets.some((t) => isSharedOwnerPath(t.relativePath)))
+    ) {
+      throw new Error(
+        `Refusing curation: protected shared owner "${FIXED_SHARED_OWNER}" cannot be curated through native memory-curation.`,
+      )
+    }
+  }
+
   validateSpec(spec)
   const currentHead = getMemoryHeadRevision(memoryRoot)
   if (currentHead !== spec.expectedHead) {

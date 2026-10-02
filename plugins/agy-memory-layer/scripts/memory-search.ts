@@ -9,6 +9,13 @@ import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { listCommittedMemoryFiles, readCommittedMemoryFile } from './memory-repository.ts'
+import {
+  FIXED_SHARED_OWNER,
+  inspectSharedSource,
+  isSharedOwnerPath,
+  loadSharedMemorySettings,
+  mergeCommunicationDocuments,
+} from './shared-memory.ts'
 
 export type SearchMatch = {
   file: string
@@ -16,6 +23,8 @@ export type SearchMatch = {
   lineNum: number
   line: string
   score: number
+  isVirtual?: boolean
+  virtualLabel?: string
 }
 
 export type MemorySearchOptions = {
@@ -108,7 +117,7 @@ export function searchMemory(query: string, options: MemorySearchOptions = {}): 
   const results: SearchMatch[] = []
   const root = path.resolve(options.memoryRoot || memoryRoot)
 
-  const searchContent = (relativePath: string, content: string): void => {
+  const searchContent = (relativePath: string, content: string, isVirtual = false): void => {
     if (options.scope && !relativePath.startsWith(options.scope)) return
     const fullPath = path.join(root, relativePath)
     const lines = content.split('\n')
@@ -125,17 +134,47 @@ export function searchMemory(query: string, options: MemorySearchOptions = {}): 
           lineNum: idx + 1,
           line: line.trim(),
           score: matchCount,
+          ...(isVirtual
+            ? { isVirtual: true, virtualLabel: 'virtual (synthetic merged document line)' }
+            : {}),
         })
       }
     })
   }
 
+  const sharedSettings = loadSharedMemorySettings(undefined, root)
+
   if (fs.existsSync(path.join(root, '.git'))) {
     for (const relativePath of listCommittedMemoryFiles(root, '')) {
       if (!relativePath.endsWith('.md')) continue
+      if (sharedSettings.enabled && isSharedOwnerPath(relativePath)) continue
       const content = readCommittedMemoryFile(root, relativePath)
       if (content !== null) searchContent(relativePath, content)
     }
+
+    if (sharedSettings.enabled) {
+      const inspection = inspectSharedSource(sharedSettings, root)
+      if (inspection.valid && inspection.document) {
+        const nativeContent = readCommittedMemoryFile(root, FIXED_SHARED_OWNER)
+        const nativeDoc = nativeContent
+          ? {
+              relativePath: FIXED_SHARED_OWNER,
+              description: '',
+              body: nativeContent,
+              readOnly: false,
+              scope: 'global' as const,
+              tier: 'system' as const,
+            }
+          : null
+        const { mergedDoc } = mergeCommunicationDocuments(
+          inspection.document,
+          nativeDoc,
+          inspection,
+        )
+        searchContent(FIXED_SHARED_OWNER, mergedDoc.body, true)
+      }
+    }
+
     results.sort((a, b) => b.score - a.score)
     return results.slice(0, options.limit || 20)
   }
@@ -190,7 +229,10 @@ if (process.argv[1]?.endsWith('memory-search.ts')) {
     console.log('   No matching memory entries found.')
   } else {
     matches.forEach((m, idx) => {
-      console.log(`[${idx + 1}] 📄 ${m.relPath}:${m.lineNum}`)
+      const loc = m.isVirtual
+        ? `${m.relPath}:${m.lineNum} (virtual line)`
+        : `${m.relPath}:${m.lineNum}`
+      console.log(`[${idx + 1}] 📄 ${loc}`)
       console.log(`    ${m.line}\n`)
     })
   }

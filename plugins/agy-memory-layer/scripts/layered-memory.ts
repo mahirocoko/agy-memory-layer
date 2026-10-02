@@ -7,6 +7,14 @@ import {
   listCommittedMemoryFiles,
   readCommittedMemoryFile,
 } from './memory-repository.ts'
+import {
+  FIXED_SHARED_OWNER,
+  inspectSharedSource,
+  isSharedOwnerPath,
+  mergeCommunicationDocuments,
+  resolveEffectiveSharedMemorySettings,
+  type SharedMemorySettings,
+} from './shared-memory.ts'
 
 export type MemoryLayoutMode = 'empty' | 'legacy' | 'layered' | 'conflict'
 
@@ -29,6 +37,11 @@ export type MemoryProjection = {
   diagnostics: string[]
   legacyPaths: string[]
   layeredPaths: string[]
+  sharedSource?: {
+    sourceRoot: string
+    pinnedSha: string
+    sharedOwner: string
+  } | null
 }
 
 export type ParsedMemoryDocument = {
@@ -231,6 +244,7 @@ const readLegacyDocuments = (
 export const inspectCommittedMemoryProjection = (
   memoryRoot: string,
   projectSlug: string,
+  sharedSettings?: SharedMemorySettings,
 ): MemoryProjection => {
   const diagnostics: string[] = []
   const globalSystemPaths = committedMarkdownFiles(memoryRoot, 'system')
@@ -261,75 +275,93 @@ export const inspectCommittedMemoryProjection = (
       diagnostics,
       legacyPaths,
       layeredPaths,
+      sharedSource: null,
     }
   }
+
+  let mode: MemoryLayoutMode = 'empty'
+  let globalSystem: MemoryDocument[] = []
+  let projectSystem: MemoryDocument[] = []
+  let external: MemoryDocument[] = []
 
   if (layeredPaths.length > 0) {
-    return {
-      mode: 'layered',
-      revision: getCommittedRevision(memoryRoot),
-      projectSlug,
-      globalSystem: readLayeredDocuments(
-        memoryRoot,
-        globalSystemPaths,
-        'global',
-        'system',
-        diagnostics,
-      ),
-      projectSystem: readLayeredDocuments(
-        memoryRoot,
-        projectSystemPaths,
-        'project',
-        'system',
-        diagnostics,
-      ),
-      external: [
-        ...readLayeredDocuments(
-          memoryRoot,
-          globalReferencePaths,
-          'global',
-          'reference',
-          diagnostics,
-        ),
-        ...readLayeredDocuments(
-          memoryRoot,
-          projectReferencePaths,
-          'project',
-          'reference',
-          diagnostics,
-        ),
-      ].sort((left, right) => left.relativePath.localeCompare(right.relativePath)),
+    mode = 'layered'
+    globalSystem = readLayeredDocuments(
+      memoryRoot,
+      globalSystemPaths,
+      'global',
+      'system',
       diagnostics,
-      legacyPaths,
-      layeredPaths,
-    }
+    )
+    projectSystem = readLayeredDocuments(
+      memoryRoot,
+      projectSystemPaths,
+      'project',
+      'system',
+      diagnostics,
+    )
+    external = [
+      ...readLayeredDocuments(memoryRoot, globalReferencePaths, 'global', 'reference', diagnostics),
+      ...readLayeredDocuments(
+        memoryRoot,
+        projectReferencePaths,
+        'project',
+        'reference',
+        diagnostics,
+      ),
+    ].sort((left, right) => left.relativePath.localeCompare(right.relativePath))
+  } else if (legacyPaths.length > 0) {
+    mode = 'legacy'
+    const legacy = readLegacyDocuments(memoryRoot, selectedLegacyPaths, projectSlug)
+    globalSystem = legacy.globalSystem
+    projectSystem = legacy.projectSystem
   }
 
-  if (legacyPaths.length > 0) {
-    const legacy = readLegacyDocuments(memoryRoot, selectedLegacyPaths, projectSlug)
-    return {
-      mode: 'legacy',
-      revision: getCommittedRevision(memoryRoot),
-      projectSlug,
-      globalSystem: legacy.globalSystem,
-      projectSystem: legacy.projectSystem,
-      external: [],
-      diagnostics,
-      legacyPaths,
-      layeredPaths,
+  const settings = resolveEffectiveSharedMemorySettings(sharedSettings, memoryRoot)
+  let sharedSource: MemoryProjection['sharedSource'] = null
+
+  if (settings.enabled) {
+    const inspection = inspectSharedSource(settings, memoryRoot)
+    if (!inspection.valid) {
+      diagnostics.push(...inspection.diagnostics)
+    } else if (inspection.document && inspection.pinnedSha && inspection.sourceRoot) {
+      sharedSource = {
+        sourceRoot: inspection.sourceRoot,
+        pinnedSha: inspection.pinnedSha,
+        sharedOwner: FIXED_SHARED_OWNER,
+      }
+      const nativeDocIndex = globalSystem.findIndex((d) => isSharedOwnerPath(d.relativePath))
+      const nativeDoc = nativeDocIndex !== -1 ? globalSystem[nativeDocIndex] : null
+      const { mergedDoc, diagnostics: mergeDiags } = mergeCommunicationDocuments(
+        inspection.document,
+        nativeDoc,
+        inspection,
+      )
+      diagnostics.push(...mergeDiags)
+
+      if (nativeDocIndex !== -1) {
+        globalSystem = globalSystem.map((d, idx) => (idx === nativeDocIndex ? mergedDoc : d))
+      } else {
+        globalSystem.push(mergedDoc)
+      }
+
+      if (mode === 'empty') {
+        mode = 'layered'
+      }
     }
   }
 
   return {
-    mode: 'empty',
+    mode,
     revision: getCommittedRevision(memoryRoot),
     projectSlug,
-    globalSystem: [],
-    projectSystem: [],
-    external: [],
+    globalSystem,
+    projectSystem,
+    external,
     diagnostics,
     legacyPaths,
     layeredPaths,
+    sharedSource,
   }
 }
 

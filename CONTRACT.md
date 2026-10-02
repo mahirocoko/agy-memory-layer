@@ -1,11 +1,12 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.23.0`
+**Package version:** `1.24.0`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release state:** Released as `v1.23.0` on 2026-09-27 for interactive,
-human-supervised use
+**Release version:** `v1.24.0` for interactive, human-supervised use;
+GitHub Releases owns publication status. Native operation does
+not require Letta; the optional shared adapter accepts a validated distinct Git source.
 
 **Parity owner:** [`docs/letta-parity.md`](./docs/letta-parity.md)
 
@@ -418,7 +419,7 @@ Current source implements a focused evidence-only adapter owned by
 
 Ownership is strictly bounded:
 - **Direct CLI runtime/lifecycle owner**: The installed Direct CLI workflow at
-  `/Users/mahiro/.letta/skills/direct-cli` (especially `scripts/herdr-jobs.py`)
+  the configured `direct-cli` skill directory (especially `scripts/herdr-jobs.py`)
   owns Herdr shell readiness, trust prompt handling, prompt dispatch,
   wait/callback lifecycle, target result collection, and workspace cleanup.
   This repository must not implement a parallel Herdr transport.
@@ -598,13 +599,23 @@ targeted `/remember`, scoped `/init`, non-mutating Stop, fresh-session
 persistence, and cleanup.
 See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 
+### 11. Shared communication adapter (`v1.24.0`)
+
+- **Opt-In / Off-By-Default**: Activated only via `AGY_SHARED_MEMORY_ENABLED=1` or config file outside Git memory (`AGY_SHARED_MEMORY_CONFIG` or `~/.gemini/memory.state/shared-memory.json`).
+- **Fixed Shared Owner**: `system/human/prefs/communication.md`.
+- **Pinned Source Revision**: Inspects committed HEAD of explicit `sourceRoot` Git repository; checks tree entry, rejects symlink escapes, secrets, and documents exceeding 20,000 characters; reads use committed Git objects exclusively so uncommitted working-tree edits are never injected.
+- **Deduplication & Provenance**: Paragraph-level deduplication keeps source canonical, preserves distinct native additions and runtime rules, annotates deferred references, and explains unresolved semantic differences under same headings without silent override.
+- **Exclusion of Extraneous Metadata**: Excludes copied source persona or model roster sections.
+- **Protected Mutation**: Write operations divert to pending proposals in `memory.state/shared-proposals/`. Direct Git commits, writes, curation, migration, and reflection rewrites are prohibited and preflight-rejected on mixed batches.
+- **Canonical Source Boundary**: Canonical source acceptance remains a human/source-owner gate; pending proposals never become active memory.
+
 ## Current release readiness boundary
 
 The retained pre-release readiness owner is
 [`docs/agy-main-phase4b-readiness-2026-09-13.md`](./docs/agy-main-phase4b-readiness-2026-09-13.md),
 with bounded retained evidence under
 [`docs/evidence/agy-main-phase4b-canary-2026-09-13/`](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md).
-The strongest supported verdict is an interactive, human-supervised `v1.23.0`
+The strongest supported verdict is an interactive, human-supervised `v1.24.0`
 release, not an unsupervised safety-trusted main. The retained `v1.20.0`
 readiness packet still owns the original supervision evidence. Herdr may report
 `done` while its pane still awaits permission, and the reviewer model may not
@@ -639,7 +650,7 @@ observe that permission UI; interactive pane supervision remains required.
 6. An automated release workflow remains deferred. Releases use the existing
    manual tag/GitHub Release path only after source, host, and human gates pass;
    current release evidence lives in
-   [`docs/releases/v1.23.0.md`](./docs/releases/v1.23.0.md).
+   [`docs/releases/v1.24.0.md`](./docs/releases/v1.24.0.md).
 
 ## Distribution
 

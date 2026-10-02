@@ -2466,8 +2466,8 @@ describe('Unit Coverage Extensions', () => {
     const biomeJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'biome.json'), 'utf8'))
 
     // 1. Development candidate intent and mirror equality
-    assert.strictEqual(packageJson.version, '1.23.0')
-    assert.strictEqual(pluginJson.version, '1.23.0')
+    assert.strictEqual(packageJson.version, '1.24.0')
+    assert.strictEqual(pluginJson.version, '1.24.0')
     assert.strictEqual(packageJson.version, pluginJson.version)
     const exactEvidenceOverride = biomeJson.overrides.find(
       (override: { includes?: string[]; formatter?: { enabled?: boolean } }) =>
@@ -2490,8 +2490,11 @@ describe('Unit Coverage Extensions', () => {
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(contractDoc.includes('**Package version:** `1.23.0`'), true)
-    assert.strictEqual(contractDoc.includes('Released as `v1.23.0` on 2026-09-27'), true)
+    assert.strictEqual(contractDoc.includes('**Package version:** `1.24.0`'), true)
+    assert.strictEqual(
+      contractDoc.includes(`**Release version:** \`v${packageJson.version}\``),
+      true,
+    )
     assert.strictEqual(
       contractDoc.includes(
         'Every schema-valid invocation that runs to completion within the host hook',
@@ -2532,23 +2535,30 @@ describe('Unit Coverage Extensions', () => {
 
     // 3. README.md product-first onboarding and current release boundary
     const readmeDoc = fs.readFileSync(path.join(ROOT_DIR, 'README.md'), 'utf8')
-    assert.strictEqual(readmeDoc.includes('**Current release:** `v1.23.0`'), true)
+    assert.strictEqual(readmeDoc.includes(`**Current release:** \`v${packageJson.version}\``), true)
     assert.strictEqual(readmeDoc.includes('## Why it exists'), true)
     assert.strictEqual(readmeDoc.includes('## Quick start'), true)
     assert.strictEqual(readmeDoc.includes('## How it works'), true)
     assert.strictEqual(readmeDoc.includes('## Everyday commands'), true)
     assert.strictEqual(readmeDoc.includes('one-line installer follows `main`'), true)
-    assert.strictEqual(readmeDoc.includes('clone --branch v1.23.0 --depth 1'), true)
+    assert.strictEqual(readmeDoc.includes(`clone --branch v${packageJson.version} --depth 1`), true)
     assert.strictEqual(readmeDoc.includes('Calling `/init` is the confirmation'), true)
     assert.strictEqual(readmeDoc.includes('asks before writing'), false)
     assert.strictEqual(readmeDoc.includes('better continuity and fewer unsupported claims'), true)
     assert.strictEqual(readmeDoc.includes("does not improve Gemini's base"), true)
     assert.strictEqual(readmeDoc.includes('`Stop` never auto-commits'), true)
-    assert.strictEqual(readmeDoc.includes('274/274 Node tests'), true)
+    assert.strictEqual(readmeDoc.includes('316/316 Node tests'), true)
     assert.strictEqual(readmeDoc.includes('11/11 generated integration scenarios'), true)
     assert.strictEqual(readmeDoc.includes('release-preparation coverage snapshot'), true)
-    assert.strictEqual(readmeDoc.includes('./docs/releases/v1.23.0.md'), true)
-    const latestReleaseDoc = fs.readFileSync(
+    assert.strictEqual(readmeDoc.includes(`./docs/releases/v${packageJson.version}.md`), true)
+    const currentReleaseDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'releases', `v${packageJson.version}.md`),
+      'utf8',
+    )
+    assert.ok(currentReleaseDoc.includes(`# v${packageJson.version}`))
+    assert.ok(currentReleaseDoc.includes('Native Agy works without Letta'))
+    assert.ok(currentReleaseDoc.includes('Human/source-owner approval remains required'))
+    const historicalReleaseDoc = fs.readFileSync(
       path.join(ROOT_DIR, 'docs', 'releases', 'v1.23.0.md'),
       'utf8',
     )
@@ -2560,7 +2570,7 @@ describe('Unit Coverage Extensions', () => {
       'claude-opus-4-6-thinking',
       '874b193358395005031c148f09b8ebaca7e42c5b0760b4b4a917d49906b35f7d',
     ]) {
-      assert.strictEqual(latestReleaseDoc.includes(requiredText), true)
+      assert.strictEqual(historicalReleaseDoc.includes(requiredText), true)
     }
     assert.strictEqual(readmeDoc.includes('./docs/agy-main-phase4b-readiness-2026-09-13.md'), true)
     assert.strictEqual(
@@ -2600,20 +2610,29 @@ describe('Unit Coverage Extensions', () => {
       true,
     )
 
-    const currentReleaseDoc = fs.readFileSync(
+    const historicalSupervisionReleaseDoc = fs.readFileSync(
       path.join(ROOT_DIR, 'docs', 'releases', 'v1.20.0.md'),
       'utf8',
     )
     assert.strictEqual(
-      currentReleaseDoc.includes(
+      historicalSupervisionReleaseDoc.includes(
         '**State:** Released as `v1.20.0` for interactive, human-supervised use.',
       ),
       true,
     )
-    assert.strictEqual(currentReleaseDoc.includes('**206/206 Node tests passed**'), true)
-    assert.strictEqual(currentReleaseDoc.includes('negative-control `fail` is expected'), true)
-    assert.strictEqual(currentReleaseDoc.includes('**86.56% lines**'), true)
-    assert.strictEqual(currentReleaseDoc.includes('Active pane supervision remains required'), true)
+    assert.strictEqual(
+      historicalSupervisionReleaseDoc.includes('**206/206 Node tests passed**'),
+      true,
+    )
+    assert.strictEqual(
+      historicalSupervisionReleaseDoc.includes('negative-control `fail` is expected'),
+      true,
+    )
+    assert.strictEqual(historicalSupervisionReleaseDoc.includes('**86.56% lines**'), true)
+    assert.strictEqual(
+      historicalSupervisionReleaseDoc.includes('Active pane supervision remains required'),
+      true,
+    )
 
     const continuityPilotDoc = fs.readFileSync(
       path.join(ROOT_DIR, 'docs', 'execution-continuity-pilot.md'),

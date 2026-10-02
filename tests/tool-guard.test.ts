@@ -291,7 +291,8 @@ describe('atomic PreToolUse confirmation request gate', () => {
     }
     assert.strictEqual(classifyCommandLine('python --version').decision, 'ask')
 
-    const protectedMemory = path.join(os.homedir(), '.gemini', 'memory', 'guard-test.md')
+    const memoryRoot = process.env.AGY_MEMORY_DIR || path.join(os.homedir(), '.gemini', 'memory')
+    const protectedMemory = path.join(memoryRoot, 'guard-test.md')
     for (const command of [
       `echo blocked > ${protectedMemory}`,
       `echo blocked >& ${protectedMemory}`,

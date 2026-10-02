@@ -212,6 +212,17 @@ files and removes layered targets while preserving the migration archive,
 later curation archives, unrelated post-migration paths, and the exact
 pre-rollback snapshot. A non-ancestor migration commit fails closed.
 
+## Shared Human Communication Adapter (`v1.24.0`)
+
+When switching between Letta, Cursor, and Antigravity, common human communication preferences (`system/human/prefs/communication.md`) can be shared across agents:
+
+Native Agy operation requires no Letta installation. Optional sharing accepts any distinct Git repository with the committed fixed owner; Letta is one possible source, not a runtime dependency.
+
+- **Opt-In / Off-By-Default**: Enable via `AGY_SHARED_MEMORY_ENABLED=1` or config file outside Git memory (`~/.gemini/memory.state/shared-memory.json` or `AGY_SHARED_MEMORY_CONFIG`).
+- **Committed-Only Inspection**: Inspects committed HEAD of the explicit source repository. Symlink escapes and secrets are strictly rejected; reads use committed Git objects exclusively so uncommitted working-tree edits are never injected.
+- **Paragraph-Level Deduplication**: Merges shared baseline while preserving distinct native additions and runtime rules. Unresolved conflicts under same headings are explained rather than overridden.
+- **Protected Mutation**: Edits to the shared owner are diverted to a pending proposals queue (`memory.state/shared-proposals/`) for manual review and upstream application. Direct commits, writes, curation, migration, and reflection rewrites are prohibited and preflight-rejected on mixed batches.
+
 ## Human Gate for the First Live Migration
 
 Before touching real `~/.gemini/memory`, present:

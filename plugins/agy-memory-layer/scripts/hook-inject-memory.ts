@@ -53,7 +53,7 @@ const BUDGET_NOTICE_SUFFIX =
 const transportMarker = (index: number, total: number): string =>
   `[MemFS Transport ${index + 1}/${total}]\n`
 
-const stripTransportStep = (message: string): string => {
+export const stripTransportStep = (message: string): string => {
   if (message === AUTHORITY_BOUNDARY_STANZA) return ''
   const authorityPrefix = `${AUTHORITY_BOUNDARY_STANZA}\n\n`
   let rest = message.startsWith(authorityPrefix) ? message.slice(authorityPrefix.length) : message

@@ -18,6 +18,7 @@ import {
   writeMemoryFile,
 } from './memory-repository.ts'
 import { withMemoryWriteLock } from './memory-write-lock.ts'
+import { FIXED_SHARED_OWNER, isSharedOwnerPath, loadSharedMemorySettings } from './shared-memory.ts'
 
 export type MigrationDispositionState =
   | 'active'
@@ -228,9 +229,15 @@ const validateTargets = (
   spec: LayeredMigrationSpec,
   sourcePaths: Set<string>,
 ): MigrationTarget[] => {
+  const sharedSettings = loadSharedMemorySettings(undefined, memoryRoot)
   const seen = new Set<string>()
   const targets = stableSort(spec.targets, (target) => target.relativePath)
   for (const target of targets) {
+    if (sharedSettings.enabled && isSharedOwnerPath(target.relativePath)) {
+      throw new Error(
+        `Refusing migration: protected shared owner "${FIXED_SHARED_OWNER}" cannot be migrated through layered-memory-migration.`,
+      )
+    }
     validateTargetPath(target.relativePath)
     resolveMemoryPath(memoryRoot, target.relativePath)
     if (seen.has(target.relativePath)) {
@@ -394,6 +401,19 @@ export const planLayeredMemoryMigration = (
   memoryRoot: string,
   spec: LayeredMigrationSpec,
 ): LayeredMigrationPlan => {
+  const sharedSettings = loadSharedMemorySettings(undefined, memoryRoot)
+  if (sharedSettings.enabled) {
+    if (
+      (Array.isArray(spec.sources) &&
+        spec.sources.some((s) => isSharedOwnerPath(s.relativePath))) ||
+      (Array.isArray(spec.targets) && spec.targets.some((t) => isSharedOwnerPath(t.relativePath)))
+    ) {
+      throw new Error(
+        `Refusing migration: protected shared owner "${FIXED_SHARED_OWNER}" cannot be migrated through layered-memory-migration.`,
+      )
+    }
+  }
+
   validateSpecShape(spec)
   const currentHead = getMemoryHeadRevision(memoryRoot)
   if (currentHead !== spec.expectedHead) {
