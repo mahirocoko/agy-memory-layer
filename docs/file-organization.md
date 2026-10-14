@@ -44,8 +44,9 @@ learn-letta-code/
 │   ├── releases/v1.19.0.md                  # Approval-bound contract snapshot and alignment release
 │   ├── releases/v1.20.0.md                  # Interactive Agy Main guard and claim-review release
 │   ├── releases/v1.21.0.md                  # Cross-project dream daemon release
-│   ├── releases/v1.23.0.md                  # Human-gated Dream v2 reflection release
 │   ├── releases/v1.22.0.md                  # Lossless memory transport and curation safety release
+│   ├── releases/v1.23.0.md                  # Human-gated Dream v2 reflection release
+│   ├── releases/v1.24.0.md                  # Optional shared communication adapter release
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene
@@ -106,15 +107,19 @@ learn-letta-code/
 │       ├── hook-memory-status.sh             # Strict Stop wrapper
 │       ├── hook-memory-status.ts             # Non-mutating Stop status owner
 │       ├── active-learning.ts                 # Canonical committed working-hypothesis selector
+│       ├── cli-entrypoint.ts                  # Direct CLI invocation detector
 │       ├── contract-ledger.ts                 # Contract compiler and deterministic evaluator core
 │       ├── contract-ledger-cli.ts             # Snapshot-bound compile/verify/eval/verdict CLI
 │       ├── contract-matching.ts               # Stable rule IDs and scope matching
 │       ├── contract-snapshot.ts               # Proposal/approval, owner, target, and snapshot identity
 │       ├── layered-memory.ts                  # Committed layered/legacy projection compiler
 │       ├── layered-memory-migration.ts        # Lossless legacy migration planner/apply/rollback
+│       ├── memory-paths.ts                    # Shared MemFS and state path resolution
 │       ├── memory-repository.ts              # Containment, Git state, atomic write, targeted commit
 │       ├── memory-write-lock.ts              # External cross-process MemFS writer lock
 │       ├── memory-curation.ts                # Receipt-led curation proposal and approval
+│       ├── process-liveness.ts               # Process liveness and orphan detection utilities
+│       ├── shared-memory.ts                  # Opt-in shared communication adapter and proposal queue
 │       ├── workspace-identity.ts             # Shared project scope and conversation workspace resolution
 │       ├── dream-daemon.ts                  # Regex Dream archive plus opt-in LLM proposals; schedule status not inspected
 │       ├── dream-reflector.ts               # Pure reflection prompt, schema, and operation planner
@@ -139,6 +144,7 @@ learn-letta-code/
 │
 ├── tools/
 │   ├── host-evidence-contract.ts             # Manifest, aggregate evidence, scoring, and accounting owner
+│   ├── host-evidence-direct-cli.ts           # Phase 3 Direct CLI callback receipt and invariance verifier
 │   ├── host-evidence-receipts.ts             # Pure exact receipt parser, replay, admission, and derivation
 │   ├── host-evidence-store.ts                # POSIX system-temp immutable run store and sealing boundary
 │   ├── memory-backup.ts                      # Complete verified backup/restore bundle
@@ -149,11 +155,17 @@ learn-letta-code/
     ├── run-test-suite.ts                    # Integration scenario runner and report generator
     ├── test-memory-backup.ts                # Backup integrity and path-containment tests
     ├── layered-memory.test.ts               # Projection, migration, rollback, curation, and lock cases
+    ├── shared-memory.test.ts                # Opt-in shared communication adapter and proposal cases
+    ├── contract-ledger.test.ts              # Contract ledger, snapshot, evaluation, and verdict cases
+    ├── dream-reflector.test.ts              # Pure reflection prompt, schema, and planner regressions
+    ├── dream-reflection.test.ts             # Dream v2 state, backoff, and proposal regressions
+    ├── dream-reflection-phase4.test.ts      # Reservation, schedule, and envelope boundary regressions
     ├── execution-continuity.test.ts         # Disposable Stage 0 mission/lifecycle and C1-C5 fixtures
     ├── execution-continuity-stage1.test.ts  # Stage 1 root safety, scoring, fingerprint, and finalization guards
     ├── host-evidence.test.ts                 # Phase 1 manifest, aggregate evidence, and scorer contract
     ├── host-evidence-lifecycle.test.ts       # Pure receipt parsing, replay, lifecycle, and derivation cases
     ├── host-evidence-store.test.ts           # Immutable system-temp persistence, seal, and tamper cases
+    ├── host-evidence-direct-cli.test.ts      # Phase 3 Direct CLI callback receipt and invariance cases
     ├── tool-guard.test.ts                    # Atomic gate, malformed/bundled, and protected-target regressions
     ├── material-claim-review.test.ts         # Packet binding, counterexample, freshness, and exit-code regressions
     ├── support/

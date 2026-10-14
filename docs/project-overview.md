@@ -8,9 +8,9 @@ The project is inspired by Letta Code, but adapts the behavior to one Agy user
 repository rather than copying Letta's per-agent storage and service APIs. The
 canonical boundary is [`letta-parity.md`](./letta-parity.md).
 
-**Latest published release:** `v1.23.0` (interactive and human-supervised)
+**Latest published release:** `v1.24.0` (interactive and human-supervised)
 
-**Current development state:** matches `v1.23.0`; no newer candidate is declared
+**Current development state:** matches `v1.24.0`; no newer candidate is declared
 
 ## Core Value
 
@@ -59,6 +59,7 @@ Antigravity CLI
 | Subsystem | Primary owner | Current boundary |
 | --- | --- | --- |
 | Committed prompt projection | `scripts/layered-memory.ts` | Selects layered/legacy ownership from `HEAD`; dirty content is not active |
+| Shared communication adapter | `scripts/shared-memory.ts` | Opt-in pinned committed-`HEAD` reader for `system/human/prefs/communication.md` from a validated distinct Git repository; diverts shared-owner writes to `memory.state/shared-proposals/`; no Letta requirement |
 | Working hypothesis | `scripts/active-learning.ts` | One canonical protected hypothesis; malformed/stray active state fails closed |
 | Tool confirmation-request gate | `scripts/tool-guard.ts`, `scripts/hook-pre-tool-use.ts` | Denies ambiguous bundles, malformed/protected/destructive shapes and issues `force_ask` for one recognized scoped mutation; does not authenticate authorization or grants and does not universally cover shell semantics |
 | Material-claim review | `scripts/material-claim-review.ts` | Binds claim packets to current owner/consumer bytes, counterexamples/outcomes, and fresh reviewer metadata; validates structure and current bytes rather than semantic truth, with identity `not-authenticated` |

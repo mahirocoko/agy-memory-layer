@@ -2,9 +2,9 @@
 
 This reference documents all testing, verification, script runners, and daemon commands available in this codebase.
 
-**Latest published release:** `v1.23.0` (interactive and human-supervised)
+**Latest published release:** `v1.24.0` (interactive and human-supervised)
 
-**Current development state:** matches `v1.23.0`; no newer candidate is declared
+**Current development state:** matches `v1.24.0`; no newer candidate is declared
 
 ---
 
@@ -18,6 +18,9 @@ pnpm test
 
 # Run the current Phase 3 first-turn adapter regressions only (fixture mode; no host effects)
 pnpm test:phase3
+
+# Run the optional shared communication adapter regressions only
+node --experimental-strip-types --test --test-concurrency=1 tests/shared-memory.test.ts
 
 # Run the atomic PreToolUse confirmation-request regressions only
 node --experimental-strip-types --test --test-concurrency=1 tests/tool-guard.test.ts
@@ -315,6 +318,27 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts s
 
 # Run a reviewed project route live
 node --experimental-strip-types plugins/agy-memory-layer/scripts/letta-sync.ts sync --agent-id <agent-id> --target-scope project --project-slug <slug> --confirm-import
+```
+
+---
+
+## 🌐 Optional Shared Communication Adapter
+
+Inspects, configures, or manages pending shared communication proposals (`system/human/prefs/communication.md`) from a distinct local Git repository without requiring Letta.
+
+```bash
+# Inspect current shared adapter status, pinned revision, and pending proposal counts
+node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts status
+
+# Enable or disable shared communication from a distinct local Git repository root
+node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts enable /absolute/path/to/shared-git-repo
+node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts disable
+
+# List, inspect, export, or reject pending shared communication proposals
+node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts list
+node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts show <proposalId>
+node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts export <proposalId>
+node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts reject <proposalId>
 ```
 
 ---

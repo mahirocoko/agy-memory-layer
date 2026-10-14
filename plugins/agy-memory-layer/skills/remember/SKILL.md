@@ -36,7 +36,7 @@ layered migration removes them. Never create a layered owner beside an active
 legacy owner; mixed ownership fails closed.
 
 > [!NOTE]
-> When the opt-in shared communication adapter (`v1.24.0` candidate) is enabled, updates to `system/human/prefs/communication.md` are automatically diverted to pending proposals in `~/.gemini/memory.state/shared-proposals/` awaiting source review. Direct writes and commits to the shared owner are prohibited.
+> When the opt-in shared communication adapter (`v1.24.0`) is enabled, updates to `system/human/prefs/communication.md` are automatically diverted to pending proposals in `~/.gemini/memory.state/shared-proposals/` awaiting source review (`shared-memory.ts list|show|export|reject`). Direct writes and commits to the shared owner are prohibited.
 
 ## Workflow
 

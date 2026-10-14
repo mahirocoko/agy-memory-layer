@@ -216,7 +216,7 @@ Complete purge is intentionally separate and destructive. Consult
 
 ## Current boundaries
 
-Use `v1.20.0` as an **interactive, human-supervised** Agy layer:
+Use `v1.24.0` as an **interactive, human-supervised** Agy layer:
 
 - keep a person at the final product, visual, spend, release, and destructive-action gates;
 - inspect permission UI directly—Herdr may report stale `done` while a pane still waits;
@@ -272,6 +272,7 @@ historical v1.23.0 release-preparation coverage snapshot remains in its release 
 - [File organization](./docs/file-organization.md) — source ownership map
 - [Letta parity](./docs/letta-parity.md) — current parity and non-parity boundaries
 - [v1.24.0 release notes](./docs/releases/v1.24.0.md) — optional shared communication, standalone use, checks, and limitations
+- [v1.23.0 release notes](./docs/releases/v1.23.0.md) — human-gated Dream v2 reflection
 - [v1.22.0 release notes](./docs/releases/v1.22.0.md) — lossless memory transport and curation safety
 - [Generated test report](./TEST_REPORT.md) — latest integration scenario evidence
 

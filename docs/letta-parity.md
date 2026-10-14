@@ -20,6 +20,7 @@ The project targets **contract parity**, not architecture parity:
 | --- | --- | --- |
 | Memory path containment and Git state | `scripts/memory-repository.ts` | lifecycle tests |
 | Active prompt projection and layout selection | `scripts/layered-memory.ts` | PreInvocation, strict health, Palace |
+| Optional shared communication adapter | `scripts/shared-memory.ts` | PreInvocation, `/memory search`, pending shared proposals |
 | Working-hypothesis selection | `scripts/active-learning.ts` | PreInvocation, strict health |
 | Authority and anti-laundering doctrine | `rules/AGENTS.md` | PreInvocation (`scripts/hook-inject-memory.ts`), Evidence Controller (`skills/evidence-controller/SKILL.md`) |
 | Agy evidence/delegation procedure | `skills/evidence-controller/SKILL.md` | plugin rules, native Agy subagent tools |
@@ -207,8 +208,9 @@ The following are useful Agy features, not proof of Letta parity:
 - Evidence Controller routing and scoped closeout;
 - explicit-intent deterministic Dream correction archives;
 - skill candidate synthesis;
-- Letta-to-Agy import.
-- hash-bound layered migration and provenance-preserving curation.
+- Letta-to-Agy import;
+- hash-bound layered migration and provenance-preserving curation;
+- opt-in shared human communication adapter (`system/human/prefs/communication.md`) from any validated distinct local Git repository without requiring Letta.
 
 Letta import requires an exact agent and scope. It writes only on-demand
 evidence under `reference/imports/letta/<agent-id>/**` or the equivalent project

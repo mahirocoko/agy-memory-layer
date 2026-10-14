@@ -2768,8 +2768,9 @@ describe('Unit Coverage Extensions', () => {
     const rootAgentsDoc = fs.readFileSync(path.join(ROOT_DIR, 'AGENTS.md'), 'utf8')
     const versionRuleSection = rootAgentsDoc
       .split('### 6. Version Bump & Manifest Sync')[1]
-      ?.split('### 7. Code Search & CocoIndex Governance')[0]
+      ?.split('### 7. Code Search & Retrieval Governance')[0]
     assert.ok(versionRuleSection)
+    assert.strictEqual(versionRuleSection.includes('### 7.'), false)
     assert.strictEqual(
       versionRuleSection.includes(
         '`palace-generator.ts` dynamically reads `plugin.json` at runtime',
@@ -2796,6 +2797,22 @@ describe('Unit Coverage Extensions', () => {
     const projectOverviewDoc = fs.readFileSync(
       path.join(ROOT_DIR, 'docs', 'project-overview.md'),
       'utf8',
+    )
+    assert.strictEqual(
+      projectOverviewDoc.includes(
+        `**Latest published release:** \`v${packageJson.version}\` (interactive and human-supervised)`,
+      ),
+      true,
+    )
+    assert.strictEqual(
+      projectOverviewDoc.includes(
+        `**Current development state:** matches \`v${packageJson.version}\`; no newer candidate is declared`,
+      ),
+      true,
+    )
+    assert.strictEqual(
+      projectOverviewDoc.includes('| Shared communication adapter | `scripts/shared-memory.ts` |'),
+      true,
     )
     assert.strictEqual(
       projectOverviewDoc.includes(
@@ -2913,15 +2930,40 @@ describe('Unit Coverage Extensions', () => {
       path.join(ROOT_DIR, 'docs', 'development-commands.md'),
       'utf8',
     )
+    assert.strictEqual(
+      developmentCommandsDoc.includes(
+        `**Latest published release:** \`v${packageJson.version}\` (interactive and human-supervised)`,
+      ),
+      true,
+    )
+    assert.strictEqual(
+      developmentCommandsDoc.includes(
+        `**Current development state:** matches \`v${packageJson.version}\`; no newer candidate is declared`,
+      ),
+      true,
+    )
+    assert.strictEqual(
+      readmeDoc.includes(
+        `Use \`v${packageJson.version}\` as an **interactive, human-supervised** Agy layer:`,
+      ),
+      true,
+    )
+    assert.strictEqual(
+      parityDoc.includes('| Optional shared communication adapter | `scripts/shared-memory.ts` |'),
+      true,
+    )
     for (const filename of [
       'material-claim-review.ts',
       'material-claim-review.test.ts',
       'tool-guard.test.ts',
+      'shared-memory.ts',
+      'shared-memory.test.ts',
       'agy-main-phase4b-canary-2026-09-13',
     ]) {
       assert.strictEqual(fileOrganizationDoc.includes(filename), true, filename)
       assert.strictEqual(developmentCommandsDoc.includes(filename), true, filename)
     }
+    assert.strictEqual(fileOrganizationDoc.includes(`releases/v${packageJson.version}.md`), true)
     assert.strictEqual(developmentCommandsDoc.includes('do not prove semantic correctness'), true)
     assert.strictEqual(developmentCommandsDoc.includes('not-authenticated'), true)
     assert.strictEqual(

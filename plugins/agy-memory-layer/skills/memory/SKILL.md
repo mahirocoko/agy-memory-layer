@@ -30,8 +30,8 @@ Inspect active memory blocks, Git snapshot commit history, or search across hist
    - When the shared communication adapter is enabled, searches the projected shared view.
    - Returns ranked match snippets with file paths, line numbers, and context.
 
-3. **Shared Memory Inspection (`shared-memory.ts status`)**:
-   - Displays the opt-in shared communication adapter status, source root, and pending proposals.
+3. **Shared Memory Inspection (`shared-memory.ts status` / `list`)**:
+   - Displays the opt-in shared communication adapter status, source root, pinned revision, and pending proposals in `~/.gemini/memory.state/shared-proposals/`.
 
 ## Direct Script Execution
 
@@ -41,4 +41,8 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-search.t
 
 # Search
 node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-search.ts "query"
+
+# Shared communication adapter status and pending proposals
+node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts status
+node --experimental-strip-types plugins/agy-memory-layer/scripts/shared-memory.ts list
 ```
