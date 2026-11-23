@@ -47,6 +47,7 @@ learn-letta-code/
 │   ├── releases/v1.22.0.md                  # Lossless memory transport and curation safety release
 │   ├── releases/v1.23.0.md                  # Human-gated Dream v2 reflection release
 │   ├── releases/v1.24.0.md                  # Optional shared communication adapter release
+│   ├── releases/v1.25.0.md                  # Tiered v2 MemFS, MCP server & offline Palace release
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene
@@ -61,6 +62,7 @@ learn-letta-code/
 ├── plugins/agy-memory-layer/                # Core Antigravity Plugin bundle
 │   ├── plugin.json                          # Plugin manifest and metadata
 │   ├── hooks.json                           # Lifecycle hook registration (PreInvocation, PreToolUse, Stop)
+│   ├── mcp_config.json                      # Bundled stdio MCP server registration
 │   ├── agents/                              # Declarative Subagent Role Manifests (9 JSON specs)
 │   │   ├── evidence_reviewer_agent.json
 │   │   ├── repo_scout_agent.json
@@ -81,11 +83,16 @@ learn-letta-code/
 │   ├── rules/
 │   │   └── AGENTS.md                        # In-Context autonomous memory directives
 │   │
-│   ├── skills/                              # 14 Slash command skill definitions
+│   ├── skills/                              # 20 Slash command skill definitions
+│   │   ├── context-doctor/SKILL.md
 │   │   ├── contract-align/SKILL.md
 │   │   ├── contract-refine/SKILL.md
+│   │   ├── creating-skills/SKILL.md
 │   │   ├── evidence-controller/SKILL.md
 │   │   ├── init/SKILL.md
+│   │   ├── initializing-memory/SKILL.md
+│   │   ├── maintaining-core-memory/SKILL.md
+│   │   ├── maintaining-deferred-memory/SKILL.md
 │   │   ├── memory/SKILL.md
 │   │   ├── recall/SKILL.md
 │   │   ├── remember/SKILL.md
@@ -95,6 +102,7 @@ learn-letta-code/
 │   │   ├── palace/SKILL.md
 │   │   ├── sync/SKILL.md
 │   │   ├── sync-letta/SKILL.md
+│   │   ├── syncing-memory-filesystem/SKILL.md
 │   │   └── update/SKILL.md
 │   │
 │   └── scripts/                             # Runtime scripts and executables
@@ -112,6 +120,13 @@ learn-letta-code/
 │       ├── contract-ledger-cli.ts             # Snapshot-bound compile/verify/eval/verdict CLI
 │       ├── contract-matching.ts               # Stable rule IDs and scope matching
 │       ├── contract-snapshot.ts               # Proposal/approval, owner, target, and snapshot identity
+│       ├── mcp-server.sh                      # Bundled stdio MCP server launcher
+│       ├── memory-mcp-server.ts               # Zero-dependency stdio MCP server (agent_memory_*)
+│       ├── memory-schema.ts                   # Tiered v2 layout, path hierarchy & frontmatter schema
+│       ├── memory-engine.ts                   # Tiered v2 memory read/edit/history/doctor operations
+│       ├── memory-retrieval.ts                # Ranked Thai/English MemFS retrieval helpers
+│       ├── memory-reflect.ts                  # Reflection workflow helpers
+│       ├── reflection-policy.ts               # Deterministic reflection cadences and budget rules
 │       ├── layered-memory.ts                  # Committed layered/legacy projection compiler
 │       ├── layered-memory-migration.ts        # Lossless legacy migration planner/apply/rollback
 │       ├── memory-paths.ts                    # Shared MemFS and state path resolution
@@ -130,7 +145,8 @@ learn-letta-code/
 │       ├── memory-search.ts                 # MemFS status and ranked text search
 │       ├── init-project-memory.ts           # Codebase onboarding and memory seeding
 │       ├── agent-launcher.ts                # Dynamic subagent resolver
-│       ├── palace-generator.ts              # Memory Palace HTML generator
+│       ├── palace-generator.ts              # Legacy Memory Palace HTML generator (--legacy)
+│       ├── palace-render.ts                 # Default offline Letta-grammar Memory Palace renderer
 │       ├── switch-persona.ts                # Persona preset switcher
 │       ├── letta-sync.ts                    # Letta payload extraction and MemFS import
 │       ├── memory-approval.ts               # Optional proposal/approval workflow
@@ -156,6 +172,7 @@ learn-letta-code/
     ├── test-memory-backup.ts                # Backup integrity and path-containment tests
     ├── layered-memory.test.ts               # Projection, migration, rollback, curation, and lock cases
     ├── shared-memory.test.ts                # Opt-in shared communication adapter and proposal cases
+    ├── mahiro-pi-memory.test.ts             # Tiered v2 MemFS, MCP tools, reflection, and Palace render cases
     ├── contract-ledger.test.ts              # Contract ledger, snapshot, evaluation, and verdict cases
     ├── dream-reflector.test.ts              # Pure reflection prompt, schema, and planner regressions
     ├── dream-reflection.test.ts             # Dream v2 state, backoff, and proposal regressions

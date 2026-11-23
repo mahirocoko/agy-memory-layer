@@ -10,17 +10,28 @@ description: >-
 
 Permanently record a user preference, architectural decision, or convention to Git-backed MemFS at `~/.gemini/memory/`.
 
+## Preferred MCP Path (`agent_memory_edit` / `agent_memory_commit` / `agent_memory_manage`)
+
+For fast, atomic, single-step or multi-file Tiered v2 edits when MCP tools are active:
+- **Quick single durable fact**: call `agent_memory_manage` with `action: "remember"`, `text`, and optional `path` (automatically resolves CAS `expectedHash` + commits or creates a shared-memory proposal if targeting the shared communication owner).
+- **Targeted / surgical edit**: read the target and `index.md` via `agent_memory_read`, then call `agent_memory_edit` (`mode: "patch" | "replace" | "append"`, optional `section`, `expectedHash`, `commit: true` for single-step index auto-sync).
+- **Multi-file atomic commit**: omit `commit: true` across `agent_memory_edit` calls to write external drafts in `memory.state/drafts/`, then finalize with `agent_memory_commit`.
+- Always respect `read_only: true`, secret checks, Lossless Retention Guard, and explicit review gates.
+
 ## Target Selection
 
 Determine where the new knowledge belongs:
 
-| Scope | Layered target | Example content |
+| Scope | Layered / Tiered v2 target | Example content |
 | :--- | :--- | :--- |
+| **Root core** | `Core.md` | High-priority always-loaded core summary |
+| **Catalog index** | `index.md` / `<dir>/index.md` | Auto-synced progressive-disclosure catalog |
 | **Human identity** | `system/human/identity.md` | Stable identity and relationship context |
 | **Human preference** | `system/human/prefs/<topic>.md` | Communication, coding, or workflow preferences |
 | **Agent persona** | `system/persona.md` | Persistent identity, tone, and operating posture |
+| **Procedures / skills** | `procedures/*.md` | Reusable cross-project step-by-step workflows |
 | **Project core** | `projects/<slug>/system/<topic>.md` | Overview, architecture, conventions, or gotchas |
-| **Detailed evidence** | `reference/**` or `projects/<slug>/reference/**` | On-demand examples, history, and long evidence |
+| **Detailed evidence** | `reference/<group>/<topic>.md` or `projects/<slug>/reference/<group>/<topic>.md` | On-demand examples, history, and long evidence |
 
 Every layered Markdown file needs minimal frontmatter:
 

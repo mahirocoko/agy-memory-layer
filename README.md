@@ -1,6 +1,6 @@
 # 🧠 agy-memory-layer
 
-[![Release](https://img.shields.io/badge/Release-v1.24.0-blue.svg)](./docs/releases/v1.24.0.md)
+[![Release](https://img.shields.io/badge/Release-v1.25.0-blue.svg)](./docs/releases/v1.25.0.md)
 [![Historical v1.23.0 Coverage](https://img.shields.io/badge/v1.23.0%20Coverage-87.47%25-green.svg)](./docs/releases/v1.23.0.md)
 [![Integration](https://img.shields.io/badge/Integration-11%2F11%20Passed%20(100%25)-success.svg)](./TEST_REPORT.md)
 [![Node.js](https://img.shields.io/badge/Node.js-v22%2B-339933.svg?logo=node.js)](https://nodejs.org)
@@ -13,10 +13,11 @@ summaries, uncommitted notes, or model confidence as current truth. It injects o
 and current-project memory, keeps learning explicit, and adds bounded safeguards for consequential
 actions and completion claims.
 
-> **Current release:** `v1.24.0` — for interactive, human-supervised use. It adds optional
-> shared communication while preserving native memory and standalone operation without Letta;
+> **Current release:** `v1.25.0` — for interactive, human-supervised use. It adds Tiered v2
+> MemFS, a bundled stdio MCP server, and offline Letta-grammar Memory Palace generation while
+> preserving native memory, opt-in shared communication, and standalone operation without Letta;
 > it does not turn Gemini into an autonomous or safety-trusted supervisor. See the
-> [release notes](./docs/releases/v1.24.0.md).
+> [release notes](./docs/releases/v1.25.0.md).
 
 ## Why it exists
 
@@ -56,10 +57,10 @@ curl -fsSL https://raw.githubusercontent.com/mahirocoko/agy-memory-layer/main/in
 ```
 
 The one-line installer follows `main`: on a later run it fast-forwards its cached source checkout.
-For a reproducible release-pinned installation, clone `v1.24.0` explicitly instead:
+For a reproducible release-pinned installation, clone `v1.25.0` explicitly instead:
 
 ```bash
-git clone --branch v1.24.0 --depth 1 https://github.com/mahirocoko/agy-memory-layer.git
+git clone --branch v1.25.0 --depth 1 https://github.com/mahirocoko/agy-memory-layer.git
 cd agy-memory-layer
 ./install.sh
 ```
@@ -216,7 +217,7 @@ Complete purge is intentionally separate and destructive. Consult
 
 ## Current boundaries
 
-Use `v1.24.0` as an **interactive, human-supervised** Agy layer:
+Use `v1.25.0` as an **interactive, human-supervised** Agy layer:
 
 - keep a person at the final product, visual, spend, release, and destructive-action gates;
 - inspect permission UI directly—Herdr may report stale `done` while a pane still waits;
@@ -260,9 +261,9 @@ pnpm test:coverage
 agy plugin validate plugins/agy-memory-layer
 ```
 
-The `v1.24.0` release checks passed **316/316 Node tests**, **11/11 generated integration scenarios**, and
-plugin validation for **14 skills, 9 agents, and 3 hooks** with zero errors. Its exact
-historical v1.23.0 release-preparation coverage snapshot remains in its release notes; current checks and boundaries are in the [release notes](./docs/releases/v1.24.0.md).
+The `v1.25.0` release checks passed **326/326 Node tests**, **11/11 generated integration scenarios**, and
+plugin validation for **20 skills, 1 rule, 3 hooks, and 1 MCP server** with zero errors (plus 9 declarative subagent role manifests under `agents/`). Its exact
+historical v1.23.0 release-preparation coverage snapshot remains in its release notes; current checks and boundaries are in the [release notes](./docs/releases/v1.25.0.md).
 
 ## Documentation map
 
@@ -271,6 +272,7 @@ historical v1.23.0 release-preparation coverage snapshot remains in its release 
 - [Development commands](./docs/development-commands.md) — script and maintenance reference
 - [File organization](./docs/file-organization.md) — source ownership map
 - [Letta parity](./docs/letta-parity.md) — current parity and non-parity boundaries
+- [v1.25.0 release notes](./docs/releases/v1.25.0.md) — Tiered v2 MemFS, bundled MCP server, offline Palace, checks, and limitations
 - [v1.24.0 release notes](./docs/releases/v1.24.0.md) — optional shared communication, standalone use, checks, and limitations
 - [v1.23.0 release notes](./docs/releases/v1.23.0.md) — human-gated Dream v2 reflection
 - [v1.22.0 release notes](./docs/releases/v1.22.0.md) — lossless memory transport and curation safety

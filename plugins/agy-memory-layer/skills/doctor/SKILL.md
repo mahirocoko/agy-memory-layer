@@ -29,6 +29,10 @@ Audits the consistency, validity, and Git health of MemFS against the active wor
 
 ## Execution
 
+Preferred MCP diagnostics:
+- Call `agent_memory_manage` with `action: "doctor"` (inspects Tiered v2 layout mode, `Core.md`/`index.md` completeness, pending external drafts, stale/orphan nodes, and dirty Git state). Use `action: "cleanup"` (`dryRun: true` first) to prune empty stubs or stale external drafts, or `load` `context-doctor` skill for full structural & behavioral investigation guides.
+
+CLI health check:
 ```bash
 node --experimental-strip-types tools/memory-health.ts \
   --memory "${HOME}/.gemini/memory" \

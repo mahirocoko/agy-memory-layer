@@ -2,9 +2,9 @@
 
 Welcome to **`agy-memory-layer`** (`learn-letta-code`). This document defines the engineering standards, architecture rules, and non-negotiable conventions for all agents and pair programmers working in this repository.
 
-**Release version:** `v1.24.0` (interactive and human-supervised; GitHub Releases owns publication status)
+**Release version:** `v1.25.0` (interactive and human-supervised; GitHub Releases owns publication status)
 
-**Current package state:** `1.24.0` (opt-in shared communication adapter; no Letta installation required)
+**Current package state:** `1.25.0` (Tiered v2 MemFS, bundled stdio MCP server, offline Palace, and opt-in shared communication; no Letta installation required)
 
 ---
 
@@ -16,12 +16,12 @@ Welcome to **`agy-memory-layer`** (`learn-letta-code`). This document defines th
 Host Workspace (learn-letta-code)
   │
   ├── plugins/agy-memory-layer/ (Plugin Bundle symlinked to ~/.gemini/antigravity-cli/plugins/)
-  │   ├── plugin.json & hooks.json
+  │   ├── plugin.json, hooks.json & mcp_config.json
   │   ├── agents/                  (9 declarative subagent role manifests)
   │   ├── prompts/                 (Prompt Warehouse: system, persona, subagents)
   │   ├── rules/AGENTS.md          (In-Context Autonomous Directives)
-  │   ├── skills/*/SKILL.md        (14 Slash Command Skills)
-  │   └── scripts/*.ts, *.sh       (Lifecycle Hooks, Daemon & Palace Generator)
+  │   ├── skills/*/SKILL.md        (20 Slash Command Skills)
+  │   └── scripts/*.ts, *.sh       (Lifecycle Hooks, MCP Server, Daemon & Palace Renderers)
   │
   └── ~/.gemini/memory/            (Independent Git MemFS Repository)
       ├── system/                  (Focused always-active global owners)
@@ -54,7 +54,7 @@ Host Workspace (learn-letta-code)
 - Use the repository's pinned pnpm toolchain and exact versions: `pnpm add -E <package>`.
 
 ### 6. Version Bump & Manifest Sync
-- `package.json` owns current version intent. `plugins/agy-memory-layer/plugin.json` mirrors it, and `palace-generator.ts` dynamically reads `plugin.json` at runtime (not a static version-bump surface).
+- `package.json` owns current version intent. `plugins/agy-memory-layer/plugin.json` mirrors it, and `palace-generator.ts` dynamically reads `plugin.json` at runtime (not a static version-bump surface; `palace-render.ts` and `memory-mcp-server.ts` also read `plugin.json` at runtime).
 - Whenever code is updated or a new release is prepared, sync version manifests across:
   - `package.json`
   - `plugins/agy-memory-layer/plugin.json`
@@ -69,7 +69,7 @@ Host Workspace (learn-letta-code)
 - **Atomic confirmation requests**: PreToolUse denies ambiguous bundles, malformed inputs, destructive actions, and protected targets, while one recognized scoped mutation receives `force_ask`. This classifier does not authenticate authorization or grants and does not universally cover shell semantics.
 - **Material claims**: Bind consequential claims to current owner and consumer bytes, explicit counterexample probes/outcomes, and fresh reviewer metadata. Packet verification is structural/current-byte evidence, not semantic proof; reviewer identity remains `not-authenticated`.
 - **Continuity**: Bounded re-grounding and fresh-conversation rotation are model-guided policy only. There is no compaction interceptor, mission supervisor, deterministic rotation, or automatic continuation.
-- **Supervision**: `v1.24.0` retains the interactive pane-supervision boundary established by `v1.20.0`: host lifecycle status may be stale while permission UI or a final response remains pending, and a reviewer model may not observe that UI.
+- **Supervision**: `v1.25.0` retains the interactive pane-supervision boundary established by `v1.20.0`: host lifecycle status may be stale while permission UI or a final response remains pending, and a reviewer model may not observe that UI.
 
 ### 9. Shared Communication Adapter (`v1.24.0`)
 - **Opt-In / Off-By-Default**: Activated only via `AGY_SHARED_MEMORY_ENABLED=1` or config file outside Git memory (`AGY_SHARED_MEMORY_CONFIG` or `~/.gemini/memory.state/shared-memory.json`).
@@ -144,8 +144,9 @@ Detailed operational documentation is split into modular files under [`docs/`](d
 - [`docs/host-evidence-phase3.md`](docs/host-evidence-phase3.md) — Current-source evidence-only verifier for terminal Direct CLI callback receipts, Phase 2 sealing, repository/MemFS content invariance, retained checkpoints, and non-claims; the installed Direct CLI workflow owns Agy/Herdr lifecycle execution.
 - [`docs/agy-main-phase4a-external-product-attribution-2026-09-13.md`](docs/agy-main-phase4a-external-product-attribution-2026-09-13.md) — Historical external-product attribution baseline; not the current release owner.
 - [`docs/agy-main-phase4b-readiness-2026-09-13.md`](docs/agy-main-phase4b-readiness-2026-09-13.md) — Retained `v1.20.0` pre-release readiness evidence and interactive/human-supervised boundary; links the retained canary evidence.
-- [`docs/releases/v1.23.0.md`](docs/releases/v1.23.0.md) — Human-gated Dream v2 LLM reflection release.
+- [`docs/releases/v1.25.0.md`](docs/releases/v1.25.0.md) — Tiered v2 MemFS, bundled stdio MCP server, and offline Letta-grammar Memory Palace.
 - [`docs/releases/v1.24.0.md`](docs/releases/v1.24.0.md) — Optional shared communication and standalone/no-Letta operation.
+- [`docs/releases/v1.23.0.md`](docs/releases/v1.23.0.md) — Human-gated Dream v2 LLM reflection release.
 - [`docs/releases/v1.22.0.md`](docs/releases/v1.22.0.md) — Lossless active-memory transport and Agy-adapted curation release.
 - [`docs/releases/v1.21.0.md`](docs/releases/v1.21.0.md) — Cross-project dream daemon release, verification, and usage.
 - [`docs/releases/v1.20.0.md`](docs/releases/v1.20.0.md) — Interactive Agy Main controls, verification, host evidence, and limitations.

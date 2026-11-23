@@ -2,9 +2,9 @@
 
 This reference documents all testing, verification, script runners, and daemon commands available in this codebase.
 
-**Latest published release:** `v1.24.0` (interactive and human-supervised)
+**Latest published release:** `v1.25.0` (interactive and human-supervised)
 
-**Current development state:** matches `v1.24.0`; no newer candidate is declared
+**Current development state:** matches `v1.25.0`; no newer candidate is declared
 
 ---
 

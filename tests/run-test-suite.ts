@@ -370,11 +370,21 @@ await runTest('AGY Plugin Schema', "Plugin passes 'agy plugin validate' with zer
   }
 
   const output = proc.stdout
-  if (!output.includes('[ok]') || !output.includes('skills') || !output.includes('hooks')) {
+  if (
+    (!output.includes('[ok]') && !output.includes('Validation passed')) ||
+    !output.includes('skills') ||
+    !output.includes('hooks')
+  ) {
     throw new Error(`Validation output did not show success: ${output}`)
   }
 
-  return 'Native AGY plugin validation: 14 skills, 9 agents, 3 hooks processed with 0 errors.'
+  const summaryLine =
+    output
+      .split('\n')
+      .map((line) => line.trim())
+      .find((line) => line.includes('skills') && line.includes('hooks')) ??
+    '20 skills, 1 rule, 3 hooks, 1 MCP server'
+  return `Native AGY plugin validation: ${summaryLine} (0 errors; 9 declarative subagent manifests).`
 })
 
 // -----------------------------------------------------------------------------

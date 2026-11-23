@@ -2466,8 +2466,8 @@ describe('Unit Coverage Extensions', () => {
     const biomeJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'biome.json'), 'utf8'))
 
     // 1. Development candidate intent and mirror equality
-    assert.strictEqual(packageJson.version, '1.24.0')
-    assert.strictEqual(pluginJson.version, '1.24.0')
+    assert.strictEqual(packageJson.version, '1.25.0')
+    assert.strictEqual(pluginJson.version, '1.25.0')
     assert.strictEqual(packageJson.version, pluginJson.version)
     const exactEvidenceOverride = biomeJson.overrides.find(
       (override: { includes?: string[]; formatter?: { enabled?: boolean } }) =>
@@ -2490,7 +2490,7 @@ describe('Unit Coverage Extensions', () => {
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(contractDoc.includes('**Package version:** `1.24.0`'), true)
+    assert.strictEqual(contractDoc.includes('**Package version:** `1.25.0`'), true)
     assert.strictEqual(
       contractDoc.includes(`**Release version:** \`v${packageJson.version}\``),
       true,
@@ -2547,7 +2547,7 @@ describe('Unit Coverage Extensions', () => {
     assert.strictEqual(readmeDoc.includes('better continuity and fewer unsupported claims'), true)
     assert.strictEqual(readmeDoc.includes("does not improve Gemini's base"), true)
     assert.strictEqual(readmeDoc.includes('`Stop` never auto-commits'), true)
-    assert.strictEqual(readmeDoc.includes('316/316 Node tests'), true)
+    assert.strictEqual(readmeDoc.includes('326/326 Node tests'), true)
     assert.strictEqual(readmeDoc.includes('11/11 generated integration scenarios'), true)
     assert.strictEqual(readmeDoc.includes('release-preparation coverage snapshot'), true)
     assert.strictEqual(readmeDoc.includes(`./docs/releases/v${packageJson.version}.md`), true)

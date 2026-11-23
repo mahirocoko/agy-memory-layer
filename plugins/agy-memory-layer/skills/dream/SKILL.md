@@ -172,6 +172,17 @@ schedule is active. The private temp directory is deleted after the attempt
 and does not prove host isolation. `gemini-4.8-high` is not a configured
 fallback. Gemini 3.x is not a substitute.
 
+## MCP Reflection & Selectable Policy (`agent_memory_reflect` / `agent_memory_manage`)
+
+In addition to the Dream daemon CLI below, the bundled MCP server provides direct model-flexible reflection:
+- **Reflection policy** (`memory.state/reflection-policy.json`): configure via `agent_memory_manage` `action: "policy"`:
+  - `trigger`: `"off"` (default — `Stop` hook stays non-mutating and leaves step tracking off) or `"step-count"` (default `stepCountThreshold: 25`, tracked externally in `memory.state/reflection-steps.json` without dirtying Git MemFS; `PreInvocation` notifies once due).
+  - `model`: `"inherit"` (default) or any explicit model id supported by the host CLI — never hardcoded to a single model.
+- **Run reflection** via `agent_memory_reflect`:
+  - `mode: "plan"` — inspect candidate reflection operations without committing MemFS.
+  - `mode: "apply"` — validate operations, apply surgical CAS edits + index sync (`commit: true`), and advance `markProjectReflected`.
+  - `mode: "mark_reflected"` — reset the pending reflection counter after manual review/curation.
+
 ## Review Contract
 
 This workflow applies the canonical **Authority, Summaries & Historical Evidence Doctrine**

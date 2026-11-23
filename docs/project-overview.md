@@ -8,9 +8,9 @@ The project is inspired by Letta Code, but adapts the behavior to one Agy user
 repository rather than copying Letta's per-agent storage and service APIs. The
 canonical boundary is [`letta-parity.md`](./letta-parity.md).
 
-**Latest published release:** `v1.24.0` (interactive and human-supervised)
+**Latest published release:** `v1.25.0` (interactive and human-supervised)
 
-**Current development state:** matches `v1.24.0`; no newer candidate is declared
+**Current development state:** matches `v1.25.0`; no newer candidate is declared
 
 ## Core Value
 

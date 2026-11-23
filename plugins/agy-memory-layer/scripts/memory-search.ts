@@ -9,6 +9,7 @@ import { execSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { listCommittedMemoryFiles, readCommittedMemoryFile } from './memory-repository.ts'
+import { matchesQueryClauses, tokenizeQueryClauses } from './memory-retrieval.ts'
 import {
   FIXED_SHARED_OWNER,
   inspectSharedSource,
@@ -113,33 +114,61 @@ export function searchMemory(query: string, options: MemorySearchOptions = {}): 
     throw new Error('Search query must not be empty.')
   }
 
-  const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean)
+  let clauses: string[][]
+  try {
+    clauses = tokenizeQueryClauses(query)
+  } catch {
+    clauses = [query.normalize('NFKC').toLowerCase().split(/\s+/).filter(Boolean)]
+  }
+  const uniqueTerms = [...new Set(clauses.flat())]
   const results: SearchMatch[] = []
   const root = path.resolve(options.memoryRoot || memoryRoot)
 
   const searchContent = (relativePath: string, content: string, isVirtual = false): void => {
     if (options.scope && !relativePath.startsWith(options.scope)) return
+    const pathFolded = relativePath.normalize('NFKC').toLowerCase()
+    const contentFolded = content.normalize('NFKC').toLowerCase()
+    const fileMatched = matchesQueryClauses(clauses, pathFolded, contentFolded)
+    if (!fileMatched) return
+
     const fullPath = path.join(root, relativePath)
     const lines = content.split('\n')
+    let anyLineMatched = false
     lines.forEach((line, idx) => {
-      const lowerLine = line.toLowerCase()
-      let matchCount = 0
-      for (const term of queryTerms) {
-        if (lowerLine.includes(term)) matchCount++
+      const lowerLine = line.normalize('NFKC').toLowerCase()
+      const lineMatched = matchesQueryClauses(clauses, pathFolded, lowerLine)
+      let matchCount = lineMatched ? lineMatched.length : 0
+      if (matchCount === 0) {
+        for (const term of uniqueTerms) {
+          if (lowerLine.includes(term)) matchCount++
+        }
       }
       if (matchCount > 0) {
+        anyLineMatched = true
         results.push({
           file: fullPath,
           relPath: relativePath,
           lineNum: idx + 1,
           line: line.trim(),
-          score: matchCount,
+          score: matchCount + (lineMatched ? fileMatched.length : 0),
           ...(isVirtual
             ? { isVirtual: true, virtualLabel: 'virtual (synthetic merged document line)' }
             : {}),
         })
       }
     })
+    if (!anyLineMatched && lines.length > 0) {
+      results.push({
+        file: fullPath,
+        relPath: relativePath,
+        lineNum: 1,
+        line: lines[0].trim() || relativePath,
+        score: fileMatched.length,
+        ...(isVirtual
+          ? { isVirtual: true, virtualLabel: 'virtual (synthetic merged document line)' }
+          : {}),
+      })
+    }
   }
 
   const sharedSettings = loadSharedMemorySettings(undefined, root)

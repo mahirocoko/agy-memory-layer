@@ -18,6 +18,7 @@ import {
   renderCommittedMemorySections,
 } from './layered-memory.ts'
 import { getMemoryRepositoryStatus } from './memory-repository.ts'
+import { getProjectReflectionStepEntry, getReflectionPolicy } from './reflection-policy.ts'
 import { resolveProjectSlug } from './workspace-identity.ts'
 
 export type PreInvocationPayload = {
@@ -243,6 +244,16 @@ export function generatePreInvocationContext(
     sections.push(
       `### ⚠️ MemFS Repository Status\n${repositoryStatus.summary}${changedSuffix}\nUncommitted memory is not active; commit or resolve it explicitly before relying on it.\n\n`,
     )
+  }
+
+  const reflectionPolicy = getReflectionPolicy(memRoot)
+  if (reflectionPolicy.trigger === 'step-count') {
+    const stepEntry = getProjectReflectionStepEntry(memRoot, projectSlug)
+    if (stepEntry.pendingReflectionDue) {
+      sections.push(
+        `### 🌙 Memory Reflection Due\n${stepEntry.pendingSteps} assistant turns accumulated since last reflection (threshold: ${reflectionPolicy.stepCountThreshold}). Run \`agent_memory_reflect\` or \`/dream\` to review and consolidate durable lessons.\n\n`,
+      )
+    }
   }
 
   return injectActiveMemory(sections)

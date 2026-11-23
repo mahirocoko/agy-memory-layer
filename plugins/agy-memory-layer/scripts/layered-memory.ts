@@ -8,6 +8,11 @@ import {
   readCommittedMemoryFile,
 } from './memory-repository.ts'
 import {
+  childIndexDescription,
+  type DirectoryIndexPointer,
+  projectedDirectoryIndexes,
+} from './memory-retrieval.ts'
+import {
   FIXED_SHARED_OWNER,
   inspectSharedSource,
   isSharedOwnerPath,
@@ -20,6 +25,7 @@ export type MemoryLayoutMode = 'empty' | 'legacy' | 'layered' | 'conflict'
 
 export type MemoryDocument = {
   relativePath: string
+  name?: string
   description: string
   body: string
   readOnly: boolean
@@ -31,9 +37,12 @@ export type MemoryProjection = {
   mode: MemoryLayoutMode
   revision: string | null
   projectSlug: string
+  coreDocuments?: MemoryDocument[]
   globalSystem: MemoryDocument[]
   projectSystem: MemoryDocument[]
   external: MemoryDocument[]
+  discoveryDirectories?: DirectoryIndexPointer[]
+  directoriesTruncated?: boolean
   diagnostics: string[]
   legacyPaths: string[]
   layeredPaths: string[]
@@ -45,6 +54,7 @@ export type MemoryProjection = {
 }
 
 export type ParsedMemoryDocument = {
+  name?: string
   description: string
   body: string
   readOnly: boolean
@@ -58,9 +68,12 @@ export const legacyProjectMemoryPaths = (projectSlug: string): string[] => [
   `projects/${projectSlug}/rules.md`,
 ]
 
-const FRONTMATTER_KEYS = new Set(['description', 'read_only'])
+const FRONTMATTER_KEYS = new Set(['name', 'description', 'read_only'])
 const EXTERNAL_INDEX_MAX_ENTRIES = 12
 const EXTERNAL_INDEX_MAX_CHARS = 1_200
+
+const isDirectoryIndexFile = (relativePath: string): boolean =>
+  relativePath === 'index.md' || relativePath.endsWith('/index.md')
 
 const stripSimpleQuotes = (value: string): string => {
   if (
@@ -78,27 +91,29 @@ export const parseMemoryDocument = (
   relativePath: string,
   options: { requireDescription?: boolean; legacyDescription?: string } = {},
 ): ParsedMemoryDocument => {
+  const normalizedContent = content.replace(/\r\n?/g, '\n')
   const diagnostics: string[] = []
-  if (!content.startsWith('---\n')) {
+  if (!normalizedContent.startsWith('---\n')) {
     if (options.requireDescription) {
       diagnostics.push(`${relativePath}: missing required description frontmatter.`)
     }
     return {
       description: options.legacyDescription || '',
-      body: options.requireDescription ? '' : content.trim(),
+      body: options.requireDescription ? '' : normalizedContent.trim(),
       readOnly: false,
       diagnostics,
     }
   }
 
-  const closingIndex = content.indexOf('\n---\n', 4)
-  if (closingIndex < 0) {
+  const closingMatch = /\n---(?:\n|$)/.exec(normalizedContent.slice(4))
+  if (!closingMatch) {
     diagnostics.push(`${relativePath}: frontmatter is not closed.`)
     return { description: '', body: '', readOnly: false, diagnostics }
   }
 
+  const closingIndex = 4 + closingMatch.index
   const values = new Map<string, string>()
-  const frontmatter = content.slice(4, closingIndex)
+  const frontmatter = normalizedContent.slice(4, closingIndex)
   for (const line of frontmatter.split('\n')) {
     if (!line.trim()) continue
     if (/^\s/.test(line)) {
@@ -123,6 +138,7 @@ export const parseMemoryDocument = (
     values.set(key, value)
   }
 
+  const name = values.get('name')
   const description = values.get('description') || ''
   if (options.requireDescription && !description) {
     diagnostics.push(`${relativePath}: description must not be empty.`)
@@ -133,8 +149,12 @@ export const parseMemoryDocument = (
   }
 
   return {
+    ...(name ? { name } : {}),
     description,
-    body: diagnostics.length > 0 ? '' : content.slice(closingIndex + 5).trim(),
+    body:
+      diagnostics.length > 0
+        ? ''
+        : normalizedContent.slice(closingIndex + closingMatch[0].length).trim(),
     readOnly: readOnlyValue === 'true',
     diagnostics,
   }
@@ -169,9 +189,13 @@ const allLegacyActivePaths = (memoryRoot: string): string[] =>
 
 const allLayeredSystemPaths = (memoryRoot: string): string[] =>
   [
-    ...committedMarkdownFiles(memoryRoot, 'system'),
-    ...committedMarkdownFiles(memoryRoot, 'projects').filter((relativePath) =>
-      /^projects\/[^/]+\/system\/.+\.md$/.test(relativePath),
+    ...committedMarkdownFiles(memoryRoot, 'system').filter(
+      (relativePath) => !isDirectoryIndexFile(relativePath),
+    ),
+    ...committedMarkdownFiles(memoryRoot, 'projects').filter(
+      (relativePath) =>
+        /^projects\/[^/]+\/system\/.+\.md$/.test(relativePath) &&
+        !isDirectoryIndexFile(relativePath),
     ),
   ].sort()
 
@@ -184,6 +208,7 @@ const readLayeredDocuments = (
 ): MemoryDocument[] => {
   const documents: MemoryDocument[] = []
   for (const relativePath of [...new Set(files)].sort()) {
+    if (isDirectoryIndexFile(relativePath)) continue
     const content = readCommittedMemoryFile(memoryRoot, relativePath)
     if (content === null) continue
     const parsed = parseMemoryDocument(content, relativePath, { requireDescription: true })
@@ -191,11 +216,67 @@ const readLayeredDocuments = (
     if (parsed.diagnostics.length > 0) continue
     documents.push({
       relativePath,
+      ...(parsed.name ? { name: parsed.name } : {}),
       description: parsed.description,
       body: parsed.body,
       readOnly: parsed.readOnly,
       scope,
       tier,
+    })
+  }
+  return documents
+}
+
+const readProcedureDocuments = (
+  memoryRoot: string,
+  files: string[],
+  diagnostics: string[],
+): MemoryDocument[] => {
+  const documents: MemoryDocument[] = []
+  for (const relativePath of [...new Set(files)].sort()) {
+    if (isDirectoryIndexFile(relativePath)) continue
+    const content = readCommittedMemoryFile(memoryRoot, relativePath)
+    if (content === null) continue
+    const fallbackDescription = childIndexDescription(content) || 'Reusable operational procedure.'
+    const parsed = parseMemoryDocument(content, relativePath, {
+      legacyDescription: fallbackDescription,
+    })
+    diagnostics.push(...parsed.diagnostics)
+    if (parsed.diagnostics.length > 0) continue
+    documents.push({
+      relativePath,
+      ...(parsed.name ? { name: parsed.name } : {}),
+      description: parsed.description || fallbackDescription,
+      body: parsed.body,
+      readOnly: parsed.readOnly,
+      scope: 'global',
+      tier: 'reference',
+    })
+  }
+  return documents
+}
+
+const readRootCoreDocuments = (memoryRoot: string, diagnostics: string[]): MemoryDocument[] => {
+  const documents: MemoryDocument[] = []
+  for (const relativePath of ['Core.md', 'index.md'] as const) {
+    const content = readCommittedMemoryFile(memoryRoot, relativePath)
+    if (content === null) continue
+    const parsed = parseMemoryDocument(content, relativePath, {
+      legacyDescription:
+        relativePath === 'Core.md'
+          ? 'Concise companion identity, preferences, and core principles.'
+          : 'Top-level memory map and deferred navigation cues.',
+    })
+    diagnostics.push(...parsed.diagnostics)
+    if (parsed.diagnostics.length > 0) continue
+    documents.push({
+      relativePath,
+      ...(parsed.name ? { name: parsed.name } : {}),
+      description: parsed.description,
+      body: parsed.body,
+      readOnly: parsed.readOnly,
+      scope: 'global',
+      tier: 'system',
     })
   }
   return documents
@@ -247,21 +328,34 @@ export const inspectCommittedMemoryProjection = (
   sharedSettings?: SharedMemorySettings,
 ): MemoryProjection => {
   const diagnostics: string[] = []
-  const globalSystemPaths = committedMarkdownFiles(memoryRoot, 'system')
-  const projectSystemPaths = committedMarkdownFiles(memoryRoot, `projects/${projectSlug}/system`)
-  const globalReferencePaths = committedMarkdownFiles(memoryRoot, 'reference')
+  const globalSystemPaths = committedMarkdownFiles(memoryRoot, 'system').filter(
+    (relativePath) => !isDirectoryIndexFile(relativePath),
+  )
+  const projectSystemPaths = committedMarkdownFiles(
+    memoryRoot,
+    `projects/${projectSlug}/system`,
+  ).filter((relativePath) => !isDirectoryIndexFile(relativePath))
+  const globalReferencePaths = committedMarkdownFiles(memoryRoot, 'reference').filter(
+    (relativePath) => !isDirectoryIndexFile(relativePath),
+  )
   const projectReferencePaths = committedMarkdownFiles(
     memoryRoot,
     `projects/${projectSlug}/reference`,
+  ).filter((relativePath) => !isDirectoryIndexFile(relativePath))
+  const procedurePaths = committedMarkdownFiles(memoryRoot, 'procedures').filter(
+    (relativePath) => !isDirectoryIndexFile(relativePath),
   )
+  const hasRootCore = committedMemoryPathExists(memoryRoot, 'Core.md')
+  const hasRootIndex = committedMemoryPathExists(memoryRoot, 'index.md')
   const layeredPaths = allLayeredSystemPaths(memoryRoot)
+  const hasAnyLayered = layeredPaths.length > 0 || hasRootCore || hasRootIndex
   const allLegacyPaths = [...LEGACY_GLOBAL_MEMORY_PATHS, ...legacyProjectMemoryPaths(projectSlug)]
   const selectedLegacyPaths = allLegacyPaths.filter((relativePath) =>
     committedMemoryPathExists(memoryRoot, relativePath),
   )
   const legacyPaths = allLegacyActivePaths(memoryRoot)
 
-  if (layeredPaths.length > 0 && legacyPaths.length > 0) {
+  if (hasAnyLayered && legacyPaths.length > 0) {
     diagnostics.push(
       `Layered and legacy active memory overlap for ${projectSlug}; no active body was projected.`,
     )
@@ -280,12 +374,16 @@ export const inspectCommittedMemoryProjection = (
   }
 
   let mode: MemoryLayoutMode = 'empty'
+  let coreDocuments: MemoryDocument[] = []
   let globalSystem: MemoryDocument[] = []
   let projectSystem: MemoryDocument[] = []
   let external: MemoryDocument[] = []
+  let discoveryDirectories: DirectoryIndexPointer[] = []
+  let directoriesTruncated: true | undefined
 
-  if (layeredPaths.length > 0) {
+  if (hasAnyLayered) {
     mode = 'layered'
+    coreDocuments = readRootCoreDocuments(memoryRoot, diagnostics)
     globalSystem = readLayeredDocuments(
       memoryRoot,
       globalSystemPaths,
@@ -309,7 +407,11 @@ export const inspectCommittedMemoryProjection = (
         'reference',
         diagnostics,
       ),
+      ...readProcedureDocuments(memoryRoot, procedurePaths, diagnostics),
     ].sort((left, right) => left.relativePath.localeCompare(right.relativePath))
+    const indexed = projectedDirectoryIndexes(committedMarkdownFiles(memoryRoot, ''), projectSlug)
+    discoveryDirectories = indexed.directories
+    directoriesTruncated = indexed.directoriesTruncated
   } else if (legacyPaths.length > 0) {
     mode = 'legacy'
     const legacy = readLegacyDocuments(memoryRoot, selectedLegacyPaths, projectSlug)
@@ -355,9 +457,12 @@ export const inspectCommittedMemoryProjection = (
     mode,
     revision: getCommittedRevision(memoryRoot),
     projectSlug,
+    ...(coreDocuments.length > 0 ? { coreDocuments } : {}),
     globalSystem,
     projectSystem,
     external,
+    ...(discoveryDirectories.length > 0 ? { discoveryDirectories } : {}),
+    ...(directoriesTruncated ? { directoriesTruncated } : {}),
     diagnostics,
     legacyPaths,
     layeredPaths,
@@ -430,6 +535,14 @@ export const renderCommittedMemorySections = (
   }
 
   const sections: string[] = []
+  for (const coreDoc of projection.coreDocuments ?? []) {
+    if (!coreDoc.body.trim()) continue
+    const heading =
+      coreDoc.relativePath === 'Core.md'
+        ? `### 🧠 Core Memory (Core.md)`
+        : `### 🗺️ Memory Index (index.md)`
+    sections.push(`${heading}\n${coreDoc.body}\n\n`)
+  }
   const persona = projection.globalSystem.find(
     (document) => document.relativePath === 'system/persona.md',
   )
@@ -446,6 +559,17 @@ export const renderCommittedMemorySections = (
   }
   if (projection.external.length > 0) {
     sections.push(renderReferenceIndexSection(memoryRoot, projection.external))
+  }
+  if (projection.discoveryDirectories && projection.discoveryDirectories.length > 0) {
+    const dirLines = projection.discoveryDirectories
+      .map((dir) => `- ${dir.path} (${dir.index})`)
+      .join('\n')
+    const truncatedNotice = projection.directoriesTruncated
+      ? '\n- … additional indexed directories omitted from the bounded list'
+      : ''
+    sections.push(
+      `### 📂 Indexed Memory Directories\nRead \`<dir>/index.md\` via \`agent_memory_read\` when navigating nested topics:\n${dirLines}${truncatedNotice}\n\n`,
+    )
   }
   if (projection.diagnostics.length > 0) {
     sections.push(

@@ -239,7 +239,7 @@ export function generateRulesMarkdown(scan: CodebaseScanResult): string {
 - **Memory Isolation**: Memory storage is strictly external in \`~/.gemini/memory/\` and must never pollute workspace git repositories.
 - **Dependency Installation**: Use exact version flag (\`-E\`) when installing dependencies via \`${scan.packageManager}\`.
 - **TypeScript Types**: ทุกครั้งที่เขียน TypeScript ต้องใช้ \`type\` alias เท่านั้น ห้ามใช้ \`interface\` เด็ดขาด (Always use \`type\` alias, never use \`interface\`).
-- **Code Search**: Prefer CocoIndex (\`ccc search\`) for semantic code discovery; use \`grep_search\` for exact tokens and literal references.
+- **Code Search**: Prefer exact filenames and \`rg\` / ripgrep for tokens, syntax, and literal strings.
 - **Review-First Commits**: ห้าม commit อัตโนมัติเด็ดขาด ให้แสดงผลการทดสอบและ diff ให้ผู้ใช้ตรวจเช็คก่อนเสมอ เมื่อผู้ใช้สั่งจึงค่อย commit.
 - **No Fluff**: Keep memory blocks compact, high-signal, structured in Markdown.
 `

@@ -25,20 +25,20 @@ You MUST proactively consult and maintain memory without waiting for a slash com
 ### A. The Annoyance & Friction Rule
 - The threshold for recording a rule or preference into MemFS is **annoyance, friction, or repeated correction**.
 - When the user corrects your code, phrasing, framework usage, or package management:
-  - **Action**: Propose the correction through the scoped memory writer. All system, reference, and legacy active owners require explicit approval.
+  - **Action**: Use `agent_memory_edit` (with `expectedHash`) / `agent_memory_commit` or the scoped memory writer. Respect `read_only: true`, secret checks, Lossless Retention Guard, and any explicit approval gate on active system owners (`system/human/prefs/communication.md` diverts to `memory.state/shared-proposals/` when shared communication is enabled).
 
 ### B. Proactive Codebase Onboarding & Initialization (`/init`)
-- When entering a workspace or repository that has no committed project-system owner in MemFS:
-  - **Action**: Recommend `/init` with the exact two protected output paths. Run it only after the user confirms; that invocation is the explicit approval boundary for the generated baseline.
+- When entering a workspace or repository that has no committed project-system owner in MemFS (`Core.md` / `index.md` / `system/`):
+  - **Action**: Recommend `/init` (`initializing-memory` or `agent_memory_manage` `init`) with the exact protected output paths. Run it only after the user confirms; that invocation is the explicit approval boundary for the generated baseline.
 
 ### B. Proactive User Learning (`~/.gemini/memory/system/human/`)
 - Whenever the user expresses a preference (e.g. "I prefer Bun", "don't use semicolons", "reply in Thai", "use exact package flags -E"):
-  - **Action**: Prepare a focused proposal for the appropriate `system/human/<topic>.md` owner.
+  - **Action**: Prepare a focused proposal or targeted `agent_memory_edit` for the appropriate `system/human/<topic>.md` owner (following explicit approval rules where required).
   - **Do NOT wait** for the user to type `/remember`.
 
 ### C. Proactive Project Architecture & Rules (`~/.gemini/memory/projects/<slug>/system/`)
 - When you discover key architectural patterns, tech stack choices, API boundaries, or project conventions:
-  - **Action**: Prepare a scoped proposal for a focused project-system owner; apply it only after explicit approval.
+  - **Action**: Prepare a scoped proposal for a focused project-system owner (`projects/<slug>/system/<topic>.md` or `projects/<slug>/reference/<group>/<topic>.md` for deep reference); apply it with explicit approval and valid `description` frontmatter.
 - When the user corrects an error or explains how something works in this codebase:
   - **Action**: Prepare the correction for `system/conventions.md` and route it through the same explicit approval boundary.
 
@@ -68,32 +68,39 @@ You MUST proactively consult and maintain memory without waiting for a slash com
 ## 2. Memory Organization & Hierarchy
 
 ```text
-~/.gemini/memory/                # Git Repository (explicit targeted commits)
-├── .git/                        # Commit history & snapshots
-├── system/                      # Always-active global memory
+~/.gemini/memory/                     # Git Repository (explicit targeted commits)
+├── .git/                             # Commit history & snapshots
+├── Core.md                           # Tiered v2 core prompt owner (optional)
+├── index.md                          # Tiered v2 root catalog (auto-synced)
+├── system/                           # Always-active global memory (+ system/index.md)
 │   ├── persona.md
 │   └── human/
 │       ├── identity.md
 │       └── prefs/*.md
-├── reference/                   # On-demand global evidence; indexed, not injected
+├── procedures/                       # Reusable skills/procedures (+ procedures/index.md)
+├── reference/                        # On-demand global evidence (<group>/<topic>.md + index.md)
 └── projects/
-    └── <project-slug>/          # Project-specific memory (isolated per workspace)
-        ├── system/*.md          # Focused active project context
-        └── reference/*.md       # On-demand project evidence
-└── archives/                    # Exact historical/provenance material; never injected
+    └── <project-slug>/               # Project-specific memory (isolated per workspace)
+        ├── index.md                  # Project root catalog (auto-synced)
+        ├── system/*.md               # Focused active project context (+ system/index.md)
+        └── reference/<group>/*.md    # On-demand project evidence (+ index.md)
+└── archives/                         # Exact historical/provenance material; never injected
 ```
 
 ---
 
-## 3. Storage & Commit Guarantees
+## 3. Storage, MCP Tools & Curation Doctrine v1
 
 1. Memory is decoupled from workspace trees (never pollutes repository code).
 2. The `PreInvocation` hook injects only committed `HEAD` memory into prompt context; uncommitted content is disclosed as dirty state but is not activated.
-3. Memory writers must resolve paths inside the configured root, start from a clean repository, and commit only their owned paths.
-4. The `Stop` hook is observational: it reports dirty/conflict state and never stages, commits, deletes Git locks, or launches Dream.
-5. A cross-process lock serializes every high-level writer. Curation and migration
-   preserve exact source blobs and disposition manifests; removal is never a
-   silent delete-only rewrite.
+3. Bundled MCP tools (`agent_memory_read`, `agent_memory_edit`, `agent_memory_commit`, `agent_memory_manage`, `agent_memory_reflect`, `continuity_recall`) enforce contained paths, Compare-And-Swap (`expectedHash` + `revision`), surgical edits (`replace` / `patch` / `append` / `section`), `read_only: true` protection, secret scanning, Lossless Retention Guard, and one-step index sync (`commit: true`).
+4. The `Stop` hook stays non-mutating wrt Git MemFS: it reports dirty/conflict state and only tracks assistant turn steps externally in `memory.state/reflection-steps.json` when the user enables `trigger: "step-count"` (default is `off`).
+5. A cross-process lock serializes every high-level writer. Curation and migration preserve exact source blobs and disposition manifests; removal is never a silent delete-only rewrite.
+6. **Curation Doctrine v1**:
+   - **Refine with reason**: update or consolidate existing focused owners rather than spawning duplicate files; return `no_changes` when nothing new warrants durable state.
+   - **Shrink before grow**: move detailed examples/specs into `reference/<group>/<topic>.md` and summarize in `system/` + `index.md` rather than bloating always-loaded context.
+   - **Standalone & contrastive**: write self-contained, testable rules with at most 1–2 concise contrastive (`Avoid:` vs `Prefer:`) examples when helpful.
+   - **Skill loading**: load built-in skills on demand — `maintaining-core-memory`, `maintaining-deferred-memory`, `initializing-memory`, `context-doctor`, `syncing-memory-filesystem`, `creating-skills`.
 
 ---
 

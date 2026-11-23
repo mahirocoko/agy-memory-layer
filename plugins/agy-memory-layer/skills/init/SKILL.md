@@ -17,6 +17,11 @@ the historical `project.md` and `rules.md` fallback.
 
 ## Execution
 
+Preferred MCP baseline & v2 migration:
+- Seed Tiered v2 baseline (`Core.md`, `index.md`, `system/overview.md`, `system/conventions.md`, `system/index.md`): call `agent_memory_manage` with `action: "init"` (and confirm before modifying user memory; use `initializing-memory` skill for deep onboarding checklists).
+- Upgrade an existing legacy or layered MemFS store to Tiered v2 (`Core.md` + `index.md` catalogs): call `agent_memory_manage` with `action: "migrate-v2"` (`dryRun: true` first, then `dryRun: false`).
+
+CLI onboarding fallback:
 ```bash
 SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../../scripts"
 node --experimental-strip-types "$SCRIPT_DIR/init-project-memory.ts" --confirm-init "$@"

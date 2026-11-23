@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "agy-memory": {
+      "command": "./scripts/mcp-server.sh",
+      "args": []
+    }
+  }
+}
