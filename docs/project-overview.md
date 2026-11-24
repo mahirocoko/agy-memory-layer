@@ -8,9 +8,9 @@ The project is inspired by Letta Code, but adapts the behavior to one Agy user
 repository rather than copying Letta's per-agent storage and service APIs. The
 canonical boundary is [`letta-parity.md`](./letta-parity.md).
 
-**Latest published release:** `v1.25.0` (interactive and human-supervised)
+**Latest published release:** `v1.25.1` (interactive and human-supervised)
 
-**Current development state:** matches `v1.25.0`; no newer candidate is declared
+**Current development state:** matches `v1.25.1`; no newer candidate is declared
 
 ## Core Value
 
@@ -43,11 +43,13 @@ Antigravity CLI
   │     └── hook-pre-tool-use.ts
   │           └── classify command, write, dependency, and subagent safety boundaries
   │
-  ├── Active conversation / explicit skills
+  ├── Active conversation / explicit skills / MCP tools
+  │     ├── mcp_config.json -> memory-mcp-server.ts ("agy-memory" stdio MCP server)
+  │     ├── Tiered v2 engine (memory-schema.ts, memory-engine.ts, memory-retrieval.ts, memory-reflect.ts, reflection-policy.ts)
   │     ├── Evidence Controller direct/delegated routing
   │     ├── contained targeted memory writers
-  │     ├── 9 declarative subagent role manifests
-  │     └── recall / palace / doctor / sync utilities
+  │     ├── 20 skills & 9 declarative subagent role manifests
+  │     └── recall / palace-render / doctor / sync utilities
   │
   └── Stop
         └── hook-memory-status.ts
@@ -77,7 +79,9 @@ Antigravity CLI
 | Dream correction archive | `scripts/dream-daemon.ts`, `scripts/dream-reflection-reservation.ts`, `scripts/dream-reflection-schedule.ts` | Regex Dream writes recall-only evidence. Manual `--run-now --llm` creates explicit proposals. One external reservation and a guarded LLM cron installer exist in source; schedule status is not-inspected, no schedule is active, and host isolation is unverified. Phase 4 source and disposable regressions are independently verified. After the first Agy 1.2.12 proof failed closed on newly observed `structured_output` / `json_schema` fields, the exact adapter and duplicate-key correction were verified; the final bounded one-call proof created one explicit proposal and advanced only disposable state. Mahiro accepted the explicit manual path only; automatic reflection and persistent scheduling remain disabled. |
 | Memory health | `tools/memory-health.ts` | Deterministic budget, scope, residue, and low-signal checks |
 | Letta import | `scripts/letta-sync.ts` | Explicit agent selection and reference-only import |
-| Memory Palace | `scripts/palace-generator.ts` | Read-only committed-projection visualization |
+| Bundled stdio MCP server | `mcp_config.json`, `scripts/mcp-server.sh`, `scripts/memory-mcp-server.ts` | Exposes 6 root-bound tools (`agent_memory_read`, `agent_memory_edit`, `agent_memory_commit`, `agent_memory_manage`, `agent_memory_reflect`, `continuity_recall`) over stdio with JSON-schema validation and CAS guarantees |
+| Tiered v2 schema, engine, and reflection | `scripts/memory-schema.ts`, `scripts/memory-engine.ts`, `scripts/memory-retrieval.ts`, `scripts/memory-reflect.ts`, `scripts/reflection-policy.ts` | Manages `Core.md`, `index.md`, `*/index.md`, `procedures/`, CAS drafts/commits, Lossless Retention Guard, `doctor`, additive `migrate-v2`, and reflection policy |
+| Memory Palace | `scripts/palace-render.ts` (`palace-server.sh` default); `scripts/palace-generator.ts` (`--legacy`) | Read-only committed-projection visualization written at `0600` under `~/.gemini/memory.state/viewers/` by default |
 | Subagent manifests | `agents/*.json`, `scripts/agent-launcher.ts` | Declarative intent, not proven sandboxing |
 
 ## Known Gaps

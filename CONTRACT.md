@@ -1,10 +1,10 @@
 # Architecture & Runtime Contract: `agy-memory-layer`
 
-**Package version:** `1.25.0`
+**Package version:** `1.25.1`
 
 **Target:** Antigravity CLI (`agy`)
 
-**Release version:** `v1.25.0` for interactive, human-supervised use;
+**Release version:** `v1.25.1` for interactive, human-supervised use;
 GitHub Releases owns publication status. Native operation does
 not require Letta; the optional shared adapter accepts a validated distinct Git source.
 
@@ -21,13 +21,18 @@ The Agy storage model remains one user-owned Git repository:
 ```text
 ~/.gemini/memory/
 ├── .git/
+├── Core.md                     # concise core memory identity & rules (Tiered v2)
+├── index.md                    # top-level navigation map (Tiered v2)
 ├── system/                     # always-active global memory
+│   ├── index.md
 │   ├── persona.md
 │   └── human/**/*.md
-├── reference/**/*.md           # indexed on-demand global evidence
+├── reference/**/*.md           # indexed deferred global evidence
+├── procedures/**/*.md          # deferred reusable operational procedures
 ├── projects/<slug>/
+│   ├── index.md
 │   ├── system/**/*.md          # active only for the current project
-│   └── reference/**/*.md       # indexed on-demand project evidence
+│   └── reference/**/*.md       # indexed deferred project evidence
 └── archives/                   # exact provenance/history; never injected
 ```
 
@@ -453,10 +458,13 @@ canary run. This subsystem was developed after `v1.19.0` and released in
 
 The bundle currently contains:
 
-- 14 skills, including the Agy-native Evidence Controller and approval-bound
-  contract refinement/alignment pair;
+- 20 skills, including the Agy-native Evidence Controller, approval-bound
+  contract refinement/alignment pair, and 6 Tiered v2 workflow skills
+  (`initializing-memory`, `maintaining-core-memory`, `maintaining-deferred-memory`,
+  `context-doctor`, `syncing-memory-filesystem`, `creating-skills`);
 - 9 declarative subagent role manifests, including a fresh read-only evidence reviewer, repository scout, and bounded implementation writer;
 - 3 lifecycle hooks (`PreInvocation`, `PreToolUse`, `Stop`);
+- 1 bundled stdio MCP server (`mcp_config.json` -> `"agy-memory"` -> `scripts/mcp-server.sh` -> `scripts/memory-mcp-server.ts`) exposing `agent_memory_read`, `agent_memory_edit`, `agent_memory_commit`, `agent_memory_manage`, `agent_memory_reflect`, and `continuity_recall`;
 - TypeScript source executed with Node 22+ type stripping;
 - Evidence Controller routing, Memory Palace, backup/restore, recall, archived
   Dream correction evidence, project onboarding, persona switching, remote Git
@@ -609,10 +617,10 @@ See [`docs/agy-host-e2e-2026-08-20.md`](./docs/agy-host-e2e-2026-08-20.md).
 - **Protected Mutation**: Write operations divert to pending proposals in `memory.state/shared-proposals/`. Direct Git commits, writes, curation, migration, and reflection rewrites are prohibited and preflight-rejected on mixed batches.
 - **Canonical Source Boundary**: Canonical source acceptance remains a human/source-owner gate; pending proposals never become active memory.
 
-### 12. Tiered v2 MemFS, bundled MCP server, and offline Palace (`v1.25.0`)
+### 12. Tiered v2 MemFS, bundled MCP server, and offline Palace (`v1.25.0+`)
 
 - **Tiered v2 MemFS Compatibility**: Supports `Core.md`, `index.md`, `*/index.md`, `procedures/`, `system/`, `reference/`, and `projects/<slug>/` with additive lossless `migrate-v2` planning/application/rollback while preserving committed-`HEAD` projection and legacy flat fallback.
-- **Bundled Stdio MCP Server**: Registers `plugins/agy-memory-layer/mcp_config.json` -> `scripts/mcp-server.sh` -> `scripts/memory-mcp-server.ts` with zero external runtime dependencies, exposing `agent_memory_read`, `agent_memory_edit`, `agent_memory_reflect`, `agent_memory_doctor`, `agent_memory_history`, and `agent_memory_palace`.
+- **Bundled Stdio MCP Server**: Registers `plugins/agy-memory-layer/mcp_config.json` -> server `"agy-memory"` -> `scripts/mcp-server.sh` -> `scripts/memory-mcp-server.ts` with zero external runtime dependencies, exposing the 6 tools `agent_memory_read`, `agent_memory_edit`, `agent_memory_commit`, `agent_memory_manage` (actions: `status`, `doctor`, `palace`, `palace_export`, `history`, `init`, `migrate-v2`, `cleanup`, `remember`, `policy`), `agent_memory_reflect` (modes: `plan`, `apply`, `mark_reflected`), and `continuity_recall`.
 - **Offline Memory Palace Default**: `scripts/palace-server.sh` defaults to `scripts/palace-render.ts` (single-file offline Letta-grammar HTML written at `0600` under `~/.gemini/memory.state/viewers/`) and retains `--legacy` for `scripts/palace-generator.ts`.
 
 ## Current release readiness boundary
@@ -621,7 +629,7 @@ The retained pre-release readiness owner is
 [`docs/agy-main-phase4b-readiness-2026-09-13.md`](./docs/agy-main-phase4b-readiness-2026-09-13.md),
 with bounded retained evidence under
 [`docs/evidence/agy-main-phase4b-canary-2026-09-13/`](./docs/evidence/agy-main-phase4b-canary-2026-09-13/README.md).
-The strongest supported verdict is an interactive, human-supervised `v1.25.0`
+The strongest supported verdict is an interactive, human-supervised `v1.25.1`
 release, not an unsupervised safety-trusted main. The retained `v1.20.0`
 readiness packet still owns the original supervision evidence. Herdr may report
 `done` while its pane still awaits permission, and the reviewer model may not
@@ -656,7 +664,7 @@ observe that permission UI; interactive pane supervision remains required.
 6. An automated release workflow remains deferred. Releases use the existing
    manual tag/GitHub Release path only after source, host, and human gates pass;
    current release evidence lives in
-   [`docs/releases/v1.25.0.md`](./docs/releases/v1.25.0.md).
+   [`docs/releases/v1.25.1.md`](./docs/releases/v1.25.1.md).
 
 ## Distribution
 

@@ -119,3 +119,35 @@ This is a model-guided procedure, not a deterministic scheduler. Native child
 conversation evidence proves delegation capability; it does not make two-agent
 agreement proof or authorize provider retry, spend, commit, release, or human
 acceptance.
+
+## 6. Bundled Stdio MCP Server & Tiered v2 Engine
+
+```text
+[Antigravity CLI (mcp_config.json)]
+        │
+        ▼
+[scripts/mcp-server.sh -> scripts/memory-mcp-server.ts ("agy-memory")]
+        │
+        ├── agent_memory_read    (committed + draft overlay, bounded Thai/English lexical search)
+        ├── agent_memory_edit    (CAS expectedHash, patch/replace/append, Lossless Retention Guard, read_only check)
+        ├── agent_memory_commit  (re-checks base HEAD & lock, auto-syncs <dir>/index.md & index.md)
+        ├── agent_memory_manage  (status, doctor, palace, palace_export, history, init, migrate-v2, cleanup, remember, policy)
+        ├── agent_memory_reflect (plan / apply / mark_reflected; inherits active/policy model)
+        └── continuity_recall    (non-binding historical Antigravity transcript search)
+```
+
+All Tiered v2 mutations pass through `scripts/memory-engine.ts` under the external shared writer lock (`withMemoryWriteLock`) with secret scanning (`findSecretLikeContent`), `read_only: true` preservation, and atomic draft-to-commit verification.
+
+## 7. Offline Memory Palace Renderer
+
+```text
+[scripts/palace-server.sh]
+        │
+        ├── default ──► [scripts/palace-render.ts]
+        │                   └── single-file offline Letta-grammar HTML written at 0600 to ~/.gemini/memory.state/viewers/palace-<slug>.html
+        │
+        └── --legacy ─► [scripts/palace-generator.ts]
+                            └── legacy dashboard written to /tmp/agy-memory-palace.html (or explicit path)
+```
+
+Both renderers read strictly from committed Git `HEAD` via `inspectCommittedMemoryProjection()`, failing closed on mixed legacy/layered layouts and never promoting uncommitted working-tree content into Core cards.

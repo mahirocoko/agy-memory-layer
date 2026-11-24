@@ -74,10 +74,10 @@ function readPluginManifest(): { name: string; version: string } {
     }
     return {
       name: typeof parsed.name === 'string' && parsed.name ? parsed.name : 'agy-memory-layer',
-      version: typeof parsed.version === 'string' && parsed.version ? parsed.version : '1.25.0',
+      version: typeof parsed.version === 'string' && parsed.version ? parsed.version : '1.25.1',
     }
   } catch {
-    return { name: 'agy-memory-layer', version: '1.25.0' }
+    return { name: 'agy-memory-layer', version: '1.25.1' }
   }
 }
 

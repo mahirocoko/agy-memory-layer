@@ -952,7 +952,7 @@ function readPluginVersion(): string {
   } catch {
     // Fallback below
   }
-  return '1.25.0'
+  return '1.25.1'
 }
 
 function readFileLastCommit(

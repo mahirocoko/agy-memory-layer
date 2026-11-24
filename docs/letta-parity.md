@@ -33,7 +33,10 @@ The project targets **contract parity**, not architecture parity:
 | Project initialization | `scripts/init-project-memory.ts` | `/init` |
 | Letta import | `scripts/letta-sync.ts` | `/sync-letta` |
 | Explicit-intent transcript-note generation | `scripts/dream-daemon.ts` | `/dream` |
-| Current version intent | `package.json` | `plugin.json` (palace-generator derives dynamically), `CONTRACT.md` |
+| Tiered v2 schema, CAS engine, and `migrate-v2` | `scripts/memory-schema.ts`, `scripts/memory-engine.ts` | `Core.md`, `index.md`, `procedures/`, Lossless Retention Guard, `doctor` |
+| Bundled stdio MCP server (`agy-memory`) | `scripts/memory-mcp-server.ts` | `mcp_config.json`, `scripts/mcp-server.sh`, 6 `agent_memory_*` / `continuity_recall` tools |
+| Offline Memory Palace viewer | `scripts/palace-render.ts` | `scripts/palace-server.sh` default (`--legacy` fallback `scripts/palace-generator.ts`) |
+| Current version intent | `package.json` | `plugin.json` (`palace-render.ts`, `palace-generator.ts`, `memory-mcp-server.ts` read dynamically), `CONTRACT.md` |
 | Runtime and release-state contract | `CONTRACT.md` | `docs/letta-parity.md` |
 | Engineering rules and version sync | Root `AGENTS.md` | `tests/unit-coverage.test.ts` drift guard |
 | Public source and release summary | `README.md` | `CONTRACT.md` |
@@ -203,7 +206,9 @@ The following are useful Agy features, not proof of Letta parity:
 
 - project folders and cross-project synapse search;
 - local BM25 + n-gram Antigravity transcript recall;
-- Memory Palace;
+- Memory Palace (`scripts/palace-render.ts` offline Letta-grammar default + `--legacy` `scripts/palace-generator.ts`);
+- Tiered v2 MemFS (`Core.md`, `index.md`, `*/index.md`, `procedures/`) with additive `migrate-v2`;
+- bundled stdio MCP server (`agy-memory`: `agent_memory_read`, `agent_memory_edit`, `agent_memory_commit`, `agent_memory_manage`, `agent_memory_reflect`, `continuity_recall`);
 - read-only Markdown maintenance and archival analysis;
 - Evidence Controller routing and scoped closeout;
 - explicit-intent deterministic Dream correction archives;

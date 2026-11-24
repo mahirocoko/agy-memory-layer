@@ -48,6 +48,7 @@ learn-letta-code/
 │   ├── releases/v1.23.0.md                  # Human-gated Dream v2 reflection release
 │   ├── releases/v1.24.0.md                  # Optional shared communication adapter release
 │   ├── releases/v1.25.0.md                  # Tiered v2 MemFS, MCP server & offline Palace release
+│   ├── releases/v1.25.1.md                  # Complete v1.25 documentation, migration & MCP alignment release
 │   ├── development-commands.md              # CLI and daemon commands
 │   ├── file-organization.md                 # Directory structure and module roles
 │   ├── best-practices.md                    # Engineering principles and memory hygiene

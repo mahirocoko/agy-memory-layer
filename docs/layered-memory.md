@@ -223,6 +223,74 @@ Native Agy operation requires no Letta installation. Optional sharing accepts an
 - **Paragraph-Level Deduplication**: Merges shared baseline while preserving distinct native additions and runtime rules. Unresolved conflicts under same headings are explained rather than overridden.
 - **Protected Mutation**: Edits to the shared owner are diverted to a pending proposals queue (`memory.state/shared-proposals/`) for manual review and upstream application. Direct commits, writes, curation, migration, and reflection rewrites are prohibited and preflight-rejected on mixed batches.
 
+## Tiered v2 Layout & Migration (`v1.25.0+`)
+
+`v1.25.0` extends the layered `system/ + reference/ + projects/ + archives/` store with explicit progressive-disclosure navigation, CAS draft/commit tooling (`memory-engine.ts`), a bundled `"agy-memory"` stdio MCP server (`memory-mcp-server.ts`), and the offline Letta-grammar Palace (`palace-render.ts`). Legacy 4-file and `v1.15–v1.24` layered repositories both continue to project cleanly without forced migration.
+
+### Tiered v2 directory shape
+
+```text
+~/.gemini/memory/
+├── .git/
+├── Core.md                       # concise identity, posture, and non-negotiable core rules
+├── index.md                      # top-level navigation map pointing to children
+├── system/                       # always-active global owners + system/index.md
+├── reference/                    # deferred global evidence + reference/index.md
+├── procedures/                   # deferred reusable workflows + procedures/index.md
+├── projects/<slug>/
+│   ├── index.md
+│   ├── system/                   # active for current project + <dir>/index.md
+│   └── reference/                # deferred project evidence + <dir>/index.md
+└── archives/                     # inert history and lossless migration originals
+```
+
+- **Core vs Deferred**: `Core.md`, root `index.md`, non-index `system/**/*.md`, and the current project's non-index `projects/<slug>/system/**/*.md` compile into `[MemFS Active Memory]` on `PreInvocation`. `reference/**`, `projects/<slug>/reference/**`, `procedures/**`, and `<dir>/index.md` files support progressive discovery on demand.
+- **Lossless Retention Guard**: Edits to protected files (`Core.md`, `system/persona.md`, `system/human/**`, `projects/<slug>/system/**`) cannot remove section headings or shrink a file >= 160 chars by > 35% unless archival provenance is recorded in the same draft or `allowShrink: true` is explicitly passed.
+- **Read-Only Protection**: Files declaring `read_only: true` in YAML frontmatter cannot be modified or deleted by automated tools, and `read_only` cannot be added, modified, or removed by agent edits.
+- **Offline Palace Default**: `./plugins/agy-memory-layer/scripts/palace-server.sh --open` runs `palace-render.ts` and writes a single-file viewer at `0600` under `~/.gemini/memory.state/viewers/palace-<project-slug>.html` (pass `--legacy` to invoke `palace-generator.ts`).
+
+### How to migrate to Tiered v2 (`migrate-v2`)
+
+Always back up MemFS first and ensure `git -C ~/.gemini/memory status --short` is clean before running migration:
+
+```bash
+# 0. Refresh plugin links/hooks & export an encrypted-hash backup bundle
+./plugins/agy-memory-layer/scripts/update.sh
+node --experimental-strip-types tools/memory-backup.ts export -o /tmp/memfs-backup.json
+git -C ~/.gemini/memory status --short   # must be empty (clean working tree)
+
+# 1. Inspect current status and preview the exact Tiered v2 plan (no writes)
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts status
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts migrate-v2 --dry-run
+
+# 2. Apply the atomic migration commit under the shared writer lock
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts migrate-v2
+
+# 3. Verify structure, active-memory budget (<= 32,000 tokens), and offline Palace
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts doctor
+pnpm memory:health -- --workspace "$(pwd)"
+bash plugins/agy-memory-layer/scripts/palace-server.sh --open
+```
+
+Equivalent MCP calls via `"agy-memory"`:
+
+1. `agent_memory_manage({ "action": "status" })`
+2. `agent_memory_manage({ "action": "migrate-v2", "dryRun": true })`
+3. `agent_memory_manage({ "action": "migrate-v2" })`
+4. `agent_memory_manage({ "action": "doctor" })`
+
+What `migrate-v2` does per starting layout:
+
+- **Upgrading from `v1.15–v1.24` Layered MemFS**: Additive-only (`removals: []`). Generates missing `Core.md`, `<dir>/index.md` for every parent directory, and root `index.md` in one atomic Git commit; preserves `system/`, `reference/`, `projects/<slug>/`, and `system/human/prefs/communication.md`.
+- **Upgrading from pre-`v1.15` Legacy 4-file MemFS**: Copies every legacy file byte-for-byte into `archives/legacy-v1-<head12>/`, maps `global/persona.md` -> `system/persona.md`, `global/human.md` -> `system/human/identity.md`, and `projects/<slug>/{project,rules}.md` -> `projects/<slug>/system/{overview,conventions}.md` with frontmatter, adds `Core.md` + `*/index.md` + `index.md`, and removes the legacy paths in one atomic commit. (If you prefer explicit per-unit dispositioning first, run the two-step unit ledger with `layered-memory-migration.ts` above and then run `memory-engine.ts migrate-v2`.)
+- **Fresh MemFS or new project workspace**: Run `node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts init --dry-run` followed by `init` (or `/initializing-memory` inside Antigravity CLI).
+- **Mixed legacy/layered overlap**: Refuses with `MIXED_LAYOUT_CONFLICT` until you manually resolve duplicate active owners cleanly; rollback any applied `migrate-v2` commit safely with additive Git history:
+
+```bash
+git -C ~/.gemini/memory log -n 5 --oneline
+git -C ~/.gemini/memory revert --no-edit <migrate-v2-commit-sha>
+```
+
 ## Human Gate for the First Live Migration
 
 Before touching real `~/.gemini/memory`, present:

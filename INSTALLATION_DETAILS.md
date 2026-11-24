@@ -13,33 +13,40 @@
 │   └── plugins/agy-memory-layer/
 │       ├── plugin.json
 │       ├── hooks.json
-│       ├── agents/                  [Declarative Subagent Role Manifests (7 Roles)]
+│       ├── mcp_config.json          [ลงทะเบียน Bundled Stdio MCP Server "agy-memory"]
+│       ├── agents/                  [Declarative Subagent Role Manifests (9 Roles)]
 │       ├── prompts/                 [Prompt Warehouse (system, persona, subagents)]
 │       ├── rules/AGENTS.md
-│       ├── skills/*/SKILL.md
+│       ├── skills/*/SKILL.md        [20 Workflow Skills]
 │       └── scripts/*.ts / *.sh
 │
 ├── 2. Antigravity Plugins Directory (ระดับ Global)
 │   └── ~/.gemini/antigravity-cli/plugins/
 │       └── agy-memory-layer  ─────────────► [Symlink ชี้กลับมาที่ Source Repo]
 │
-└── 3. Memory Git Storage Directory (ที่เก็บข้อมูล Memory)
+└── 3. Memory Git Storage Directory (ที่เก็บข้อมูล Memory - Tiered v2)
     └── ~/.gemini/memory/                    [Git Repository แยกอิสระ]
         ├── .git/                            [Commit History & Snapshots]
-        ├── system/                          [Memory ที่ active ทุกครั้ง]
+        ├── Core.md                          [แกนความจำหลัก Always-Loaded (Tiered v2)]
+        ├── index.md                         [สารบัญระดับบนสุดชี้ไปยังไฟล์ลูก]
+        ├── system/                          [Memory ที่ active ทุกครั้ง + system/index.md]
+        │   ├── index.md
         │   ├── persona.md                   [Agent Persona]
         │   └── human/
+        │       ├── index.md
         │       ├── identity.md              [ตัวตนและบริบทการทำงานร่วมกัน]
         │       └── prefs/*.md               [Preference แยกตามหัวข้อ]
-        ├── reference/                       [หลักฐานสำหรับค้นเมื่อจำเป็น]
+        ├── reference/                       [หลักฐานสำหรับค้นเมื่อจำเป็น + reference/index.md]
+        ├── procedures/                      [ขั้นตอนการทำงานแบบ deferred + procedures/index.md]
         ├── projects/
-            └── <project-slug>/              [แยกตามชื่อแต่ละโปรเจกต์]
-                ├── system/*.md              [Inject เฉพาะตอนอยู่โปรเจกต์นี้]
-                └── reference/*.md           [รายละเอียดสำหรับค้นเมื่อจำเป็น]
+        │   └── <project-slug>/              [แยกตามชื่อแต่ละโปรเจกต์]
+        │       ├── index.md
+        │       ├── system/*.md              [Inject เฉพาะตอนอยู่โปรเจกต์นี้]
+        │       └── reference/*.md           [รายละเอียดสำหรับค้นเมื่อจำเป็น]
         └── archives/                        [ประวัติและหลักฐานเดิม ไม่ inject]
 ```
 
-State ชั่วคราวของ proposal และ Dream cursor จะอยู่ที่ `~/.gemini/memory.state/` แยกจาก Git repository จึงไม่ถูก inject เข้า prompt และไม่ติดไปกับ memory commit
+State ชั่วคราวของ proposal, Dream cursor และไฟล์ HTML ของ offline Memory Palace จะอยู่ที่ `~/.gemini/memory.state/` (เช่น `~/.gemini/memory.state/viewers/palace-<slug>.html` สิทธิ์ `0600`) แยกจาก Git repository จึงไม่ถูก inject เข้า prompt และไม่ติดไปกับ memory commit
 ---
 
 ## ⚡ วิธีการติดตั้ง (Installation Methods)
@@ -184,6 +191,56 @@ ls -la ~/.gemini/antigravity-cli/plugins/
 # 2. เช็คว่า Git Memory Repository ทำงานปกติหรือไม่
 git -C ~/.gemini/memory log --oneline
 
-# 3. ทดลองเปิด Memory Palace ตรวจสอบข้อมูลใน Browser
+# 3. ทดสอบสร้างและเปิด Offline Memory Palace (`~/.gemini/memory.state/viewers/palace-<slug>.html`)
+./plugins/agy-memory-layer/scripts/palace-server.sh --open
+# (หากต้องการใช้ template แบบเดิม: ./plugins/agy-memory-layer/scripts/palace-server.sh --legacy --open)
+```
+
+---
+
+## 🚀 วิธี Migrate สู่ Tiered v2 (`v1.25+`)
+
+ระบบ Tiered v2 เพิ่ม `Core.md`, `index.md`, `<dir>/index.md`, `procedures/`, Bundled MCP Server (`"agy-memory"`) และ Offline Palace โดยไม่บังคับแก้ MemFS อัตโนมัติระหว่างอัปเดตปลั๊กอิน ผู้ใช้เดิมสามารถเลือกอัปเกรดแบบปลอดภัยตามสถานะ MemFS ของเครื่องได้ดังนี้:
+
+- **กรณีที่ 1: ใช้ Layered MemFS อยู่แล้ว (`v1.15–v1.24`)** — การรัน `migrate-v2` จะเพิ่มเฉพาะ `Core.md`, `index.md` และ `<dir>/index.md` แบบ additive-only (`removals: []`) ไม่ลบหรือเขียนทับไฟล์ `system/` และ `reference/` เดิม
+- **กรณีที่ 2: ใช้ Legacy 4 ไฟล์เดิม (ก่อน `v1.15`: `global/{human,persona}.md`, `projects/<slug>/{project,rules}.md`)** — `migrate-v2` จะสำรองต้นฉบับแบบ byte-for-byte ลง `archives/legacy-v1-<head12>/` แล้วย้ายเข้า `system/` และ `projects/<slug>/system/` พร้อม frontmatter และ index ทั้งหมดใน commit เดียว (หรือถ้าต้องการตรวจ disposition รายบรรทัดก่อน ให้รัน `layered-memory-migration.ts` ก่อนแล้วค่อยตามด้วย `migrate-v2`)
+- **กรณีที่ 3: เริ่มโปรเจกต์/คลังความจำใหม่ใน Tiered v2** — ใช้ `memory-engine.ts init --dry-run` แล้วค่อยรัน `init`
+
+### ขั้นตอนแนะนำทีละขั้น
+
+```bash
+# 1. รีเฟรชไฟล์ปลั๊กอิน, permission และ symlink ให้เป็นเวอร์ชันล่าสุด
+./plugins/agy-memory-layer/scripts/update.sh
+
+# 2. สำรอง MemFS และตรวจให้แน่ใจว่า working tree สะอาด (ห้ามมีไฟล์ค้างยังไม่ commit)
+node --experimental-strip-types tools/memory-backup.ts export -o /tmp/memfs-backup.json
+git -C ~/.gemini/memory status --short
+
+# 3. ตรวจสถานะปัจจุบันและ Dry-Run แผน migration (ยังไม่เขียนไฟล์จริง)
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts status
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts migrate-v2 --dry-run
+
+# 4. ถ้ารายการ writes/removals ถูกต้อง ให้สั่ง migrate จริง
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts migrate-v2
+
+# 5. ตรวจสอบโครงสร้าง, token budget (<= 32,000), และเปิด Offline Palace
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts doctor
+pnpm memory:health -- --workspace "$(pwd)"
 ./plugins/agy-memory-layer/scripts/palace-server.sh --open
 ```
+
+หรือสั่งผ่าน MCP tool ของปลั๊กอิน (`"agy-memory"`) โดยตรง:
+1. `agent_memory_manage({ "action": "migrate-v2", "dryRun": true })` เพื่อพรีวิวแผน
+2. `agent_memory_manage({ "action": "migrate-v2" })` เพื่อรัน migration
+3. `agent_memory_manage({ "action": "doctor" })` เพื่อตรวจสุขภาพหลังย้าย
+
+### วิธีย้อนกลับ (Rollback) หากต้องการถอย
+
+เนื่องจาก `migrate-v2` บันทึกทุกอย่างเป็น Git commit เดียวและเก็บต้นฉบับ Legacy ไว้ใน `archives/` จึงย้อนกลับแบบปลอดภัยได้ด้วย:
+
+```bash
+git -C ~/.gemini/memory log -n 5 --oneline
+git -C ~/.gemini/memory revert --no-edit <migrate-v2-commit-sha>
+```
+
+หรือตรวจสอบและกู้คืนจากไฟล์ backup ด้วย `node --experimental-strip-types tools/memory-backup.ts import -i /tmp/memfs-backup.json --dry-run` ครับ

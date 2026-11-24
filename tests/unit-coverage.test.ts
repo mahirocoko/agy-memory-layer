@@ -2466,8 +2466,8 @@ describe('Unit Coverage Extensions', () => {
     const biomeJson = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'biome.json'), 'utf8'))
 
     // 1. Development candidate intent and mirror equality
-    assert.strictEqual(packageJson.version, '1.25.0')
-    assert.strictEqual(pluginJson.version, '1.25.0')
+    assert.strictEqual(packageJson.version, '1.25.1')
+    assert.strictEqual(pluginJson.version, '1.25.1')
     assert.strictEqual(packageJson.version, pluginJson.version)
     const exactEvidenceOverride = biomeJson.overrides.find(
       (override: { includes?: string[]; formatter?: { enabled?: boolean } }) =>
@@ -2490,7 +2490,7 @@ describe('Unit Coverage Extensions', () => {
 
     // 2. CONTRACT.md runtime/release-state contract and PreInvocation runtime wording
     const contractDoc = fs.readFileSync(path.join(ROOT_DIR, 'CONTRACT.md'), 'utf8')
-    assert.strictEqual(contractDoc.includes('**Package version:** `1.25.0`'), true)
+    assert.strictEqual(contractDoc.includes('**Package version:** `1.25.1`'), true)
     assert.strictEqual(
       contractDoc.includes(`**Release version:** \`v${packageJson.version}\``),
       true,
@@ -2964,6 +2964,49 @@ describe('Unit Coverage Extensions', () => {
       assert.strictEqual(developmentCommandsDoc.includes(filename), true, filename)
     }
     assert.strictEqual(fileOrganizationDoc.includes(`releases/v${packageJson.version}.md`), true)
+    assert.strictEqual(
+      contractDoc.includes('- 20 skills, including') &&
+        contractDoc.includes('agent_memory_commit') &&
+        contractDoc.includes('agent_memory_manage') &&
+        contractDoc.includes('continuity_recall'),
+      true,
+    )
+    assert.strictEqual(contractDoc.includes('- 14 skills, including'), false)
+    for (const nonexistentTool of [
+      'agent_memory_doctor',
+      'agent_memory_history',
+      'agent_memory_palace',
+    ]) {
+      assert.strictEqual(contractDoc.includes(nonexistentTool), false, nonexistentTool)
+    }
+    for (const requiredReadmeToken of [
+      'migrate-v2',
+      'agent_memory_manage',
+      'continuity_recall',
+      'palace-render.ts',
+      '/initializing-memory',
+    ]) {
+      assert.strictEqual(readmeDoc.includes(requiredReadmeToken), true, requiredReadmeToken)
+    }
+    const layeredMemoryDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'docs', 'layered-memory.md'),
+      'utf8',
+    )
+    const installDetailsDoc = fs.readFileSync(
+      path.join(ROOT_DIR, 'INSTALLATION_DETAILS.md'),
+      'utf8',
+    )
+    for (const docContent of [layeredMemoryDoc, developmentCommandsDoc, installDetailsDoc]) {
+      assert.strictEqual(docContent.includes('migrate-v2 --dry-run'), true)
+      assert.strictEqual(
+        docContent.includes('palace-render.ts') || docContent.includes('palace-server.sh'),
+        true,
+      )
+    }
+    for (const scriptRef of ['scripts/memory-mcp-server.ts', 'scripts/palace-render.ts']) {
+      assert.strictEqual(projectOverviewDoc.includes(scriptRef), true, scriptRef)
+      assert.strictEqual(parityDoc.includes(scriptRef), true, scriptRef)
+    }
     assert.strictEqual(developmentCommandsDoc.includes('do not prove semantic correctness'), true)
     assert.strictEqual(developmentCommandsDoc.includes('not-authenticated'), true)
     assert.strictEqual(

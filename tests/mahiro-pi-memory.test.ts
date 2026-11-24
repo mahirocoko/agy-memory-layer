@@ -620,7 +620,7 @@ test('Offline Letta-grammar Palace HTML renderer: 4 views, nested folders, scopi
       projectSlug: slugA,
       revision: 'abc123456789',
       capturedAt: '2026-11-23T00:00:00.000Z',
-      pluginVersion: '1.25.0',
+      pluginVersion: '1.25.1',
       files: [
         {
           path: 'Core.md',

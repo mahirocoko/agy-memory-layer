@@ -2,9 +2,9 @@
 
 This reference documents all testing, verification, script runners, and daemon commands available in this codebase.
 
-**Latest published release:** `v1.25.0` (interactive and human-supervised)
+**Latest published release:** `v1.25.1` (interactive and human-supervised)
 
-**Current development state:** matches `v1.25.0`; no newer candidate is declared
+**Current development state:** matches `v1.25.1`; no newer candidate is declared
 
 ---
 
@@ -21,6 +21,9 @@ pnpm test:phase3
 
 # Run the optional shared communication adapter regressions only
 node --experimental-strip-types --test --test-concurrency=1 tests/shared-memory.test.ts
+
+# Run the Tiered v2, bundled MCP server, reflection policy, and offline Palace regressions only
+node --experimental-strip-types --test --test-concurrency=1 tests/mahiro-pi-memory.test.ts
 
 # Run the atomic PreToolUse confirmation-request regressions only
 node --experimental-strip-types --test --test-concurrency=1 tests/tool-guard.test.ts
@@ -249,15 +252,48 @@ node --experimental-strip-types plugins/agy-memory-layer/scripts/recall-engine.t
 
 ## 🏛️ Memory Palace Generator
 
-Generates the interactive Memory Palace HTML visualizer.
+Generates the offline single-file Letta-grammar Memory Palace HTML viewer (`palace-render.ts` by default, writing `0600` HTML under `~/.gemini/memory.state/viewers/palace-<project-slug>.html`) or falls back to the legacy template (`palace-generator.ts` with `--legacy`, defaulting to `/tmp/agy-memory-palace.html`).
 
 ```bash
-# Generate the default /tmp/agy-memory-palace.html and open it
+# Default offline Palace (palace-render.ts -> ~/.gemini/memory.state/viewers/palace-<slug>.html) and open it
 bash plugins/agy-memory-layer/scripts/palace-server.sh --open
 
-# Generate to an explicit path without opening a browser
-bash plugins/agy-memory-layer/scripts/palace-server.sh /tmp/agy-memory-palace.html
+# Default offline Palace written to an explicit HTML path without opening a browser
+bash plugins/agy-memory-layer/scripts/palace-server.sh /tmp/palace-custom.html
+
+# Explicit legacy generator fallback (palace-generator.ts -> /tmp/agy-memory-palace.html)
+bash plugins/agy-memory-layer/scripts/palace-server.sh --legacy --open
 ```
+
+---
+
+## 🔌 Bundled MCP Server & Tiered v2 Engine CLI
+
+`plugins/agy-memory-layer/mcp_config.json` registers the `"agy-memory"` stdio MCP server via `scripts/mcp-server.sh` -> `scripts/memory-mcp-server.ts`, exposing `agent_memory_read`, `agent_memory_edit`, `agent_memory_commit`, `agent_memory_manage`, `agent_memory_reflect`, and `continuity_recall`.
+
+Direct operator CLI actions live on `memory-engine.ts`:
+
+```bash
+# Inspect Tiered v2 status and layout diagnostics
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts status
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts doctor
+
+# Non-destructive Tiered v2 init (preview and apply)
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts init --dry-run
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts init
+
+# Upgrade an existing Layered (v1.15-v1.24) or Legacy (4-file) MemFS to Tiered v2
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts migrate-v2 --dry-run
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts migrate-v2
+
+# Export offline Palace HTML, inspect scoped history, inspect reflection policy, or append a quick note
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts palace_export
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts history
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts policy
+node --experimental-strip-types plugins/agy-memory-layer/scripts/memory-engine.ts remember --text "Always run pnpm check before commit"
+```
+
+For full backup, mixed-layout checks, legacy archive mapping, and `git revert` rollback steps, see [`layered-memory.md`](./layered-memory.md).
 
 ---
 

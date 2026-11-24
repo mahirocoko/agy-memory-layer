@@ -29,10 +29,10 @@ pnpm install --frozen-lockfile
 ```
 
 ### What `install.sh` does:
-1. Creates the external MemFS Git repository at `~/.gemini/memory/`.
-2. Seeds initial `human.md` and `persona.md` templates if they do not exist.
-3. Creates a symlink from `plugins/agy-memory-layer/` to `~/.gemini/antigravity-cli/plugins/agy-memory-layer`.
-4. Sets executable permissions (`chmod +x`) on all hook and utility scripts.
+1. Creates the external MemFS Git repository at `~/.gemini/memory/` (when absent).
+2. Seeds initial layered owners (`system/human/identity.md`, `system/human/prefs/communication.md`, `system/human/prefs/coding.md`, and `system/persona.md`) if they do not exist. Run `memory-engine.ts init` (or `migrate-v2` on an existing MemFS) to populate Tiered v2 `Core.md`, `index.md`, `<dir>/index.md`, and project baselines.
+3. Creates a symlink from `plugins/agy-memory-layer/` to `~/.gemini/antigravity-cli/plugins/agy-memory-layer` (including hooks, 20 skills, and `mcp_config.json` registering the bundled `agy-memory` stdio MCP server).
+4. Sets executable permissions (`chmod +x`) on all hook and utility scripts under `scripts/*.sh`.
 5. Validates committed-memory PreInvocation and non-mutating Stop behavior.
 
 ---
@@ -54,9 +54,9 @@ runner with zero failures. `AGENTS.md` owns the exact current-source count.
 
 | Path | Purpose |
 | :--- | :--- |
-| `plugins/agy-memory-layer/` | Core plugin bundle source code (hooks, manifests, scripts, prompts) |
+| `plugins/agy-memory-layer/` | Core plugin bundle source code (hooks, `mcp_config.json`, 20 skills, 9 subagent manifests, scripts, prompts) |
 | `~/.gemini/memory/` | External Git-versioned MemFS repository |
-| `~/.gemini/memory.state/` | Pending proposal and Dream cursor state, outside prompt memory |
+| `~/.gemini/memory.state/` | Pending proposal, Dream cursor, and offline Memory Palace HTML state (`viewers/`), outside prompt memory |
 | `~/.gemini/antigravity-cli/plugins/agy-memory-layer` | Global symlink target read by Antigravity CLI |
 | `assets/` | Architecture and lifecycle diagrams |
 | `tests/` | Automated test harness and unit coverage suites |
